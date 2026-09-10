@@ -2,24 +2,24 @@
 
 > 校验日期：2026-08-26 ｜ 截止：2026-11-07 23:59 SGT ｜ 作业说明：[Group Assignment Intro.pdf](../Group%20Assignment%20Intro.pdf) ｜ English: [README.md](README.md)
 >
-> 论文 PDF 已迁至 OneDrive：各选题通过自己的 `Useful Paper.html` 进入；通用论文通过 [Common Useful Paper.html](Common%20Useful%20Paper.html) 进入。下文另给 arXiv / ACL Anthology / 官方页面，便于独立核验元数据与原文主张。
+> 论文 PDF 已迁至 OneDrive （NTU给了我们一人3T, 不用白不用）：各选题通过自己的 `Useful Paper.html` 进入；通用论文通过 [Common Useful Paper.html](Common%20Useful%20Paper.html) 进入。下文另给 arXiv / ACL Anthology / 官方页面，便于独立核验元数据与原文主张。
 
 ## 结论与推荐顺序
 
 | 目录 | 选题 | 当前建议 | 核心理由 |
 |---|---|---|---|
-| [Patch Version RAG](Patch%20Version%20RAG/README_CN.md) | 游戏补丁说明的版本感知 / 时间旅行问答 | 🥇 **最稳主选** | 数据与答案可追溯、1,000 题可人工逐条核验、版本过滤/路由可清楚消融；先做 API 与许可试采样即可锁定可行性。 |
-| [Energy Opinion RAG](Energy%20Opinion%20RAG/README_CN.md) | 东南亚能源转型观点 RAG | 🥈 **有条件备选** | 与课程兴趣高度契合，但 Reddit 研究访问现需审批，且“观点分布”不能被解释为总体民意；获批前不能把第三方 dump 当作低风险主数据源。 |
-| [Greenwash RAG](Greenwash%20RAG/README_CN.md) | SGX 可持续承诺的跨年证据追踪 | 🥉 **高上限 / 高风险** | A3CG 与本地场景很强、数据已确认可取，但标注工作量最大，且原 MVP 定位已被 EmeraldMind（WWW 2026）与 ML-Promise（EMNLP 2025）占据——只有采用其 README §0 与 §1.4 的"证据条件化 + 跨年"重构才成立。系统只能做风险筛查与证据辅助，不能作确定的漂绿判决。 |
+| [Patch Version RAG](Patch%20Version%20RAG/README_CN.md) | 游戏补丁说明的版本感知 / 时间旅行问答 | **感觉最稳捏** | 数据与答案可追溯、1,000 题可人工逐条核验、版本过滤/路由可清楚消融；先做 API 与许可试采样即可锁定可行性。 |
+| [Energy Opinion RAG](Energy%20Opinion%20RAG/README_CN.md) | 东南亚能源转型观点 RAG | **感觉也不错，但是数据gated** | 与课程兴趣高度契合，但 Reddit 研究访问现需审批，且“观点分布”不能被解释为总体民意；获批前不能把第三方 dump 当作低风险主数据源。 |
+| [Greenwash RAG](Greenwash%20RAG/README_CN.md) | SGX 可持续报告的漂绿风险感知证据 RAG | **教授组估计喜欢，不过高上限伴随高风险** | A3CG 与本地场景很强，但标注、PDF/视觉检索及外部核查工作量最大；系统只能做风险筛查与证据辅助，不能作确定的漂绿判决。 |
 
 ## 作业硬约束速查
 
 - KB ≥ 10,000 文档/段落且 ≥ 100,000 词；需自行清洗、切分并报告文档、chunk、词数与类型统计。
 - 必须实现稀疏、稠密和混合检索（可再加重排）；不得用 SQL `LIKE`；需简单 UI、5 条示例查询与速度报告。
-- 自建、留出的评测集 ≥ 1,000 条**人工标注/核验**记录，去重、尽量均衡，IAA ≥ 80%；分类任务提交 `eval.xls`。半自动生成不等于免除逐条人工核验与独立重标子集。
+- 自建、留出的评测集 ≥ 1,000 条**人工标注/核验**记录（上学期ML作业100条都挺够呛的，这学期NLP大家都是加把劲骑士），去重、尽量均衡，IAA ≥ 80%；分类任务提交 `eval.xls`。半自动生成不等于免除逐条人工核验与独立重标子集。
 - 检索报告 P@K、R@K、MRR、nDCG；下游报告任务指标，并做答案层面的 faithfulness、answer relevance、context relevance/precision（可用 RAGAS）及性能测量。
 - 每个创新点都要有对应消融；与往届或同届项目重叠 >30% 将失去成绩。（我上学期的A-的LLM作业不能复用了555）
-- 最终提交为以小组编号命名的单个 PDF，并在报告中给出数据和代码的 OneDrive/Dropbox 链接；不要把本仓库里的 HTML 跳转页误当作最终数据/代码交付物。
+- 最终提交为以小组编号命名的单个 PDF (应该都会Latex吼，谁要是有vip的话请群里说，不然咱可能得代码库里放论文了)，并在报告中给出数据和代码的 OneDrive/GitHub 链接；不要把本仓库里的 HTML 跳转页误当作最终数据/代码交付物。
 
 ## 三个选题的可行性对比
 
@@ -51,15 +51,11 @@
 | [Patch Useful Paper](Patch%20Version%20RAG/Useful%20Paper.html) | VersionRAG、TG-RAG、ChronoQA、时间鲁棒性与冲突处理 |
 | [Greenwash Useful Paper](Greenwash%20RAG/Useful%20Paper.html) | A3CG、环境声明、视觉文档检索与 AVeriTeC |
 
-四个 HTML 的 meta-refresh 均能跳到预期 SharePoint 资料夹，但注意需要登录一个MS账号，否则自动请求会返回 HTTP 403 (NTU 强制认证)。
+四个 HTML 的 meta-refresh 均能跳到预期 SharePoint 资料夹，但注意需要登录一个MS账号，否则自动请求会返回 HTTP 403 (NTU搞的强制认证)。
 
 ## 小建议
 
 1. Patch-Version感觉不错：第一周完成 100 个页面/补丁的 API 与解析 pilot、许可记录、10k chunk 规模外推，以及 50 题独立双标试验；达到门槛再扩全量。
-2. 或者对Energy感兴趣的话：我们得先申请 [Reddit for Researchers](https://support.reddithelp.com/hc/en-us/articles/49381918834964-Reddit-for-Researchers-Program)，取得学校伦理审查/豁免与数据使用许可后再锁题；否则切换到可合法复用的开放观点数据。
-3. 只有在组内有 ESG 领域经验、PDF 处理能力、可承受标注工时，**并且接受"证据条件化"重构**（原定位已被已发表工作占据）的情况下才选 Greenwash。数据风险现已实测而非假设：A3CG 数据 + GRACE 代码 + checkpoint 均已到手，SGX PDF pilot 实测每份约 12.6k 词 / 43.8 页，因此 10k chunk 门槛约需 240 份报告。先做文本 MVP；视觉页面检索做受控消融，外部核查降级为不设验收指标的拉伸目标。
-4. 定题后把仓库根目录 README 的 `<Pending Proposal>` 替换为最终摘要，并把重叠检查、数据截止日期、许可与伦理处理写进报告。
-
-## 校验边界
-
-本次校验确认了作业要求、论文元数据、摘要/正文中的关键主张及主要数据入口；它不等于复现每篇论文的全部实验。凡保留精确数字的地方，应在最终报告中补充页码或表号。
+2. 或者大家对Energy感兴趣的话：我们得先申请 [Reddit for Researchers](https://support.reddithelp.com/hc/en-us/articles/49381918834964-Reddit-for-Researchers-Program)，取得学校伦理审查/豁免与数据使用许可后再锁题；否则切换到可合法复用的开放观点数据。
+3. 如果组内有 ESG 领域经验、PDF 处理能力和可承受标注工时的情况下选 Greenwash；先做文本 MVP，视觉页面检索与外部核查作为逐级增强项。
+4. 定题后把仓库根目录 README 的 `<Pending Proposal / Approval>` 替换为最终摘要，并把重叠检查、数据截止日期、许可与伦理处理写进报告。
