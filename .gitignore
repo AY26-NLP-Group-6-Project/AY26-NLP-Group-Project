@@ -224,3 +224,6 @@ tmp/
 
 # local academic-use corpus of company sustainability reports (never commit / redistribute)
 kb/raw/
+
+# annotation master / LLM pre-labels: private until annotator sheets are complete
+kb/annotation/
