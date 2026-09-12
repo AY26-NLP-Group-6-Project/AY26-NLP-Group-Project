@@ -1,0 +1,35 @@
+[project]
+name = "greenwash-rag"
+version = "0.1.0"
+description = "Greenwash-RAG: evidence-grounded, cross-year tracking of SGX sustainability claims"
+requires-python = ">=3.12"
+dependencies = [
+    "gw-common",
+    "baseline-rag",
+    "graph-rag",
+]
+
+[tool.uv.workspace]
+members = ["src/common", "src/baseline-rag", "src/graph-rag"]
+
+[tool.uv.sources]
+gw-common = { workspace = true }
+baseline-rag = { workspace = true }
+graph-rag = { workspace = true }
+
+[dependency-groups]
+dev = [
+    "httpx>=0.28.1",
+    "pytest>=8",
+    "ruff>=0.6",
+]
+
+[tool.ruff]
+line-length = 110
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

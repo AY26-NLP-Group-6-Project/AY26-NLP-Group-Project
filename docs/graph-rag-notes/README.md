@@ -1,0 +1,141 @@
+# Graph-RAG notes · roadmap
+
+Working notes for the Graph-RAG line of Proposal 3 (Greenwash-RAG). Started 2026-09-12.
+These are design notes, not a proposal: they fix the interfaces first so that the baseline RAG,
+the graph RAG and any later agentic variant are measured by the same harness.
+
+- `01-graph-schema.md` — what the graph contains and how it is built
+- `02-repo-and-tooling.md` — uv workspace, layout, commands
+- `03-eval-contract.md` — what every system must implement to be evaluated
+- `04-api-contract.md` — FastAPI surface for the front end
+
+## 1. Why a graph at all
+
+Hybrid retrieval (BM25 + dense + RRF) ranks passages by similarity. Three things we need are not
+similarity problems:
+
+1. **Same company, same aspect, other year.** ESG language is templated, so nearest-neighbour
+   search returns other companies' near-identical sentences. The constraint we want is an exact
+   join on `(company, canonical_aspect, year)`.
+2. **Promise fulfilment.** "Did the 2022 `planning` statement become an `implemented` statement or
+   a metric by 2024?" is a two-hop traversal, not a ranking.
+3. **Moved goalposts.** Baseline-year changes, restated figures and quietly dropped targets are
+   comparisons between structured records.
+
+Prior art: EmeraldMind (WWW 2026) already ships an ESG KG (EmeraldGraph, 53,748 entities /
+59,344 relations over 37 reports) with EM-KGRAG ablations, **but it has no temporal dimension**;
+ML-Promise is single-year; A3CG never compares across years. So the defensible contribution is a
+**temporal claim graph**, not "an ESG knowledge graph".
+
+## 2. Scope and non-goals
+
+In scope:
+
+- A narrow, mostly deterministic property graph over the existing `kb/` corpus
+  (240 reports, 56 companies, 2020–2025) — see `01-graph-schema.md`.
+- Graph traversal as an *evidence provider* for the existing RQ1 ablation, i.e. one more arm:
+  `sentence-only / +local / +same-report (RRF) / +cross-year (RRF) / +cross-year (graph)`.
+- Trajectory reconstruction (RQ2) as a graph query.
+
+Non-goals for this pilot:
+
+- Open-domain LLM entity extraction over the whole corpus (error compounds, nothing to validate it against).
+- Community summarisation à la Microsoft GraphRAG — our queries are local and structured, not global.
+- Free-form ReAct agents. An agentic arm, if any, is a bounded traversal policy (`04` + `03`).
+
+## 3. Labels used in this pilot
+
+The pilot runs against **`LLM_pre`** (the pre-filled labels in `kb/annotation/GW_master_1000.xlsx`),
+because human annotation is still in flight. Current signal: on the rows two annotators have
+completed, agreement with `LLM_pre` is ~86 %.
+
+Rules we hold ourselves to:
+
+- Every eval artefact records `label_source` (`llm_pre` | `human_majority`) and the dataset build hash.
+- `uv run gw-eval --labels human` re-runs everything unchanged once the pilot gold lands.
+- No headline number in the report/paper is quoted from `llm_pre` runs; they are development numbers.
+- Systems never see `LLM_pre` as input — it is only ever the target.
+
+## 4. Phases and gates
+
+| Phase | Deliverable | Gate to proceed |
+|---|---|---|
+| **M0 scaffold** ✅ 2026-09-12 | uv workspace, `src/common` (schemas, Protocols, registry, frozen datasets, metrics, runner, report, FastAPI factory), stubs for `baseline-rag` / `graph-rag` / `agentic-graph-rag`, 8 tests | done: `gw-data build gw1000` froze 1,000 items at `fddce492c10d`; `gw-eval --system majority` gives macro-F1 0.2264 / acc 0.5143, `random` 0.3109 / 0.2877; both write `metrics.json`, `manifest.json`, `report.md` |
+| **M1 graph build (narrow)** | Statement/Report/Company nodes for 5–10 companies × 3 years; aspects from our 1,000 annotated spans; DuckDB store | graph loads, `(company, aspect, year)` join returns non-empty chains for ≥20 aspects |
+| **M2 canonicalisation** | alias table + clustering for aspects; manual audit of 100 clusters | cluster purity ≥0.8 on the audited sample, else fall back to string-normalised exact match |
+| **M3 metrics & targets** | regex + unit extraction (Scope 1/2/3, kWh, m³, tCO₂e, %, target year, baseline year) | precision ≥0.9 on a 100-row manual check |
+| **M4 retrieval arm** | `graph-rag` implements `Retriever`; RQ1 five-condition ablation runs end to end | graph arm reported next to RRF arm, whatever the sign of the delta |
+| **M5 trajectories** | `TrajectoryBuilder`; transition F1 on the ~60 (company, aspect) trajectory set | — |
+| **M6 serving** | FastAPI app exposing classify / retrieve / trajectory / subgraph | p95 latency ≤8 s end to end |
+| **M7 agentic arm** | bounded traversal policy (plan, rewrite, traverse, stop), ≤3 hops, hard timeout; reported in the same ablation table as the other arms | runs under the same harness with cost and latency reported; a loss is a result, not a reason to hide it |
+
+## 5. Risks
+
+1. **Aspect canonicalisation is the whole ball game.** If "Scope 1 emissions", "direct emissions"
+   and "our carbon footprint" do not merge, every cross-year edge is missing. M2 has an explicit gate.
+2. **LLM_pre bias.** The graph arm is developed against labels I produced; a model that shares my
+   conventions looks better than it is. Mitigation: §3 rules, plus re-running on gold before any claim.
+3. **Extraction noise.** `kb/` text has tables, ligature artefacts and merged fragments; metric regexes
+   will hit them. M3 gate is a manual precision check, and every node keeps `{file, page, sha256}`.
+4. **Latency.** Graph queries are cheap; LLM hops are not. Budget is enforced in the harness
+   (`latency_p95` is a reported metric, not an afterthought).
+5. **Scope creep.** The graph is a retrieval arm for an existing experiment. If it stops being that,
+   it is out of scope.
+
+## 6. Decisions taken (2026-09-12)
+
+| # | Decision | Consequence |
+|---|---|---|
+| D1 | Store = **DuckDB + networkx**. No Neo4j service. | `DuckDBGraphStore` is the only implementation we build; the Protocol stays so Neo4j remains possible |
+| D2 | Build the graph over **eval-set companies only** first | scope is the companies and years touched by `gw1000`; expand only if M2 passes |
+| D3 | Aspects outside the annotated 1,000 sentences are extracted by **LLM**, prompted with the A3CG aspect rules | needs a measured extraction-quality gate, see A3 and A8 |
+| D4 | The **agentic arm is part of the comparison**, not a side demo | M7 is promoted into the main ablation table; cost and latency are first-class metrics, not footnotes |
+
+## 7. Evidence ledger
+
+Convention for these notes: every design claim is tagged **[cited]** (a paper says so, with the
+number), **[measured]** (we measured it on our data) or **[assumed]** (neither yet). No [assumed]
+row may reach the report without becoming one of the other two first.
+
+### 7.1 Already checked against papers
+
+| Claim | Tag | Source |
+|---|---|---|
+| An ESG KG plus graph RAG already exists, so a plain KG is not novelty | [cited] | EmeraldMind, arXiv 2512.11506: EmeraldGraph, 53,748 entities / 59,344 relations from 37 reports; variants EM-RAG, EM-KGRAG, EM-HYBRID |
+| Graph-only retrieval does not dominate text retrieval; the hybrid does | [cited] | EmeraldMind Table 5: variants reach 49-77 % coverage vs 19-31 % for the baseline LLM at 77-93 % accuracy; EM-HYBRID is best on overall accuracy, up to 70.59 %, by judging EM-RAG and EM-KGRAG justifications pairwise. Consequence for us: keep a fusion arm, do not bet on graph-only |
+| ESG graphs are sparse, company-centred and star-shaped, so reasoning should stay local | [cited] | EmeraldMind section 7.2: Organization nodes are high-degree hubs, average shortest path and diameter are large, global traversal is inefficient. Consequence: company-scoped subgraphs, small hop limits |
+| KPI structure carries most of the graph density | [cited] | EmeraldMind Table 4: KPIObservation is about 46 % of entities, reportsKPI about 42 % of edges. Consequence: our Metric and Target nodes are the payload, not an afterthought |
+| Sensible starting hyperparameters for graph retrieval | [cited] | EmeraldMind Table 2: top-n 3 nodes per type, similarity threshold 0.2, max 3 hops; EM-RAG top-m 8 chunks |
+| Hop limits, schema constraints and traversal heuristics are open questions | [cited] | EmeraldMind, Conclusions and Future Work, names exactly these as future work |
+| EmeraldMind has no temporal dimension | [measured] | full-text search of arXiv 2512.11506 returns no hit for temporal, longitudinal, across years, year-over-year or multi-year |
+| A3CG and its follow-up classify isolated sentences | [cited] | A3CG, ACL 2025, and COGLM, arXiv 2601.21722 |
+| Vector RAG is already the right tool for locally answerable queries; GraphRAG targets global sensemaking | [cited] | Microsoft GraphRAG, arXiv 2404.16130: "RAG works well for queries that can be answered with information localized within a small set of records", whereas vector RAG "do not support sensemaking queries ... such as What are the key trends". Settles A2: our queries are local and structured, so community-summary GraphRAG is out of scope |
+| Community-summary indexing is expensive | [cited] | GraphRAG: graph indexing with a 600-token window took 281 minutes for the ~1M-token Podcast dataset on a 16 GB VM; datasets were 1669 chunks (~1M tokens) and 3197 chunks (~1.7M tokens); evaluation is LLM-as-judge on comprehensiveness, diversity, empowerment and directness with 72-83 % win rates |
+| Graph-only retrieval is bad for specific questions; keep the source text | [cited] | Zhou et al., arXiv 2503.04338, unified graph-RAG study: "for specific QA tasks, retaining the original text chunks is crucial"; methods relying solely on graph structure (G-retriever, ToG, DALK) "perform poorly on most datasets", and G-retriever even reduced accuracy by 14.17 % on one dataset. Consequence: our graph arm returns Statement nodes with their text and page, never bare nodes |
+| Graph structure pays off on multi-hop questions | [cited] | Same study: on MultihopQA, DALK improved accuracy 6.57 % and recall 27.94 % over VanillaRAG. Cross-year promise-to-evidence is our multi-hop case |
+| The strongest configuration is graph plus vector, not graph alone | [cited] | Same study, Exp.6: their new best method VGraphRAG combines top-k entities and relations with vector-selected communities and chunks, beating RAPTOR by 6.42 % on MultihopQA and 11.6 % on MusiqueQA. Plus EmeraldMind EM-HYBRID. Consequence: a `cross_year_fused` arm is required, not optional |
+| Agentic RAG is not universally better, and it is measurably more expensive | [cited] | Ferrazzi et al., arXiv 2601.07711: "neither Enhanced nor Agentic RAG is universally superior"; agentic used 3.3x more input tokens, 1.9x more output tokens and 1.5x more time on average, up to 3.6x more expensive; "a well-optimized Enhanced RAG can match or exceed Agentic performance while remaining more efficient" |
+| Where agentic actually helps: intent routing and query rewriting; where it hurts: document selection | [cited] | Same paper: agentic wins on user-intent handling and dynamic query rewriting, but "is not as good as the re-ranking done by Enhanced RAG at selecting just the most meaningful docs"; latency is dominated by LLM calls (45-50 % answer generation, similar share for rewriting, 0-5 % retrieval). Consequence for M7: the agent plans and rewrites, the reranker still picks |
+| Missing context and unattributed statements are the dominant error modes | [cited] | A3CG Tables 12 and 13 (ellipsis, ambiguous syntax, modality, negation, unattributed, future dependency) |
+
+### 7.2 Still unsupported, must be settled before or during implementation
+
+| # | Assumption | How it gets settled |
+|---|---|---|
+| A1 | Traversal beats RRF for same-company same-aspect cross-year lookup | our M4 ablation; a negative result is reportable |
+| A3 | Embedding plus clustering canonicalises ESG aspects at purity 0.8 or better | M2 audit of 100 clusters; if it fails, read entity-resolution and aspect-normalisation literature before inventing a method |
+| A4 | Development decisions taken on LLM_pre labels survive the switch to human gold | pilot kappa, then re-run; look for work on silver-label evaluation and system ranking stability under label noise |
+| A5 | Regex plus unit validation extracts ESG metrics at 0.9 precision | M3 manual check; compare with how ML-Promise and ESGBench extract numbers before writing our own |
+| A6 | Retrieved evidence helps specifically the ellipsis and unattributed buckets | bucketed analysis in M4, the prediction is falsifiable |
+| A7 | Restated baselines and moved goalposts are detectable and meaningful signals | read the greenwashing measurement literature (Calamai et al. survey, arXiv 2502.07541) for how prior work operationalises them |
+| A8 | LLM aspect extraction (D3) on unlabelled corpus sentences is good enough to build edges on | measure it against our 1,000 gold spans held out from the prompt: span exact/partial match and category accuracy; gate before the extracted aspects enter the graph |
+| A9 | An agent that plans and rewrites beats fixed traversal on our task at acceptable cost | M7 under the same harness, with the token and latency multipliers from arXiv 2601.07711 as the expected cost baseline |
+
+### 7.3 Reading queue
+
+1. ~~Microsoft GraphRAG, arXiv 2404.16130~~ — read 2026-09-12, A2 settled (see 7.1).
+1b. ~~Zhou et al., arXiv 2503.04338, unified graph-RAG study~~ and ~~Ferrazzi et al., arXiv 2601.07711, Is Agentic RAG worth it~~ — read 2026-09-12.
+2. Calamai et al. greenwashing NLP survey, arXiv 2502.07541 (already in the corpus), for A7 and for
+   how the field frames verifiability.
+3. ML-Promise, EMNLP 2025, for evidence linking inside one document and for its annotation design.
+4. A temporal or time-aware RAG reference, to be found, for how others handle year-scoped evidence.
