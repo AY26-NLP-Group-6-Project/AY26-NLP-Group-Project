@@ -61,7 +61,7 @@ Rules we hold ourselves to:
 | Phase | Deliverable | Gate to proceed |
 |---|---|---|
 | **M0 scaffold** ✅ 2026-09-12 | uv workspace, `src/common` (schemas, Protocols, registry, frozen datasets, metrics, runner, report, FastAPI factory), stubs for `baseline-rag` / `graph-rag` / `agentic-graph-rag`, 8 tests | done: `gw-data build gw1000` froze 1,000 items at `fddce492c10d`; `gw-eval --system majority` gives macro-F1 0.2264 / acc 0.5143, `random` 0.3109 / 0.2877; both write `metrics.json`, `manifest.json`, `report.md` |
-| **M1 graph build (narrow)** | Statement/Report/Company nodes for 5–10 companies × 3 years; aspects from our 1,000 annotated spans; DuckDB store | graph loads, `(company, aspect, year)` join returns non-empty chains for ≥20 aspects |
+| **M1 graph build (narrow)** ⏸ paused 2026-09-12 | code done (`parse` / `aspects` / `derive`, DuckDB store, 5 tests); build scoped to 52 eval companies x 233 reports. Parse is **135/233 reports, 55,328 statements**; it is resumable, so `uv run gw-graph parse` picks up where it stopped | graph loads, `(company, aspect, year)` join returns non-empty chains for >=20 aspects — not yet verified, needs the remaining 98 reports |
 | **M2 canonicalisation** | alias table + clustering for aspects; manual audit of 100 clusters | cluster purity ≥0.8 on the audited sample, else fall back to string-normalised exact match |
 | **M3 metrics & targets** | regex + unit extraction (Scope 1/2/3, kWh, m³, tCO₂e, %, target year, baseline year) | precision ≥0.9 on a 100-row manual check |
 | **M4 retrieval arm** | `graph-rag` implements `Retriever`; RQ1 five-condition ablation runs end to end | graph arm reported next to RRF arm, whatever the sign of the delta |

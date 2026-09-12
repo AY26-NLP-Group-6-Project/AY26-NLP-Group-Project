@@ -3,7 +3,7 @@ name = "graph-rag"
 version = "0.1.0"
 description = "Temporal claim graph over SGX sustainability reports: build, traversal retrieval, trajectories"
 requires-python = ">=3.12"
-dependencies = ["gw-common", "duckdb>=1.1", "networkx>=3.3"]
+dependencies = ["gw-common", "duckdb>=1.1", "networkx>=3.3", "pymupdf>=1.24", "pyyaml>=6"]
 
 [project.scripts]
 gw-graph = "graph_rag.cli:main"

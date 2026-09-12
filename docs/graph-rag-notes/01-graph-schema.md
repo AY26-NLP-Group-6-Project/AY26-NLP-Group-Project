@@ -109,3 +109,20 @@ kb/manifest.csv + kb/raw/*.pdf
 
 Every stage is a separate `uv run` command, idempotent, writing to `artifacts/graph/<build_id>/`.
 A build is never overwritten; the eval harness records which `build_id` it ran against.
+
+## 7. M1 status (what is actually built)
+
+Stages `parse`, `aspects`, `derive` are implemented and run over the D2 scope: the 52 companies the
+eval set touches, all of their kept reports 2020-2025 (233 reports, ~10.5k pages).
+
+Two deliberate simplifications, both replaced later:
+
+- **Aspect identity is normalised exact match** (`aspect_key`: lowercase, strip punctuation, drop a
+  leading determiner or possessive). No clustering yet, so two spans merge only when they are the
+  same words. Sparser graph, no false cross-year links. M2 replaces this, gated on purity >= 0.8.
+- **Mentions come from two sources**: `gold_span` (the annotated span of an eval sentence, carrying
+  its action label) and `string_match` (the same surface form found verbatim in another statement of
+  the same company, with **no** action label). String matching is what makes cross-year chains exist
+  before any extractor runs; it is capped per (company, aspect, year) and skips spans shorter than
+  10 characters or 2 tokens, so generic aspects like "waste" or "data" cannot flood the graph.
+  M3/D3 replaces it with LLM extraction, gated by A8.
