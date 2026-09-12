@@ -83,3 +83,32 @@ def test_text_helpers_match_the_annotation_pipeline():
     ]
     assert normalise("Scope 1 & 2 emissions!") == "scope 1 2 emissions"
     assert aspect_key("Our energy consumption") == "energy consumption"
+
+
+def test_ingest_extracted_rejects_bad_rows(tmp_path):
+    """Externally extracted spans enter as method='llm' and only if they are real substrings."""
+    import json
+
+    from graph_rag.build.aspects import ingest_extracted
+
+    store = _fixture_store(tmp_path)
+    pred = tmp_path / "pred.jsonl"
+    pred.write_text(
+        "\n".join(
+            json.dumps(r)
+            for r in [
+                {"stmt_id": "s1", "spans": [{"text": "solar panels", "category": "resource optimisation"}]},
+                {"stmt_id": "s2", "spans": [{"text": "wind turbines", "category": "emissions control"}]},
+                {"stmt_id": "s2", "spans": [{"text": "solar panels", "category": "not a category"}]},
+                {"stmt_id": "nope", "spans": [{"text": "solar panels", "category": "workplace"}]},
+            ]
+        ),
+        encoding="utf-8",
+    )
+    stats = ingest_extracted(store, pred, verbose=False)
+    assert stats["rejected"] == {
+        "unknown_stmt_id": 1, "not_a_substring": 1, "bad_category": 1, "empty_span": 0
+    }
+    assert stats["llm_mentions"] == 1
+    rows = store.con.execute("SELECT method, count(*) FROM mentions GROUP BY 1 ORDER BY 1").fetchall()
+    assert dict(rows) == {"gold_span": 1, "string_match": 1}  # s1/solar panels already existed

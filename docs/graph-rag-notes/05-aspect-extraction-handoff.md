@@ -32,7 +32,11 @@ the repo is required.
 | `<your output>.jsonl` | you return | `{"stmt_id", "spans": [{"text", "category"}]}` per line, same order |
 | `data/eval/extract_gold.jsonl` | given to you **only if you want a dry run** | 1,000 sentences with 1,098 gold spans |
 
-Generate the input on our side with:
+Both files already exist on our side (regenerate with the commands below):
+`artifacts/graph/dev/extract_input.jsonl` holds **9,320 statements** (40 sampled per report, junk
+pre-filtered), `data/eval/extract_gold.jsonl` holds **1,000 sentences / 1,098 gold spans**.
+
+Regenerate with:
 
 ```bash
 uv run gw-graph export-extract --per-report 40 --out artifacts/graph/dev/extract_input.jsonl
@@ -92,9 +96,14 @@ Two failure modes we care about more than the headline F1:
 ```bash
 # after the gate passes
 uv run gw-graph aspects --config configs/graph.dev.yaml --extracted your_output.jsonl
-uv run gw-graph derive
-uv run gw-graph stats        # cross-year chains, the M1/M2 gate
+uv run gw-graph derive  --config configs/graph.dev.yaml
+uv run gw-graph stats                       # cross-year chains
 ```
+
+Ingestion validates every row and counts what it throws away: unknown `stmt_id`, span that is not a
+literal substring of the sentence, category outside the ten, empty span. Rejects are reported, not
+silently dropped, so a systematic formatting mistake shows up immediately rather than as a quietly
+smaller graph.
 
 Extracted aspects are stored with `method='llm'` and are never mixed with `method='gold_span'`, so
 every experiment can be re-run with or without them and we can always say which edges came from

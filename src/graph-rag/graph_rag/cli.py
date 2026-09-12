@@ -27,14 +27,20 @@ def _git_sha() -> str:
         return "unknown"
 
 
-def build(cfg: GraphConfig, stages: list[str], rebuild: bool = False) -> dict:
+def build(
+    cfg: GraphConfig, stages: list[str], rebuild: bool = False, extracted: str | None = None
+) -> dict:
     cfg.out_dir.mkdir(parents=True, exist_ok=True)
     t0 = time.perf_counter()
     stats = {}
     with DuckDBGraphStore(cfg.db_path) as store:
         for name in stages:
             print(f"[{name}]", flush=True)
-            kwargs = {"rebuild": rebuild} if name == "parse" else {}
+            kwargs: dict = {}
+            if name == "parse":
+                kwargs["rebuild"] = rebuild
+            elif name == "aspects" and extracted:
+                kwargs["extracted"] = extracted
             stats[name] = STAGES[name](cfg, store, **kwargs)
         counts = store.counts()
         chains = store.chains(min_years=2)
@@ -79,6 +85,7 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--gold", help="gold JSONL for score-extraction (default data/eval/extract_gold.jsonl)")
     ap.add_argument("--limit", type=int, help="cap the number of exported statements")
     ap.add_argument("--per-report", type=int, help="sample at most N statements per report")
+    ap.add_argument("--extracted", help="extractor output JSONL to ingest during the aspects stage")
     args = ap.parse_args(argv)
 
     cfg = GraphConfig.load(args.config, build_id=args.build_id)
@@ -104,6 +111,6 @@ def main(argv: list[str] | None = None) -> int:
         out.write_text(json.dumps(result, indent=2), encoding="utf-8")
         return 0 if result["gate"]["passed"] else 1
     stages = list(STAGES) if args.stage == "build" else [args.stage]
-    manifest = build(cfg, stages, rebuild=args.rebuild)
+    manifest = build(cfg, stages, rebuild=args.rebuild, extracted=args.extracted)
     print(json.dumps({k: manifest[k] for k in ("counts", "cross_year_chains", "wall_seconds")}, indent=2))
     return 0
