@@ -63,6 +63,7 @@ CREATE TABLE IF NOT EXISTS follows_up (
     aspect_id   VARCHAR,
     company     VARCHAR,
     years_apart INTEGER,
+    same_text   BOOLEAN,          -- the later statement is the earlier one copied verbatim
     PRIMARY KEY (from_stmt, to_stmt, aspect_id)
 );
 """
@@ -175,12 +176,13 @@ class DuckDBGraphStore:
             g.add_node(stmt_id, kind="statement", text=text, year=year, page=page, company=company)
             g.add_node(aid, kind="aspect", canonical=canonical, category=category)
             g.add_edge(stmt_id, aid, key="mentions", action=action)
-        for a, b, aid, years in self.con.execute(
-            "SELECT from_stmt, to_stmt, aspect_id, years_apart FROM follows_up WHERE company = ?",
+        for a, b, aid, years, same in self.con.execute(
+            "SELECT from_stmt, to_stmt, aspect_id, years_apart, same_text FROM follows_up "
+            "WHERE company = ?",
             [company],
         ).fetchall():
             if g.has_node(a) and g.has_node(b):
-                g.add_edge(a, b, key="follows_up", aspect_id=aid, years_apart=years)
+                g.add_edge(a, b, key="follows_up", aspect_id=aid, years_apart=years, same_text=same)
         return g
 
     def close(self) -> None:

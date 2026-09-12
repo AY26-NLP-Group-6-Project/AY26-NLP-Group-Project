@@ -61,13 +61,32 @@ Rules we hold ourselves to:
 | Phase | Deliverable | Gate to proceed |
 |---|---|---|
 | **M0 scaffold** ✅ 2026-09-12 | uv workspace, `src/common` (schemas, Protocols, registry, frozen datasets, metrics, runner, report, FastAPI factory), stubs for `baseline-rag` / `graph-rag` / `agentic-graph-rag`, 8 tests | done: `gw-data build gw1000` froze 1,000 items at `fddce492c10d`; `gw-eval --system majority` gives macro-F1 0.2264 / acc 0.5143, `random` 0.3109 / 0.2877; both write `metrics.json`, `manifest.json`, `report.md` |
-| **M1 graph build (narrow)** ⏸ paused 2026-09-12 | code done (`parse` / `aspects` / `derive`, DuckDB store, 5 tests); build scoped to 52 eval companies x 233 reports. Parse is **135/233 reports, 55,328 statements**; it is resumable, so `uv run gw-graph parse` picks up where it stopped | graph loads, `(company, aspect, year)` join returns non-empty chains for >=20 aspects — not yet verified, needs the remaining 98 reports |
+| **M1 graph build (narrow)** ✅ 2026-09-12 | 52 companies, 233 reports, **108,948 statements**, 734 aspects, 19,586 mentions, 7,146 `follows_up` edges, DuckDB store, 13 tests | **passed**: 2,804 cross-year chains (1,931 span >=3 years) against a gate of 20; all 1,000 eval sentences matched a parsed statement, so the graph joins the eval set exactly |
 | **M2 canonicalisation** | alias table + clustering for aspects; manual audit of 100 clusters | cluster purity ≥0.8 on the audited sample, else fall back to string-normalised exact match |
 | **M3 metrics & targets** | regex + unit extraction (Scope 1/2/3, kWh, m³, tCO₂e, %, target year, baseline year) | precision ≥0.9 on a 100-row manual check |
 | **M4 retrieval arm** | `graph-rag` implements `Retriever`; RQ1 five-condition ablation runs end to end | graph arm reported next to RRF arm, whatever the sign of the delta |
 | **M5 trajectories** | `TrajectoryBuilder`; transition F1 on the ~60 (company, aspect) trajectory set | — |
 | **M6 serving** | FastAPI app exposing classify / retrieve / trajectory / subgraph | p95 latency ≤8 s end to end |
 | **M7 agentic arm** | bounded traversal policy (plan, rewrite, traverse, stop), ≤3 hops, hard timeout; reported in the same ablation table as the other arms | runs under the same harness with cost and latency reported; a loss is a result, not a reason to hide it |
+
+## 4b. What M1 actually showed
+
+- **The splitter port is exact.** 1,000/1,000 eval sentences matched a parsed statement by normalised
+  text inside their own report. The graph and the eval set share identity, which the whole design
+  depends on.
+- **Page furniture nearly poisoned the chains.** The first run produced 3,682 chains, but spot checks
+  found links anchored on GRI content-index rows repeated across years ("Page 25 of 26 GRI Reference
+  Disclosure Response 102-54 …"). Adding a sentence filter to the string-match step dropped 23,097
+  candidate mentions and left 2,804 chains on real sentences. Numbers that pass a gate still have to
+  be read.
+- **27 % of cross-year edges link verbatim repeats.** 1,922 of 7,146 `follows_up` edges join two
+  identical sentences a year apart — templated reporting, which is a finding rather than a bug. Edges
+  now carry `same_text`, so the trajectory task can separate "the claim progressed" from "the
+  paragraph was copied".
+- **The labelled part of the graph is thin, as expected.** Only 392 chains contain at least one
+  action-labelled statement, and just 6 have labels at two different years. That gap is precisely
+  what the D3 extractor plus a classifier fill; until then the graph knows *where* an aspect is
+  discussed, not *what was claimed*.
 
 ## 5. Risks
 

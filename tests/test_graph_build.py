@@ -62,8 +62,11 @@ def test_derive_links_consecutive_years(tmp_path):
     cfg.out_dir.mkdir(parents=True, exist_ok=True)
     stats = derive_run(cfg, store, verbose=False)
     assert stats["follows_up_edges"] == 1
-    edge = store.con.execute("SELECT from_stmt, to_stmt, years_apart FROM follows_up").fetchone()
-    assert edge == ("s1", "s2", 2)
+    edge = store.con.execute(
+        "SELECT from_stmt, to_stmt, years_apart, same_text FROM follows_up"
+    ).fetchone()
+    assert edge == ("s1", "s2", 2, False)
+    assert stats["verbatim_repeat_edges"] == 0
 
 
 def test_subgraph_has_statement_and_aspect_nodes(tmp_path):
