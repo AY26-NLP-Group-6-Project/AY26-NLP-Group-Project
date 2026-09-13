@@ -69,6 +69,20 @@ Console scripts live in `src/common` (`gw-eval`, `gw-serve`) and `src/graph-rag`
 - No network calls at eval time except to a locally configured model server; anything remote must be
   cached in `artifacts/cache/` keyed by request hash so a re-run is offline.
 
+## 3b. Models and secrets
+
+All model calls go through `gw_common.llm.LLMClient`, configured from a git-ignored `.env`
+(template: `.env.example`): `OPENAI_API_KEY`, optional `OPENAI_BASE_URL`, `GW_CHAT_MODEL`,
+`GW_EMBED_MODEL` (default `text-embedding-3-small`), `GW_LLM_TEMPERATURE` (default 0), `GW_LLM_CACHE`,
+`GW_EMBED_BACKEND` (`openai` | `fastembed`). Every request/response is cached in
+`artifacts/cache/llm.sqlite` keyed by the full payload hash, so an evaluation re-run makes no network
+call; each call reports input/output tokens, latency and cache hits for the `ops` metrics. The key is
+never written to manifests (`LLMSettings.describe()`).
+
+Canonicalisation embeds with the OpenAI model when a key is configured and with local
+`BAAI/bge-small-en-v1.5` (fastembed, ONNX) otherwise. The annotation pools were built with the local
+model on purpose, so the gold clustering is not shaped by the embedding model being evaluated.
+
 ## 4. Conventions
 
 - Python 3.12, `ruff` + `ruff format`, line length 110 (matches the annotation scripts).

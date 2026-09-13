@@ -12,12 +12,18 @@ from pathlib import Path
 
 from graph_rag import extract as extraction
 from graph_rag.build import aspects as stage_aspects
+from graph_rag.build import canonical as stage_canonical
 from graph_rag.build import derive as stage_derive
 from graph_rag.build import parse as stage_parse
 from graph_rag.config import REPO_ROOT, GraphConfig
 from graph_rag.store.duckdb_store import DuckDBGraphStore
 
-STAGES = {"parse": stage_parse.run, "aspects": stage_aspects.run, "derive": stage_derive.run}
+STAGES = {
+    "parse": stage_parse.run,
+    "aspects": stage_aspects.run,
+    "canonical": stage_canonical.run,
+    "derive": stage_derive.run,
+}
 
 
 def _git_sha() -> str:
@@ -28,7 +34,11 @@ def _git_sha() -> str:
 
 
 def build(
-    cfg: GraphConfig, stages: list[str], rebuild: bool = False, extracted: str | None = None
+    cfg: GraphConfig,
+    stages: list[str],
+    rebuild: bool = False,
+    extracted: str | None = None,
+    canon_kwargs: dict | None = None,
 ) -> dict:
     cfg.out_dir.mkdir(parents=True, exist_ok=True)
     t0 = time.perf_counter()
@@ -41,6 +51,8 @@ def build(
                 kwargs["rebuild"] = rebuild
             elif name == "aspects" and extracted:
                 kwargs["extracted"] = extracted
+            elif name == "canonical":
+                kwargs.update(canon_kwargs or {"method": "exact"})
             stats[name] = STAGES[name](cfg, store, **kwargs)
         counts = store.counts()
         chains = store.chains(min_years=2)
@@ -75,7 +87,8 @@ def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser("gw-graph")
     ap.add_argument(
         "stage",
-        choices=[*STAGES, "build", "stats", "export-extract", "export-gold", "score-extraction"],
+        choices=[*STAGES, "build", "stats", "export-extract", "export-gold", "score-extraction",
+                 "canon-pools", "canon-tune"],
     )
     ap.add_argument("--config", default="configs/graph.dev.yaml")
     ap.add_argument("--build-id")
@@ -86,6 +99,10 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--limit", type=int, help="cap the number of exported statements")
     ap.add_argument("--per-report", type=int, help="sample at most N statements per report")
     ap.add_argument("--extracted", help="extractor output JSONL to ingest during the aspects stage")
+    ap.add_argument("--method", choices=stage_canonical.METHODS, default="exact",
+                    help="canonicalisation method for the canonical stage")
+    ap.add_argument("--threshold", type=float, help="cosine similarity threshold for --method hac")
+    ap.add_argument("--labels", help="annotated pool partitions JSONL for canon-tune")
     args = ap.parse_args(argv)
 
     cfg = GraphConfig.load(args.config, build_id=args.build_id)
@@ -100,6 +117,21 @@ def main(argv: list[str] | None = None) -> int:
         out = Path(args.out or REPO_ROOT / "data" / "eval" / "extract_gold.jsonl")
         print(json.dumps(extraction.export_gold(out), indent=2))
         return 0
+    if args.stage == "canon-pools":
+        from graph_rag.canonical import tuning
+
+        out = Path(args.out or cfg.out_dir / "canon_pools.jsonl")
+        print(json.dumps(tuning.export_pools(cfg, out), indent=2))
+        return 0
+    if args.stage == "canon-tune":
+        from graph_rag.canonical import tuning
+
+        if not args.labels:
+            ap.error("--labels is required for canon-tune")
+        pools = Path(args.out or cfg.out_dir / "canon_pools.jsonl")
+        result = tuning.tune(cfg, pools, Path(args.labels))
+        print(json.dumps(result["summary"], indent=2))
+        return 0
     if args.stage == "score-extraction":
         if not args.pred:
             ap.error("--pred is required for score-extraction")
@@ -111,6 +143,9 @@ def main(argv: list[str] | None = None) -> int:
         out.write_text(json.dumps(result, indent=2), encoding="utf-8")
         return 0 if result["gate"]["passed"] else 1
     stages = list(STAGES) if args.stage == "build" else [args.stage]
-    manifest = build(cfg, stages, rebuild=args.rebuild, extracted=args.extracted)
+    canon_kwargs = {"method": args.method, "threshold": args.threshold}
+    manifest = build(
+        cfg, stages, rebuild=args.rebuild, extracted=args.extracted, canon_kwargs=canon_kwargs
+    )
     print(json.dumps({k: manifest[k] for k in ("counts", "cross_year_chains", "wall_seconds")}, indent=2))
     return 0

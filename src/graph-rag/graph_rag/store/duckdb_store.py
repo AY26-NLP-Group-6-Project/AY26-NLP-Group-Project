@@ -57,6 +57,14 @@ CREATE TABLE IF NOT EXISTS mentions (
     method       VARCHAR,        -- gold_span | string_match | llm
     PRIMARY KEY (stmt_id, aspect_id)
 );
+CREATE TABLE IF NOT EXISTS aspect_canon (
+    aspect_id   VARCHAR PRIMARY KEY,
+    canon_id    VARCHAR,          -- the identity chains and edges group on (M2)
+    canonical   VARCHAR,
+    method      VARCHAR,          -- exact | morph | hac
+    threshold   DOUBLE,
+    model       VARCHAR
+);
 CREATE TABLE IF NOT EXISTS follows_up (
     from_stmt   VARCHAR,
     to_stmt     VARCHAR,
@@ -76,6 +84,11 @@ class Chain:
     canonical: str
     years: list[int]
     statements: list[str]
+
+
+# Grouping identity for an aspect: its canonical cluster when M2 has run, the raw aspect id otherwise.
+GROUP_ID = "COALESCE(c.canon_id, m.aspect_id)"
+GROUP_NAME = "COALESCE(c.canonical, a.canonical)"
 
 
 class DuckDBGraphStore:
@@ -112,20 +125,21 @@ class DuckDBGraphStore:
     def counts(self) -> dict[str, int]:
         out = {}
         for t in ("companies", "reports", "statements", "aspects", "aspect_aliases", "mentions",
-                  "follows_up"):
+                  "aspect_canon", "follows_up"):
             out[t] = self.con.execute(f"SELECT count(*) FROM {t}").fetchone()[0]
         return out
 
     def chains(self, min_years: int = 2) -> list[Chain]:
         """(company, aspect) groups whose statements span at least `min_years` distinct years."""
         rows = self.con.execute(
-            """
-            SELECT s.company, m.aspect_id, any_value(a.canonical),
+            f"""
+            SELECT s.company, {GROUP_ID} AS gid, any_value({GROUP_NAME}),
                    list(DISTINCT s.year ORDER BY s.year), list(s.stmt_id)
             FROM mentions m
             JOIN statements s USING (stmt_id)
             JOIN aspects a ON a.aspect_id = m.aspect_id
-            GROUP BY s.company, m.aspect_id
+            LEFT JOIN aspect_canon c ON c.aspect_id = m.aspect_id
+            GROUP BY s.company, gid
             HAVING count(DISTINCT s.year) >= ?
             ORDER BY count(DISTINCT s.year) DESC, s.company
             """,
@@ -136,10 +150,11 @@ class DuckDBGraphStore:
     def statements_for(
         self, company: str, aspect_id: str, year_from: int | None = None, year_to: int | None = None
     ) -> list[dict[str, Any]]:
-        sql = """
+        sql = f"""
             SELECT s.stmt_id, s.text, s.company, s.year, s.page, s.sha256, m.action, m.method
             FROM mentions m JOIN statements s USING (stmt_id)
-            WHERE s.company = ? AND m.aspect_id = ?
+            LEFT JOIN aspect_canon c ON c.aspect_id = m.aspect_id
+            WHERE s.company = ? AND {GROUP_ID} = ?
         """
         params: list[Any] = [company, aspect_id]
         if year_from is not None:
@@ -159,16 +174,17 @@ class DuckDBGraphStore:
     def subgraph(self, company: str, aspect_id: str | None = None) -> nx.MultiDiGraph:
         """Company-scoped subgraph for traversal. Small by construction: hundreds of nodes."""
         g = nx.MultiDiGraph()
-        sql = """
-            SELECT s.stmt_id, s.text, s.year, s.page, m.aspect_id, a.canonical, a.category, m.action
+        sql = f"""
+            SELECT s.stmt_id, s.text, s.year, s.page, {GROUP_ID}, {GROUP_NAME}, a.category, m.action
             FROM mentions m
             JOIN statements s USING (stmt_id)
             JOIN aspects a ON a.aspect_id = m.aspect_id
+            LEFT JOIN aspect_canon c ON c.aspect_id = m.aspect_id
             WHERE s.company = ?
         """
         params: list[Any] = [company]
         if aspect_id:
-            sql += " AND m.aspect_id = ?"
+            sql += f" AND {GROUP_ID} = ?"
             params.append(aspect_id)
         for stmt_id, text, year, page, aid, canonical, category, action in self.con.execute(
             sql, params
