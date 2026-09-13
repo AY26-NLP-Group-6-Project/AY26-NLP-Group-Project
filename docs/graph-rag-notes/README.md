@@ -147,7 +147,8 @@ row may reach the report without becoming one of the other two first.
 | A5 | Regex plus unit validation extracts ESG metrics at 0.9 precision | M3 manual check; compare with how ML-Promise and ESGBench extract numbers before writing our own |
 | A6 | Retrieved evidence helps specifically the ellipsis and unattributed buckets | bucketed analysis in M4, the prediction is falsifiable |
 | A7 | Restated baselines and moved goalposts are detectable and meaningful signals | read the greenwashing measurement literature (Calamai et al. survey, arXiv 2502.07541) for how prior work operationalises them |
-| A8 | LLM aspect extraction (D3) on unlabelled corpus sentences is good enough to build edges on | measure it against our 1,000 gold spans held out from the prompt: span exact/partial match and category accuracy; gate before the extracted aspects enter the graph |
+| A8 | LLM aspect extraction (D3) on unlabelled corpus sentences is good enough to build edges on | **[measured] passed 2026-09-12** (GPT-6 via Codex): partial F1 0.649, category acc 0.873, no-aspect FP 0.264; measured precision is a lower bound because gold skips enumeration items — needs a human adjudication sample before a corrected figure is quoted. See 05 section 8 |
+| A10 | Our category convention for climate-risk aspects (emissions control) matches A3CG | **[measured] it does not**: in the A3CG release climate-risk aspects are management 7 of 7; only climate targets/ambition/action are emissions control. Decision pending on re-mapping LLM_pre and the prompt/guide |
 | A9 | An agent that plans and rewrites beats fixed traversal on our task at acceptable cost | M7 under the same harness, with the token and latency multipliers from arXiv 2601.07711 as the expected cost baseline |
 
 ### 7.3 Reading queue

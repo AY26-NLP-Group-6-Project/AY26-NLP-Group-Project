@@ -108,3 +108,74 @@ smaller graph.
 Extracted aspects are stored with `method='llm'` and are never mixed with `method='gold_span'`, so
 every experiment can be re-run with or without them and we can always say which edges came from
 where.
+
+## 8. Run 1 · GPT-6 via Codex, 2026-09-12 — independent review
+
+Artefacts: `artifacts/graph/dev/extraction_gpt6_20260912/` (manifest, prompt copy, per-batch inputs
+and predictions, merged outputs, validation and score reports).
+
+### 8.1 What was re-checked on our side, and the result
+
+| check | result |
+|---|---|
+| SHA-256 of gold, corpus input, both prediction files, prompt copy vs manifest | all match; prompt copy byte-identical to `configs/prompts/aspect_extraction.md` |
+| merged predictions vs concatenated batches | same 1,000 / 9,320 records (bytes differ only in formatting) |
+| strict validation, re-implemented independently: row count, id order, exact keys, closed category set, case-sensitive verbatim substring, empty or duplicate spans | 0 problems on 1,000 calibration rows (1,387 spans) and 9,320 corpus rows (11,095 spans) |
+| repo scorer re-run on calibration | reproduces the reported metrics exactly |
+| gate A8 | **passed**: partial F1 0.6487 (>= 0.60), category accuracy 0.8734 (>= 0.70), no-aspect false-positive rate 0.2640 (<= 0.35). Excluding the three gold rows exposed before the run: 0.6473 / 0.8727 / 0.2640, still passes |
+
+### 8.2 What the numbers do not say
+
+- **Measured precision (0.58 partial) is a lower bound.** In an 18-span random sample of predicted
+  spans with no gold match, about 11 were defensible aspects our gold had skipped — mostly further
+  items in enumerations ("risk assessment" next to gold "hazard identification", "community
+  engagement", "Anti-Commercial Bribery and Integrity Agreement") — about 3 were borderline and about
+  4 were real errors (a span running across a verb, a listing-rule reference, a reporting framework
+  name). This is one reviewer's read of their own gold; a human adjudication sample is needed before
+  a corrected precision can be quoted.
+- **False positives on no-aspect sentences are mostly real errors.** In a 10-sentence sample, about 6
+  were pointer or meta sentences ("Please refer to pages 93 to 117 … corporate governance practices",
+  "Information on the governance structure is further provided in section 3.3") where the prompt's
+  own worked example says `[]`.
+- **Most category disagreements are convention, not error.** On matched spans the top disagreements
+  are emissions control -> management (26), business compliance -> management (20) and waste
+  management -> resource optimisation (14). Checked against the A3CG release itself
+  (`tmp/data/a3cg/full`, 2,004 statements): climate-risk aspects ("climate risk",
+  "climate-related risks and opportunities", "climate risk assessment") are **management** 7 times
+  and emissions control 0 times, while climate targets/ambition/action are emissions control
+  (4). So on climate risk the extractor follows A3CG and our LLM_pre convention does not. Ethics
+  and code-of-conduct aspects are split in A3CG (business compliance 26, management 9); packaging
+  and waste reduction are waste management 10 of 13, so there the extractor deviates, not us.
+- **Span boundaries are not the problem.** On partially matched spans, 636 have the same length as
+  gold, 89 are longer and 81 shorter.
+- **The corpus batch looks like report text should.** 29.7 % of rows are empty (A3CG: 22 % in its
+  splits, 33 % overall), 1.19 spans per row, 5 % single-word spans.
+
+### 8.3 Criticisms from the run that were accepted and fixed
+
+- The scorer's `exact` metric was token-set equality, not boundary equality, and its substring count
+  normalised text. Now reported as `boundary_exact` (characters up to case and whitespace, F1 0.5111),
+  `token_set_exact` (F1 0.5119) and `partial`; the substring count is strict and case-sensitive
+  (`spans_not_verbatim_substring`, 0 for this run).
+- Ingestion now enforces the verbatim contract case-sensitively, matching the prompt.
+
+### 8.4 Reproducibility limits that travel with every result built on this run
+
+- Model recorded as the session identity "GPT-6"; no immutable snapshot id was available.
+- Temperature was not controllable and is recorded as `null`, not 0.
+- Gold rows `eval0001`-`eval0003` were visible before calibration; both scores are kept.
+
+### 8.5 Effect on the graph
+
+| | before | after |
+|---|---|---|
+| mentions | 19,586 | 29,637 (+10,051 `llm`; 1,044 duplicates of an existing string match kept the older provenance) |
+| aspect nodes | 734 | 7,503 (+6,769 `llm`) |
+| statements with >= 1 aspect | — | 20,185 |
+| cross-year chains (>= 2 years) | 2,804 | 3,932 (1,251 contain an `llm` mention; 1,095 sit on llm-only aspect nodes) |
+| `follows_up` edges | 7,146 | 8,563, of which 28.1 % link verbatim repeats |
+
+**5,334 of the 6,769 new aspect nodes (79 %) occur exactly once.** Exact-match aspect identity
+fragments free-text spans: "scope 1 and 2 emissions", "scope 1 and scope 2 ghg emissions" and
+"direct emissions" never meet. This makes M2 canonicalisation the binding constraint on the graph,
+not extraction. A pre-ingestion copy is kept at `artifacts/graph/dev/graph.pre_llm.duckdb`.

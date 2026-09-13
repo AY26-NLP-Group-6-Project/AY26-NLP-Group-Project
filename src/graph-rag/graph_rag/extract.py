@@ -132,6 +132,11 @@ def _tokens(s: str) -> set[str]:
     return set(_norm(s).split())
 
 
+def _boundary_key(s: str) -> str:
+    """Character-level identity up to case and whitespace runs: the span boundaries must agree."""
+    return re.sub(r"\s+", " ", s).strip().lower()
+
+
 def _overlap(a: str, b: str) -> float:
     ta, tb = _tokens(a), _tokens(b)
     if not ta or not tb:
@@ -182,17 +187,34 @@ def score(pred_path: Path, gold_path: Path) -> dict:
         "missing_predictions": len(missing),
     }
 
-    for name, threshold in (("exact", 1.0), ("partial", 0.5)):
+    # boundary_exact: same characters up to case/whitespace (the strict reading of "exact").
+    # token_set_exact: same token set, ignoring order and punctuation (lenient).
+    # partial: token Jaccard >= 0.5 (the A8 gate metric).
+    strict_not_substring = sum(
+        1
+        for sid, g in gold_by_id.items()
+        for sp in pred_by_id.get(sid, {}).get("spans", [])
+        if sp.get("text") and sp["text"] not in g["text"]
+    )
+    for name, threshold in (("boundary_exact", None), ("token_set_exact", 0.999), ("partial", 0.5)):
         tp = fp = fn = 0
         cat_hit = cat_total = 0
-        not_substring = 0
         for sid, g in gold_by_id.items():
             p = pred_by_id.get(sid, {"spans": []})
             gold_spans, pred_spans = g["spans"], p.get("spans", [])
-            for sp in pred_spans:
-                if _norm(sp.get("text", "")) and _norm(sp["text"]) not in _norm(g["text"]):
-                    not_substring += 1
-            matches = _match_spans(gold_spans, pred_spans, threshold if threshold < 1.0 else 0.999)
+            if threshold is None:
+                gold_keys = [_boundary_key(x["text"]) for x in gold_spans]
+                matches = []
+                used: set[int] = set()
+                for sp in pred_spans:
+                    k = _boundary_key(sp.get("text", ""))
+                    for gi, gk in enumerate(gold_keys):
+                        if gi not in used and gk == k:
+                            used.add(gi)
+                            matches.append(Match(gold_spans[gi], sp, 1.0))
+                            break
+            else:
+                matches = _match_spans(gold_spans, pred_spans, threshold)
             tp += len(matches)
             fp += len(pred_spans) - len(matches)
             fn += len(gold_spans) - len(matches)
@@ -205,7 +227,7 @@ def score(pred_path: Path, gold_path: Path) -> dict:
         stats[name] = {"precision": precision, "recall": recall, "f1": f1, "tp": tp, "fp": fp, "fn": fn}
         if name == "partial":
             stats["category_accuracy"] = cat_hit / cat_total if cat_total else 0.0
-            stats["spans_not_in_sentence"] = not_substring // 1
+    stats["spans_not_verbatim_substring"] = strict_not_substring
 
     empty_gold = [sid for sid, g in gold_by_id.items() if not g["spans"]]
     invented = sum(bool(pred_by_id.get(sid, {}).get("spans")) for sid in empty_gold)
