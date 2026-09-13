@@ -47,9 +47,9 @@ following CESI section 7.2, macro / micro / pairwise precision, recall and F1 fo
 - `morph`: normalisation only (every normalised phrase its own cluster), the baseline;
 - `hac`: threshold swept on the `val` pools (0.70-0.98), best by mean F1, then reported on `test`.
 
-Gate for M2: micro precision (cluster purity) >= 0.80 on the test pools. Purity alone rewards not
-merging at all (singletons are always pure), so macro and pairwise recall are reported next to it and
-the threshold is chosen on mean F1, not purity.
+Gate for M2 (revised after the first run): **pairwise precision >= 0.80** on the test pools, threshold
+selected by pairwise F0.5 on the val pools. The first version gated on micro precision and selected on
+mean F1; on this gold, where most clusters are singletons, merging nothing maximised both.
 
 ## 5. Practical notes
 
@@ -58,3 +58,12 @@ the threshold is chosen on mean F1, not purity.
 - One pool per request is fine; pools are small.
 - Do not merge across pools, and do not reuse groupings from one pool in another: pools are judged
   independently.
+
+## 6. Run 1 · Claude, 2026-09-13
+
+Gold written by Claude in-session rather than by Codex, after discussion: the method under test is
+OpenAI embeddings + HAC, not the annotator, so the circularity that made the extraction run need an
+independent model does not arise here. Controls: labelled from pool text only, before any clustering
+had been run on the pools; provenance in `canon_gold_claude_20260913.provenance.json`. Remaining risk:
+the annotator designed the pipeline and the guideline. A human spot-check of ~10 test pools is
+recommended before any M2 number is quoted.

@@ -62,7 +62,7 @@ Rules we hold ourselves to:
 |---|---|---|
 | **M0 scaffold** ✅ 2026-09-12 | uv workspace, `src/common` (schemas, Protocols, registry, frozen datasets, metrics, runner, report, FastAPI factory), stubs for `baseline-rag` / `graph-rag` / `agentic-graph-rag`, 8 tests | done: `gw-data build gw1000` froze 1,000 items at `fddce492c10d`; `gw-eval --system majority` gives macro-F1 0.2264 / acc 0.5143, `random` 0.3109 / 0.2877; both write `metrics.json`, `manifest.json`, `report.md` |
 | **M1 graph build (narrow)** ✅ 2026-09-12 | 52 companies, 233 reports, **108,948 statements**, 734 aspects, 19,586 mentions, 7,146 `follows_up` edges, DuckDB store, 13 tests | **passed**: 2,804 cross-year chains (1,931 span >=3 years) against a gate of 20; all 1,000 eval sentences matched a parsed statement, so the graph joins the eval set exactly |
-| **M2 canonicalisation** ⏳ in progress 2026-09-13 | CESI-style pipeline implemented: morph normalisation baseline, phrase embeddings (OpenAI text-embedding-3-small or local bge-small), complete-linkage HAC blocked by category, CESI macro/micro/pairwise metrics (unit-tested on the paper's own worked example), 59 disjoint annotation pools (593 forms, 30 val / 29 test) exported for independent gold clustering | threshold tuned on val pools by mean F1; micro precision (purity) >= 0.80 on test pools, reported with macro and pairwise recall |
+| **M2 canonicalisation** ⚠ gate failed 2026-09-13 | pipeline, CESI metrics, 59 pools and a first gold clustering (Claude, blind to method output: 593 forms, 518 groups, 70 val / 44 test same-aspect pairs). Embedding + complete-linkage HAC alone does **not** reach the precision the graph needs: test pairwise precision 0.47 [95 % CI 0.34-0.61], recall 0.39 at the val-selected threshold 0.82. The graph keeps morph canonicalisation; HAC merges stay off | pairwise precision >= 0.80 on test pools (revised from micro precision, see 4c) |
 | **M3 metrics & targets** | regex + unit extraction (Scope 1/2/3, kWh, m³, tCO₂e, %, target year, baseline year) | precision ≥0.9 on a 100-row manual check |
 | **M4 retrieval arm** | `graph-rag` implements `Retriever`; RQ1 five-condition ablation runs end to end | graph arm reported next to RRF arm, whatever the sign of the delta |
 | **M5 trajectories** | `TrajectoryBuilder`; transition F1 on the ~60 (company, aspect) trajectory set | — |
@@ -87,6 +87,32 @@ Rules we hold ourselves to:
   action-labelled statement, and just 6 have labels at two different years. That gap is precisely
   what the D3 extractor plus a classifier fill; until then the graph knows *where* an aspect is
   discussed, not *what was claimed*.
+
+## 4c. What the first M2 run showed
+
+- **The metrics we planned to gate on cannot separate methods on this gold.** 87 % of gold clusters
+  are singletons, so merging nothing scores micro precision 1.0 and macro/micro F1 0.95/0.94 on the
+  test pools, above every clustering. Only the pairwise metrics discriminate (no-merge: pairwise
+  recall 0). Threshold selection moved from mean F1 to **pairwise F0.5** and the gate from micro
+  precision to **pairwise precision**. This change was made *after* test numbers had been seen, so
+  the reported test figures are no longer a clean held-out estimate; a fresh set of test pools is
+  needed before any M2 number goes into the report.
+- **Embeddings measure topical closeness, not identity at the right granularity.** At 0.82 the wrong
+  merges are parents with children ("GHG Protocol" + "Greenhouse Gas Protocol Corporate Standard",
+  "risk management" + "risk management process"), siblings (the Corporate Standard + the Scope 3
+  Standard) and things with instruments ("anti-bribery and anti-corruption laws" + "anti-bribery and
+  corruption"). The missed merges are re-ordered paraphrases ("Policies relating to anti-corruption
+  and bribery" / "anti-corruption and bribery policies") and programme-name variants ("Connext ED").
+  Lowering the threshold to 0.74 raises recall to 0.61 but drops precision to 0.28 [0.18-0.40].
+- **Measured precision depends on how strict the gold is.** The guideline keeps granularity levels
+  apart and says "when unsure, keep apart"; some kept-apart pairs (e.g. "anti-corruption related
+  policies" / "anti-corruption and bribery policies") many readers would merge. A human spot-check of
+  the gold is needed to know how much of the precision gap is the method and how much the guideline.
+- **Small test set.** 44 gold same-aspect pairs in the test pools; confidence intervals are wide.
+
+Next step for M2 (to be grounded before building): use HAC at a low threshold only to *propose*
+candidate merges and let an LLM verify each candidate under the same granularity rules, the analogue
+of the side information CESI adds on top of embeddings.
 
 ## 5. Risks
 
@@ -131,6 +157,8 @@ row may reach the report without becoming one of the other two first.
 | Canonicalisation is evaluated with macro, micro and pairwise P/R/F1 | [cited] | CESI section 7.2, following Galárraga et al. 2014. Our implementation reproduces the paper's Figure 2 example (P_macro = 2/3, P_micro = 6/7, P_pair = 4/6, R_pair = 4/7) in `tests/test_canonical.py` |
 | String normalisation alone barely merges anything | [cited] + [measured] | CESI Table 2: Morph Norm on ReVerb45K scores macro 1.4 / micro 77.7 / pairwise 75.1, GloVe + HAC 56.5 / 82.9 / 75.3. On our graph morph normalisation turns 7,503 aspect ids into 7,319 canonical aspects (184 merges; 7,143 clusters are singletons) |
 | Cross-year chain count is not a quality measure for canonicalisation | [measured] | merging aspects fuses chains, so the count can fall while coverage rises: morph normalisation moved chains from 3,932 to 3,906. Canonicalisation is judged on the gold clustering, chains are only descriptive |
+| On singleton-heavy gold, macro and micro canonicalisation metrics reward not merging | [measured] | no-merge baseline on our test pools: micro precision 1.0, macro F1 0.949, micro F1 0.938, pairwise recall 0; HAC at 0.82: macro F1 0.946, micro F1 0.944, pairwise P 0.472 / R 0.386 |
+| Embedding + complete-linkage HAC alone is not precise enough to merge ESG aspects | [measured] | test pairwise precision 0.472 [95 % CI 0.34-0.61] at the val-selected threshold; 0.281 [0.18-0.40] at 0.74 |
 | A3CG and its follow-up classify isolated sentences | [cited] | A3CG, ACL 2025, and COGLM, arXiv 2601.21722 |
 | Vector RAG is already the right tool for locally answerable queries; GraphRAG targets global sensemaking | [cited] | Microsoft GraphRAG, arXiv 2404.16130: "RAG works well for queries that can be answered with information localized within a small set of records", whereas vector RAG "do not support sensemaking queries ... such as What are the key trends". Settles A2: our queries are local and structured, so community-summary GraphRAG is out of scope |
 | Community-summary indexing is expensive | [cited] | GraphRAG: graph indexing with a 600-token window took 281 minutes for the ~1M-token Podcast dataset on a 16 GB VM; datasets were 1669 chunks (~1M tokens) and 3197 chunks (~1.7M tokens); evaluation is LLM-as-judge on comprehensiveness, diversity, empowerment and directness with 72-83 % win rates |
