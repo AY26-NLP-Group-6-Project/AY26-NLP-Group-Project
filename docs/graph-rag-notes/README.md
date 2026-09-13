@@ -160,6 +160,37 @@ from the validation pools (HAC threshold 0.82; verifier variant rules+demos, top
   with the confidence interval now entirely below it. The only way the verdict changes is if the gold
   itself is stricter than human judgement, which the blind spot-check (66 pairs, 10 pools) measures.
 
+## 4f. Graph-RAG proof of concept (2026-09-13)
+
+First 300 gw1000 items, `llm_pre` labels (development numbers), shared zero-shot classifier
+(`configs/prompts/action_classifier.md`, gpt-5.6-luna, temperature not applied), k = 3 evidence spans.
+Graph arm: aspect → morph group → same company, other years; fused arm: graph first, BM25 over the
+company's other-year statements fills to k. Runs `20260913T152226Z` (cached) and `20260913T153019Z`
+(`GW_LLM_CACHE=0`, a fresh sample of every call).
+
+| condition | macro-F1 run 1 | macro-F1 run 2 | acc run 1 / 2 | evidence coverage |
+|---|---|---|---|---|
+| sentence_only | 0.773 | 0.789 | 0.805 / 0.817 | — |
+| local | 0.798 | — | 0.829 / — | — |
+| cross_year_graph | 0.790 | 0.791 | 0.825 / 0.817 | 0.39 (mean 0.80 spans) |
+| cross_year_fused | 0.805 | 0.787 | 0.833 / 0.817 | 0.88 (mean 2.63 spans) |
+
+- **Does not collapse.** No arm is below sentence_only beyond noise (all McNemar p ≥ 0.18), accuracy
+  sits at 0.80-0.83, in the range expected given LLM_pre agrees with humans about 86 % of the time.
+- **No measurable gain either.** The same prompt re-sampled disagrees with itself on 28 of 300 labels
+  and moves macro-F1 by 0.015; run 1's +0.017 (graph) and +0.032 (fused) vanish in run 2 (+0.002,
+  -0.002). On the 118 items that received graph evidence, sentence_only vs itself differs on 13 items,
+  sentence_only vs graph on 10 (run 1) and 9 (run 2): the evidence effect is below resampling noise.
+- **Why so little signal.** 28 of 241 graph spans are the target sentence repeated verbatim in another
+  year, which adds nothing; generic aspects pull in off-topic hits (GRI-index-like lines). Fused-arm
+  breaks concentrate on no-aspect items (gold `none`), where BM25 noise pushes the model towards an
+  action label; one real cross-year break ("started reporting Scope 1 emissions" in 2024 turning a
+  disclosure-only sentence into `implemented`) is the relabelling the prompt forbids.
+- **Consequences for the harness.** A single cached run hides the classifier's own variance, so every
+  RQ1 comparison needs at least 3 uncached repeats per arm (or a temperature-controllable model), with
+  flips counted against a sentence_only-vs-sentence_only baseline. Cross-year evidence should skip
+  verbatim repeats and not be retrieved for items without an aspect.
+
 ## 5. Risks
 
 1. **Aspect canonicalisation is the whole ball game.** If "Scope 1 emissions", "direct emissions"
