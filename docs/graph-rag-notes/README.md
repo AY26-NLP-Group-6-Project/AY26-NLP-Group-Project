@@ -62,7 +62,7 @@ Rules we hold ourselves to:
 |---|---|---|
 | **M0 scaffold** ✅ 2026-09-12 | uv workspace, `src/common` (schemas, Protocols, registry, frozen datasets, metrics, runner, report, FastAPI factory), stubs for `baseline-rag` / `graph-rag` / `agentic-graph-rag`, 8 tests | done: `gw-data build gw1000` froze 1,000 items at `fddce492c10d`; `gw-eval --system majority` gives macro-F1 0.2264 / acc 0.5143, `random` 0.3109 / 0.2877; both write `metrics.json`, `manifest.json`, `report.md` |
 | **M1 graph build (narrow)** ✅ 2026-09-12 | 52 companies, 233 reports, **108,948 statements**, 734 aspects, 19,586 mentions, 7,146 `follows_up` edges, DuckDB store, 13 tests | **passed**: 2,804 cross-year chains (1,931 span >=3 years) against a gate of 20; all 1,000 eval sentences matched a parsed statement, so the graph joins the eval set exactly |
-| **M2 canonicalisation** ⚠ gate not met 2026-09-13 | M2a embedding + HAC alone: test pairwise P 0.47 / R 0.39. **M2b embeddings propose, LLM verifies** (EDC-style; forced Yes/No with the gold guideline as matching rules; variant chosen on val): test pairwise **P 0.733 [95 % CI 0.55-0.88] / R 0.750 / F1 0.742**, val P 0.819 / R 0.971. Graph still runs morph canonicalisation until the gate is settled | pairwise precision >= 0.80 on test pools; current point estimate misses it but the CI covers it (44 gold pairs), so a fresh, larger test set decides |
+| **M2 canonicalisation** ❌ gate failed on a clean test set 2026-09-13 | Fresh test set: 81 pools, 811 phrases, 123 gold pairs, disjoint from the tuning pools, labelled before any method ran on it; configurations frozen from val. Pairwise P / R / F1: HAC@0.82 **0.467** [0.37-0.58] / 0.463 / 0.465; LLM-verified merges **0.597** [0.49-0.70] / **0.748** [0.63-0.87] / **0.664**. The earlier 0.733 on the reused test pools was optimistic. Graph keeps morph canonicalisation. Blind human spot-check of the gold exported (66 pairs, 07-canonicalisation-spotcheck.md) | pairwise precision >= 0.80: the 95 % CI now excludes it, so the method fails unless the spot-check shows the gold is stricter than people are |
 | **M3 metrics & targets** | regex + unit extraction (Scope 1/2/3, kWh, m³, tCO₂e, %, target year, baseline year) | precision ≥0.9 on a 100-row manual check |
 | **M4 retrieval arm** | `graph-rag` implements `Retriever`; RQ1 five-condition ablation runs end to end | graph arm reported next to RRF arm, whatever the sign of the delta |
 | **M5 trajectories** | `TrajectoryBuilder`; transition F1 on the ~60 (company, aspect) trajectory set | — |
@@ -139,6 +139,26 @@ of the side information CESI adds on top of embeddings.
   rejected "Anti-Corruption Policy" ~ "anti-corruption related policies".
 - **The test split has now been looked at twice** (M2a, M2b). Further prompt or threshold iteration
   must be judged on val, and the M2 number for the report needs fresh test pools.
+
+## 4e. Clean M2 test (2026-09-13)
+
+Fresh pools (`canon_pools_test2.jsonl`, 81 pools, 811 phrases, 0 shared with the tuning pools, seed
+20260914), gold written before any method touched them (123 same-aspect pairs), every setting frozen
+from the validation pools (HAC threshold 0.82; verifier variant rules+demos, top-5, floor 0.70).
+
+| method | pairwise P [95 % CI] | pairwise R [95 % CI] | F1 |
+|---|---|---|---|
+| morph only (no merges) | 1.000 | 0.000 | 0.000 |
+| embeddings + HAC @0.82 | 0.467 [0.37-0.58] | 0.463 [0.34-0.59] | 0.465 |
+| embeddings propose, LLM verifies | 0.597 [0.49-0.70] | 0.748 [0.63-0.87] | 0.664 |
+
+- Candidate recall holds (115 of 123 gold pairs proposed); the verifier accepts 106 of them but also
+  76 non-gold pairs, which is where precision is lost. 629 LLM calls, 313k input tokens.
+- The reused-test figure (P 0.733) was optimistic by about 0.14, which is what re-looking at a test
+  split costs; the clean figure is the one to quote.
+- Verdict: the method is a clear improvement over HAC (F1 +0.20) but **fails the 0.80 precision gate**,
+  with the confidence interval now entirely below it. The only way the verdict changes is if the gold
+  itself is stricter than human judgement, which the blind spot-check (66 pairs, 10 pools) measures.
 
 ## 5. Risks
 

@@ -88,7 +88,7 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument(
         "stage",
         choices=[*STAGES, "build", "stats", "export-extract", "export-gold", "score-extraction",
-                 "canon-pools", "canon-tune", "canon-verify"],
+                 "canon-pools", "canon-tune", "canon-verify", "canon-spotcheck", "canon-spotcheck-score"],
     )
     ap.add_argument("--config", default="configs/graph.dev.yaml")
     ap.add_argument("--build-id")
@@ -107,6 +107,13 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--variant", choices=["rules", "rules+demos"], default="rules")
     ap.add_argument("--k", type=int, default=5)
     ap.add_argument("--floor", type=float, default=0.70)
+    ap.add_argument("--pools", help="pool file for canon-tune / canon-verify (default canon_pools.jsonl)")
+    ap.add_argument("--n-pools", type=int, default=60)
+    ap.add_argument("--exclude-pools", nargs="*", default=[], help="pool files whose forms must not reappear")
+    ap.add_argument("--all-split", choices=["val", "test"], help="assign every exported pool to this split")
+    ap.add_argument("--prefix", default="pool")
+    ap.add_argument("--seed", type=int)
+    ap.add_argument("--sheet", help="returned spot-check CSV for canon-spotcheck-score")
     args = ap.parse_args(argv)
 
     cfg = GraphConfig.load(args.config, build_id=args.build_id)
@@ -125,23 +132,49 @@ def main(argv: list[str] | None = None) -> int:
         from graph_rag.canonical import tuning
 
         out = Path(args.out or cfg.out_dir / "canon_pools.jsonl")
-        print(json.dumps(tuning.export_pools(cfg, out), indent=2))
+        info = tuning.export_pools(cfg, out, n_pools=args.n_pools,
+                                   exclude_pools=[Path(x) for x in args.exclude_pools],
+                                   split=args.all_split, prefix=args.prefix, seed=args.seed)
+        print(json.dumps(info, indent=2))
         return 0
     if args.stage == "canon-tune":
         from graph_rag.canonical import tuning
 
         if not args.labels:
             ap.error("--labels is required for canon-tune")
-        pools = Path(args.out or cfg.out_dir / "canon_pools.jsonl")
+        pools = Path(args.pools or cfg.out_dir / "canon_pools.jsonl")
         result = tuning.tune(cfg, pools, Path(args.labels))
         print(json.dumps(result["summary"], indent=2))
+        return 0
+    if args.stage == "canon-spotcheck":
+        from graph_rag.build.canonical import load_phrases
+        from graph_rag.canonical import spotcheck
+        from graph_rag.canonical.embed import PhraseEmbedder
+        from graph_rag.canonical.goldset import form_id
+
+        if not (args.pools and args.labels):
+            ap.error("--pools and --labels are required for canon-spotcheck")
+        with DuckDBGraphStore(cfg.db_path, read_only=True) as store:
+            phrases, _, _ = load_phrases(store)
+        vectors = PhraseEmbedder().embed([p.key for p in phrases])
+        by_form = {form_id(p): vectors[i] for i, p in enumerate(phrases)}
+        out = Path(args.out or cfg.out_dir / "spotcheck")
+        info = spotcheck.export(Path(args.pools), Path(args.labels), by_form, out, k=args.k, floor=args.floor)
+        print(json.dumps(info, indent=2))
+        return 0
+    if args.stage == "canon-spotcheck-score":
+        from graph_rag.canonical import spotcheck
+
+        out = Path(args.out or cfg.out_dir / "spotcheck")
+        sheet = Path(args.sheet or out / "canon_spotcheck_pairs.csv")
+        print(json.dumps(spotcheck.score(sheet, out / "canon_spotcheck_key.json"), indent=2))
         return 0
     if args.stage == "canon-verify":
         from graph_rag.canonical import tuning
 
         if not args.labels:
             ap.error("--labels is required for canon-verify")
-        pools = Path(args.out or cfg.out_dir / "canon_pools.jsonl")
+        pools = Path(args.pools or cfg.out_dir / "canon_pools.jsonl")
         r = tuning.verify_eval(cfg, pools, Path(args.labels), args.split, args.variant, args.k, args.floor)
         pw = r["metrics"]["pairwise"]
         print(json.dumps({k: r[k] for k in ("split", "variant", "candidates", "gold_pairs",

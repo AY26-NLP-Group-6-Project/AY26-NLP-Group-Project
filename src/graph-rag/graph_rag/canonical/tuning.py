@@ -41,18 +41,33 @@ def _pairwise_f05(m: dict) -> float:
     return 1.25 * p * r / (0.25 * p + r) if p + r else 0.0
 
 
-def export_pools(cfg: GraphConfig, out_path: Path, n_pools: int = 60) -> dict:
+def export_pools(
+    cfg: GraphConfig,
+    out_path: Path,
+    n_pools: int = 60,
+    exclude_pools: list[Path] | None = None,
+    split: str | None = None,
+    prefix: str = "pool",
+    seed: int | None = None,
+) -> dict:
     with DuckDBGraphStore(cfg.db_path, read_only=True) as store:
         phrases, _, examples = load_phrases(store)
+    exclude = set()
+    for path in exclude_pools or []:
+        for line in path.read_text(encoding="utf-8").splitlines():
+            if line.strip():
+                exclude.update(f["form_id"] for f in json.loads(line)["forms"])
     # Pools come from the local model on purpose: the gold must not be shaped by the embedder under test.
     vectors = PhraseEmbedder(backend="fastembed").embed([p.key for p in phrases])
-    pools = build_pools(phrases, vectors, examples, n_pools=n_pools, seed=cfg.seed)
+    pools = build_pools(phrases, vectors, examples, n_pools=n_pools, seed=seed or cfg.seed,
+                        exclude=exclude, split=split, prefix=prefix)
     write_pools(pools, out_path)
     return {
         "pools": len(pools),
         "forms": sum(len(p["forms"]) for p in pools),
         "val": sum(p["split"] == "val" for p in pools),
         "test": sum(p["split"] == "test" for p in pools),
+        "excluded_forms": len(exclude),
         "path": str(out_path),
     }
 

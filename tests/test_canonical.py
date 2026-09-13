@@ -82,7 +82,8 @@ def test_verdict_clustering_never_crosses_a_rejection():
     ]
     clusters = sorted(cluster_from_verdicts(5, v))
     assert [0, 1] in clusters and [2] in clusters and [3, 4] in clusters
-    assert parse_yes_no("Yes.") and parse_yes_no(" yes") and not parse_yes_no("No") and not parse_yes_no("Maybe yes")
+    assert parse_yes_no("Yes.") and parse_yes_no(" yes")
+    assert not parse_yes_no("No") and not parse_yes_no("Maybe yes")
 
 
 def test_candidate_pairs_respect_floor_and_groups():
@@ -93,3 +94,22 @@ def test_candidate_pairs_respect_floor_and_groups():
     pairs = candidate_pairs(v, [[0, 1], [2, 3]], k=5, floor=0.9)
     assert {(c.a, c.b) for c in pairs} == {(0, 1), (2, 3)}
     assert candidate_pairs(v, [[0, 2]], k=5, floor=0.9) == []
+
+
+def test_spotcheck_score_kappa(tmp_path):
+    import csv
+
+    from graph_rag.canonical.spotcheck import score
+
+    key = [{"pair_id": f"p{i}", "form_a": "a", "form_b": "b", "gold": g}
+           for i, g in enumerate(["same", "same", "different", "different"])]
+    (tmp_path / "key.json").write_text(json.dumps(key), encoding="utf-8")
+    with (tmp_path / "sheet.csv").open("w", encoding="utf-8-sig", newline="") as f:
+        w = csv.DictWriter(f, fieldnames=["pair_id", "label"])
+        w.writeheader()
+        for i, lab in enumerate(["same", "different", "different", "different"]):
+            w.writerow({"pair_id": f"p{i}", "label": lab})
+    r = score(tmp_path / "sheet.csv", tmp_path / "key.json")
+    assert r["labelled_pairs"] == 4 and r["raw_agreement"] == 0.75
+    assert r["cohen_kappa"] == 0.5            # pe = 0.5*0.25 + 0.5*0.75 = 0.5
+    assert r["confusion"]["gold_same__human_different"] == 1

@@ -44,7 +44,12 @@ def build_pools(
     n_lexical: int = 4,
     n_random: int = 2,
     seed: int = 20260913,
+    exclude: set[str] | None = None,
+    split: str | None = None,
+    prefix: str = "pool",
 ) -> list[dict]:
+    """`exclude`: form ids that may not appear (e.g. every form of an earlier pool set), so a new test
+    set shares no phrase with the pools that tuned the method. `split`: force one split for all pools."""
     rng = random.Random(seed)
     by_cat: dict[str, list[int]] = {}
     for i, p in enumerate(phrases):
@@ -58,7 +63,8 @@ def build_pools(
     for c in cats:
         quota[c] += round(remaining * len(by_cat[c]) / total)
 
-    used: set[int] = set()
+    excluded = exclude or set()
+    used: set[int] = {i for i, p in enumerate(phrases) if form_id(p) in excluded}
     pools = []
     for cat in cats:
         idx = by_cat[cat]
@@ -82,10 +88,10 @@ def build_pools(
             members = members[:pool_size]
             rng.shuffle(members)
             used.update(members)
-            pool_id = f"pool{len(pools) + 1:03d}"
+            pool_id = f"{prefix}{len(pools) + 1:03d}"
             pools.append({
                 "pool_id": pool_id,
-                "split": "val" if len(pools) % 2 == 0 else "test",
+                "split": split or ("val" if len(pools) % 2 == 0 else "test"),
                 "category": cat,
                 "forms": [
                     {"form_id": form_id(phrases[i]), "text": phrases[i].display or phrases[i].key,
