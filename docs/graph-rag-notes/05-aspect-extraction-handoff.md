@@ -151,6 +151,13 @@ and predictions, merged outputs, validation and score reports).
 - **The corpus batch looks like report text should.** 29.7 % of rows are empty (A3CG: 22 % in its
   splits, 33 % overall), 1.19 spans per row, 5 % single-word spans.
 
+**Follow-up (2026-09-13).** Our gold was re-mapped to the A3CG convention for climate aspects (56
+pairs, emissions control -> management for climate risk, disclosures and scenario analysis). Against
+the re-mapped gold the same predictions score category accuracy **0.903** (was 0.873); partial F1
+0.649 and no-aspect false-positive rate 0.264 are unchanged. The prompt is now **v2** and states the
+climate split explicitly; run 1 used v1, whose copy stays in the run folder (`prompt.md`, sha256
+`e6783b7b…`), so any re-run must record which version it used.
+
 ### 8.3 Criticisms from the run that were accepted and fixed
 
 - The scorer's `exact` metric was token-set equality, not boundary equality, and its substring count

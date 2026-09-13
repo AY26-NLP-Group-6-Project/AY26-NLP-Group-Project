@@ -1,4 +1,4 @@
-# Aspect extraction prompt (v1)
+# Aspect extraction prompt (v2)
 
 Give this file to the extractor model verbatim as the system/instruction prompt. Do not paraphrase
 it: the wording is taken from the A3CG annotation guidelines (Ong et al., ACL 2025, Appendix A and
@@ -47,6 +47,11 @@ Assign exactly one category per aspect, from this closed set (definitions are th
 | `business compliance` | Anti-corruption, anti-competitive practices, financial regulations, financial reporting. |
 | `worker & consumer safety compliance` | Laws guaranteeing safety of products and services to consumer health; fair labour practices; protection of workers' rights. |
 | `data and cybersecurity protection` | Protection and confidentiality of data, measures against cyber threats, compliance with data security regulations. |
+
+Climate aspects split in two, following the A3CG annotations: climate **risk** (climate-related
+risks and opportunities, climate risk assessment, physical or transition risks, scenario analysis,
+TCFD / climate-related disclosures) is `management`; climate **targets and action** (emission
+reductions, decarbonisation, net zero, climate targets) is `emissions control`.
 
 If an aspect fits no category without an assumption, do not output it.
 
