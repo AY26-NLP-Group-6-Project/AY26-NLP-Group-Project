@@ -72,9 +72,11 @@ Console scripts live in `src/common` (`gw-eval`, `gw-serve`) and `src/graph-rag`
 ## 3b. Models and secrets
 
 All model calls go through `gw_common.llm.LLMClient`, configured from a git-ignored `.env`
-(template: `.env.example`): `OPENAI_API_KEY`, optional `OPENAI_BASE_URL`, `GW_CHAT_MODEL`,
-`GW_EMBED_MODEL` (default `text-embedding-3-small`), `GW_LLM_TEMPERATURE` (default 0), `GW_LLM_CACHE`,
-`GW_EMBED_BACKEND` (`openai` | `fastembed`). Every request/response is cached in
+(template: `.env.example`). Chat and embeddings are configured separately: `LLM_API_KEY`,
+`LLM_BASE_URL`, `LLM_MODEL` and `EMB_API_KEY`, `EMB_BASE_URL`, `EMB_MODEL`, each falling back to
+`OPENAI_API_KEY` / `OPENAI_BASE_URL`; optional `GW_LLM_TEMPERATURE` (default 0), `GW_LLM_CACHE`,
+`GW_EMBED_BACKEND` (`openai` | `fastembed`). If a model rejects the temperature setting, the client
+retries without it and records `temperature_applied=False` in the result. Every request/response is cached in
 `artifacts/cache/llm.sqlite` keyed by the full payload hash, so an evaluation re-run makes no network
 call; each call reports input/output tokens, latency and cache hits for the `ops` metrics. The key is
 never written to manifests (`LLMSettings.describe()`).

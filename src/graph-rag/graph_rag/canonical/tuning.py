@@ -31,7 +31,8 @@ def _mean_f1(m: dict) -> float:
 def export_pools(cfg: GraphConfig, out_path: Path, n_pools: int = 60) -> dict:
     with DuckDBGraphStore(cfg.db_path, read_only=True) as store:
         phrases, _, examples = load_phrases(store)
-    vectors = PhraseEmbedder().embed([p.key for p in phrases])
+    # Pools come from the local model on purpose: the gold must not be shaped by the embedder under test.
+    vectors = PhraseEmbedder(backend="fastembed").embed([p.key for p in phrases])
     pools = build_pools(phrases, vectors, examples, n_pools=n_pools, seed=cfg.seed)
     write_pools(pools, out_path)
     return {
@@ -47,7 +48,8 @@ def tune(cfg: GraphConfig, pools_path: Path, labels_path: Path) -> dict:
     gold = load_gold(pools_path, labels_path)
     with DuckDBGraphStore(cfg.db_path, read_only=True) as store:
         phrases, _, _ = load_phrases(store)
-    vectors = PhraseEmbedder().embed([p.key for p in phrases])
+    embedder = PhraseEmbedder()
+    vectors = embedder.embed([p.key for p in phrases])
     ids = [form_id(p) for p in phrases]
 
     def assign_exact() -> dict[str, str]:
@@ -71,6 +73,7 @@ def tune(cfg: GraphConfig, pools_path: Path, labels_path: Path) -> dict:
     report["hac"] = {"val_sweep": sweep, "best_threshold": best["threshold"], "test": test}
 
     summary = {
+        "embedder": embedder.label,
         "pools": {"val": sum(g["split"] == "val" for g in gold.values()),
                   "test": sum(g["split"] == "test" for g in gold.values())},
         "morph_test_mean_f1": round(_mean_f1(report["morph"]["test"]), 4),

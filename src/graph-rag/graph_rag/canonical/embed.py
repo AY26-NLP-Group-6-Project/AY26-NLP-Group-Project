@@ -6,7 +6,7 @@
                no API key is configured, and used to build the annotation pools so the gold is not
                shaped by the embedding model that the clustering is evaluated with.
 
-Select with `GW_EMBED_BACKEND=openai|fastembed` (default: `openai` if `OPENAI_API_KEY` is set,
+Select with `GW_EMBED_BACKEND=openai|fastembed` (default: `openai` if an embedding key is set,
 otherwise `fastembed`). The backend and model name are written into every canonical build.
 """
 
@@ -25,17 +25,19 @@ CACHE_DIR = REPO_ROOT / "artifacts" / "cache" / "embeddings"
 
 
 def default_backend() -> str:
-    from gw_common.llm import load_env
+    from gw_common.llm import embeddings_configured, load_env
 
     load_env()
     explicit = os.getenv("GW_EMBED_BACKEND")
     if explicit:
         return explicit
-    return "openai" if os.getenv("OPENAI_API_KEY") else "fastembed"
+    return "openai" if embeddings_configured() else "fastembed"
 
 
 class PhraseEmbedder:
-    def __init__(self, backend: str | None = None, model: str | None = None, batch_size: int = 128) -> None:
+    def __init__(
+        self, backend: str | None = None, model: str | None = None, batch_size: int = 128
+    ) -> None:
         self.backend = backend or default_backend()
         if self.backend not in ("openai", "fastembed"):
             raise ValueError(f"unknown embedding backend {self.backend!r}")
@@ -82,7 +84,8 @@ class PhraseEmbedder:
                 from fastembed import TextEmbedding
 
                 self._model = TextEmbedding(model_name=self.model_name)
-            new = np.asarray(list(self._model.embed(missing, batch_size=self.batch_size)), dtype=np.float32)
+            vecs = list(self._model.embed(missing, batch_size=self.batch_size))
+            new = np.asarray(vecs, dtype=np.float32)
             new /= np.linalg.norm(new, axis=1, keepdims=True).clip(min=1e-12)
             start = len(self._keys)
             self._keys.extend(self._key(t) for t in missing)

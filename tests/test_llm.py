@@ -29,7 +29,8 @@ class FakeOpenAI:
 
 
 def _client(tmp_path, **overrides):
-    settings = LLMSettings(api_key="sk-test", chat_model="test-chat", embed_model="test-embed", **overrides)
+    settings = LLMSettings(chat_api_key="sk-test", embed_api_key="sk-test", chat_model="test-chat",
+                           embed_model="test-embed", **overrides)
     fake = FakeOpenAI()
     return LLMClient(settings, cache_path=tmp_path / "llm.sqlite", client=fake), fake
 
@@ -63,14 +64,29 @@ def test_embed_caches_per_text_and_normalises(tmp_path):
 
 
 def test_missing_model_and_key_fail_loudly(tmp_path):
-    client = LLMClient(LLMSettings(api_key=None, chat_model=None), cache_path=tmp_path / "c.sqlite")
-    with pytest.raises(RuntimeError, match="GW_CHAT_MODEL"):
+    client = LLMClient(LLMSettings(chat_api_key=None, chat_model=None), cache_path=tmp_path / "c.sqlite")
+    with pytest.raises(RuntimeError, match="LLM_MODEL"):
         client.chat([{"role": "user", "content": "x"}])
-    client2 = LLMClient(LLMSettings(api_key=None, chat_model="m"), cache_path=tmp_path / "d.sqlite")
-    with pytest.raises(RuntimeError, match="OPENAI_API_KEY"):
+    client2 = LLMClient(LLMSettings(chat_api_key=None, chat_model="m"), cache_path=tmp_path / "d.sqlite")
+    with pytest.raises(RuntimeError, match="LLM_API_KEY"):
         client2.chat([{"role": "user", "content": "x"}])
 
 
 def test_describe_never_contains_the_key(tmp_path):
-    settings = LLMSettings(api_key="sk-secret-value", chat_model="m")
+    settings = LLMSettings(chat_api_key="sk-secret-value", embed_api_key="sk-secret-value", chat_model="m")
     assert "sk-secret-value" not in str(settings.describe())
+
+
+def test_temperature_rejection_is_retried_and_recorded(tmp_path):
+    client, fake = _client(tmp_path)
+    original = fake._chat
+
+    def picky(**kwargs):
+        if "temperature" in kwargs:
+            raise ValueError("Unsupported value: 'temperature' does not support 0 with this model")
+        return original(**kwargs)
+
+    fake.chat = SimpleNamespace(completions=SimpleNamespace(create=picky))
+    result = client.chat([{"role": "user", "content": "x"}])
+    assert result.text == "planning"
+    assert result.temperature_applied is False

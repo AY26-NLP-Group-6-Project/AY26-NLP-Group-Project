@@ -11,15 +11,15 @@ Guarantees:
   A re-run of an evaluation reads the cache and makes no network call (02-repo-and-tooling.md §3).
 - **Accounting.** Each call returns input/output tokens, latency and whether it was a cache hit, so
   `Prediction.input_tokens` etc. are measured, not estimated.
-- **Explicit models.** No model name is hard-coded as a silent default for chat; the `.env` must say
-  which model runs, and the name is echoed into every result.
+- **Explicit models.** No chat model is hard-coded; the `.env` names it and every result echoes it.
+- **Honest temperature.** Some models reject a non-default temperature. The client then retries
+  without it and records `temperature_applied=False` instead of pretending the setting took effect.
 
-Environment (see `.env.example`):
+Environment (see `.env.example`). Chat and embeddings are configured separately, because they may use
+different gateways or keys; each falls back to the generic OpenAI variables.
 
-    OPENAI_API_KEY        required for the openai provider
-    OPENAI_BASE_URL       optional, for a compatible gateway
-    GW_CHAT_MODEL         chat model id, required before any chat call
-    GW_EMBED_MODEL        embedding model id (default text-embedding-3-small)
+    LLM_API_KEY / LLM_BASE_URL / LLM_MODEL      chat        (fallback OPENAI_API_KEY, OPENAI_BASE_URL)
+    EMB_API_KEY / EMB_BASE_URL / EMB_MODEL      embeddings  (fallback LLM_*, then OPENAI_*)
     GW_LLM_TEMPERATURE    default 0
     GW_LLM_CACHE          1 (default) to cache, 0 to bypass
 """
@@ -43,7 +43,7 @@ DEFAULT_EMBED_MODEL = "text-embedding-3-small"
 
 
 def load_env() -> None:
-    """Load `.env` from the repo root if python-dotenv is available; never overrides real env vars."""
+    """Load `.env` from the repo root; never overrides variables already set in the environment."""
     try:
         from dotenv import load_dotenv
     except ImportError:  # pragma: no cover - dependency is declared, this is only defensive
@@ -51,11 +51,26 @@ def load_env() -> None:
     load_dotenv(REPO_ROOT / ".env", override=False)
 
 
+def _first(*names: str) -> str | None:
+    for n in names:
+        v = os.getenv(n)
+        if v:
+            return v
+    return None
+
+
+def embeddings_configured() -> bool:
+    load_env()
+    return bool(_first("EMB_API_KEY", "LLM_API_KEY", "OPENAI_API_KEY"))
+
+
 @dataclass(slots=True)
 class LLMSettings:
-    api_key: str | None = None
-    base_url: str | None = None
+    chat_api_key: str | None = None
+    chat_base_url: str | None = None
     chat_model: str | None = None
+    embed_api_key: str | None = None
+    embed_base_url: str | None = None
     embed_model: str = DEFAULT_EMBED_MODEL
     temperature: float = 0.0
     use_cache: bool = True
@@ -65,20 +80,24 @@ class LLMSettings:
     @classmethod
     def from_env(cls) -> LLMSettings:
         load_env()
+        chat_key = _first("LLM_API_KEY", "OPENAI_API_KEY")
+        chat_url = _first("LLM_BASE_URL", "OPENAI_BASE_URL")
         return cls(
-            api_key=os.getenv("OPENAI_API_KEY") or None,
-            base_url=os.getenv("OPENAI_BASE_URL") or None,
-            chat_model=os.getenv("GW_CHAT_MODEL") or None,
-            embed_model=os.getenv("GW_EMBED_MODEL") or DEFAULT_EMBED_MODEL,
+            chat_api_key=chat_key,
+            chat_base_url=chat_url,
+            chat_model=_first("LLM_MODEL", "GW_CHAT_MODEL"),
+            embed_api_key=_first("EMB_API_KEY") or chat_key,
+            embed_base_url=_first("EMB_BASE_URL") or chat_url,
+            embed_model=_first("EMB_MODEL", "GW_EMBED_MODEL") or DEFAULT_EMBED_MODEL,
             temperature=float(os.getenv("GW_LLM_TEMPERATURE", "0")),
             use_cache=os.getenv("GW_LLM_CACHE", "1") != "0",
         )
 
     def describe(self) -> dict[str, Any]:
-        """What goes into run manifests. Never includes the key."""
-        return {"chat_model": self.chat_model, "embed_model": self.embed_model,
-                "temperature": self.temperature, "base_url": self.base_url or "api.openai.com",
-                "cache": self.use_cache}
+        """What goes into run manifests. Never includes a key."""
+        return {"chat_model": self.chat_model, "chat_base_url": self.chat_base_url,
+                "embed_model": self.embed_model, "embed_base_url": self.embed_base_url,
+                "temperature": self.temperature, "cache": self.use_cache}
 
 
 @dataclass(slots=True)
@@ -89,6 +108,7 @@ class ChatResult:
     output_tokens: int = 0
     latency_ms: float = 0.0
     cached: bool = False
+    temperature_applied: bool = True
     raw: dict[str, Any] = field(default_factory=dict)
 
 
@@ -114,23 +134,38 @@ def _request_key(kind: str, payload: dict) -> str:
 
 class LLMClient:
     def __init__(
-        self, settings: LLMSettings | None = None, cache_path: Path = CACHE_PATH, client=None
+        self,
+        settings: LLMSettings | None = None,
+        cache_path: Path = CACHE_PATH,
+        client=None,
+        embed_client=None,
     ) -> None:
         self.settings = settings or LLMSettings.from_env()
         self._cache = _Cache(cache_path) if self.settings.use_cache else None
-        self._client = client  # injectable for tests
+        self._chat_client = client            # injectable for tests
+        self._embed_client = embed_client or client
         self.usage = {"calls": 0, "cache_hits": 0, "input_tokens": 0, "output_tokens": 0}
 
     # ----------------------------------------------------------------- transport
-    def _openai(self):
-        if self._client is None:
-            if not self.settings.api_key:
-                raise RuntimeError("OPENAI_API_KEY is not set (add it to .env)")
-            from openai import OpenAI
+    def _make(self, api_key: str | None, base_url: str | None, what: str):
+        if not api_key:
+            var = "LLM_API_KEY" if what == "chat" else "EMB_API_KEY"
+            raise RuntimeError(f"no API key for {what}: set {var} (or OPENAI_API_KEY) in .env")
+        from openai import OpenAI
 
-            self._client = OpenAI(api_key=self.settings.api_key, base_url=self.settings.base_url,
-                                  timeout=self.settings.timeout_s, max_retries=self.settings.max_retries)
-        return self._client
+        return OpenAI(api_key=api_key, base_url=base_url, timeout=self.settings.timeout_s,
+                      max_retries=self.settings.max_retries)
+
+    def _chat_transport(self):
+        if self._chat_client is None:
+            self._chat_client = self._make(self.settings.chat_api_key, self.settings.chat_base_url, "chat")
+        return self._chat_client
+
+    def _embed_transport(self):
+        if self._embed_client is None:
+            self._embed_client = self._make(self.settings.embed_api_key, self.settings.embed_base_url,
+                                            "embeddings")
+        return self._embed_client
 
     # ----------------------------------------------------------------- chat
     def chat(
@@ -144,18 +179,26 @@ class LLMClient:
     ) -> ChatResult:
         model = model or self.settings.chat_model
         if not model:
-            raise RuntimeError("no chat model configured: set GW_CHAT_MODEL in .env")
-        payload = {"model": model, "messages": messages,
-                   "temperature": self.settings.temperature if temperature is None else temperature,
-                   "max_tokens": max_tokens, "response_format": response_format}
+            raise RuntimeError("no chat model configured: set LLM_MODEL in .env")
+        temp = self.settings.temperature if temperature is None else temperature
+        payload = {"model": model, "messages": messages, "temperature": temp,
+                   "max_completion_tokens": max_tokens, "response_format": response_format}
         key = _request_key("chat", payload)
         if self._cache and (hit := self._cache.get(key)):
             self.usage["cache_hits"] += 1
             return ChatResult(**{**hit, "cached": True, "latency_ms": 0.0})
 
-        t0 = time.perf_counter()
         kwargs = {k: v for k, v in payload.items() if v is not None}
-        resp = self._openai().chat.completions.create(**kwargs)
+        t0 = time.perf_counter()
+        temperature_applied = True
+        try:
+            resp = self._chat_transport().chat.completions.create(**kwargs)
+        except Exception as exc:  # noqa: BLE001 - only the temperature rejection is retried
+            if "temperature" not in str(exc).lower():
+                raise
+            kwargs.pop("temperature", None)
+            temperature_applied = False
+            resp = self._chat_transport().chat.completions.create(**kwargs)
         latency = (time.perf_counter() - t0) * 1000
         usage = getattr(resp, "usage", None)
         result = ChatResult(
@@ -164,6 +207,7 @@ class LLMClient:
             input_tokens=getattr(usage, "prompt_tokens", 0) or 0,
             output_tokens=getattr(usage, "completion_tokens", 0) or 0,
             latency_ms=latency,
+            temperature_applied=temperature_applied,
         )
         self.usage["calls"] += 1
         self.usage["input_tokens"] += result.input_tokens
@@ -171,7 +215,8 @@ class LLMClient:
         if self._cache:
             self._cache.put(key, "chat", {"text": result.text, "model": result.model,
                                           "input_tokens": result.input_tokens,
-                                          "output_tokens": result.output_tokens})
+                                          "output_tokens": result.output_tokens,
+                                          "temperature_applied": temperature_applied})
         return result
 
     # ----------------------------------------------------------------- embeddings
@@ -182,14 +227,15 @@ class LLMClient:
         todo: list[int] = []
         for i, t in enumerate(texts):
             key = _request_key("embed", {"model": model, "input": t})
-            if self._cache and (hit := self._cache.get(key)):
+            hit = self._cache.get(key) if self._cache else None
+            if hit:
                 out[i] = np.asarray(hit["vector"], dtype=np.float32)
                 self.usage["cache_hits"] += 1
             else:
                 todo.append(i)
         for start in range(0, len(todo), batch_size):
             batch = todo[start:start + batch_size]
-            resp = self._openai().embeddings.create(model=model, input=[texts[i] for i in batch])
+            resp = self._embed_transport().embeddings.create(model=model, input=[texts[i] for i in batch])
             self.usage["calls"] += 1
             self.usage["input_tokens"] += getattr(getattr(resp, "usage", None), "prompt_tokens", 0) or 0
             for i, item in zip(batch, resp.data, strict=True):
@@ -198,5 +244,7 @@ class LLMClient:
                 if self._cache:
                     self._cache.put(_request_key("embed", {"model": model, "input": texts[i]}), "embed",
                                     {"vector": vec.tolist()})
-        mat = np.vstack(out) if texts else np.zeros((0, 0), dtype=np.float32)
+        if not texts:
+            return np.zeros((0, 0), dtype=np.float32)
+        mat = np.vstack(out)
         return mat / np.linalg.norm(mat, axis=1, keepdims=True).clip(min=1e-12)
