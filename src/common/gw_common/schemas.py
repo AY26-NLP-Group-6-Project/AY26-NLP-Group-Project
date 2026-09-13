@@ -72,6 +72,7 @@ class Query(BaseModel):
     aspect: str | None = None
     year_from: int | None = None
     year_to: int | None = None
+    anchor_year: int | None = None  # the year of the statement being classified; cross-year excludes it
     exclude_statement_ids: list[str] = Field(default_factory=list)
     condition: EvidenceCondition = EvidenceCondition.CROSS_YEAR_RRF
 

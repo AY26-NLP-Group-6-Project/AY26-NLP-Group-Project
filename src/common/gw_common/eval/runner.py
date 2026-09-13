@@ -27,7 +27,7 @@ from gw_common.schemas import (
 
 REPO_ROOT = Path(__file__).resolve().parents[4]
 RUNS_DIR = REPO_ROOT / "artifacts" / "runs"
-EVIDENCE_K = 5
+EVIDENCE_K = 3
 
 
 def _git() -> tuple[str, bool]:
@@ -42,7 +42,7 @@ def _git() -> tuple[str, bool]:
 
 def _collect_evidence(system, items: list[GoldItem], condition: EvidenceCondition) -> dict[str, list]:
     retriever = system.retriever()
-    if retriever is None or condition is EvidenceCondition.SENTENCE_ONLY:
+    if retriever is None or condition in (EvidenceCondition.SENTENCE_ONLY, EvidenceCondition.LOCAL):
         return {}
     evidence = {}
     for it in items:
@@ -52,6 +52,7 @@ def _collect_evidence(system, items: list[GoldItem], condition: EvidenceConditio
             aspect=it.aspect,
             year_from=None if condition.value.startswith("cross_year") else it.year,
             year_to=None if condition.value.startswith("cross_year") else it.year,
+            anchor_year=it.year,
             exclude_statement_ids=[it.item_id],
             condition=condition,
         )
@@ -101,12 +102,17 @@ def run_task(
 
     results: dict[str, dict] = {}
     baseline_labels: list[Label] | None = None
+    ev_fp = (run_dir / "evidence.jsonl").open("w", encoding="utf-8")
     with (run_dir / "predictions.jsonl").open("w", encoding="utf-8") as fp:
         for cond in wanted:
             if cond not in supported:
                 results[cond.value] = {"status": "n/a"}
                 continue
             evidence = _collect_evidence(system, items, cond)
+            for item_id, spans in evidence.items():
+                record = {"condition": cond.value, "item_id": item_id,
+                          "spans": [s.model_dump(mode="json") for s in spans]}
+                ev_fp.write(json.dumps(record) + "\n")
             clf = system.classifier()
             if clf is None:
                 results[cond.value] = {"status": "n/a"}
@@ -115,6 +121,15 @@ def run_task(
             for p in preds:
                 fp.write(json.dumps({"condition": cond.value, **p.model_dump(mode="json")}) + "\n")
             block = {"status": "ok", **_condition_metrics(gold, preds)}
+            if evidence:
+                counts = [len(evidence.get(it.item_id, [])) for it in items]
+                why = [s.why for spans in evidence.values() for s in spans]
+                block["evidence"] = {
+                    "items_with_evidence": sum(c > 0 for c in counts),
+                    "coverage": sum(c > 0 for c in counts) / len(counts) if counts else 0.0,
+                    "mean_spans": sum(counts) / len(counts) if counts else 0.0,
+                    "by_source": {w: why.count(w) for w in sorted(set(why))},
+                }
             labels = [p.label for p in preds]
             if cond is EvidenceCondition.SENTENCE_ONLY:
                 baseline_labels = labels
@@ -128,6 +143,7 @@ def run_task(
             block["bootstrap"] = M.bootstrap_ci(gold, labels)
             results[cond.value] = block
 
+    ev_fp.close()
     sha, dirty = _git()
     manifest = RunManifest(
         run_id=run_id,

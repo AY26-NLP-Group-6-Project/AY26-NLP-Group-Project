@@ -16,11 +16,11 @@ def test_healthz_and_systems():
 
 
 def test_classify_roundtrip_and_501():
-    client = TestClient(create_app(["majority", "graph-rag"]))
+    client = TestClient(create_app(["majority", "baseline-rag"]))
     resp = client.post("/classify", json={"text": "We installed solar panels.", "system": "majority"})
     assert resp.status_code == 200
     assert resp.json()["label"] in {"implemented", "planning", "indeterminate", "none"}
 
     # a system that cannot classify says so rather than pretending
-    assert client.post("/classify", json={"text": "x", "system": "graph-rag"}).status_code == 501
+    assert client.post("/classify", json={"text": "x", "system": "baseline-rag"}).status_code == 501
     assert client.post("/classify", json={"text": "x", "system": "nope"}).status_code == 404

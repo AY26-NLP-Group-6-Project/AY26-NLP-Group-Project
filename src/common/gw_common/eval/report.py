@@ -44,6 +44,13 @@ def write_report(run_dir: Path, manifest: RunManifest, results: dict[str, dict])
             f"| {_fmt(vs.get('mcnemar', {}).get('p_value'), '.3f') if vs else '—'} "
             f"| {ops['p50_ms']:.1f} | {ops['p95_ms']:.1f} | {ops['llm_calls']} |"
         )
+    ev_rows = [(c, b["evidence"]) for c, b in results.items()
+               if b.get("status") == "ok" and b.get("evidence")]
+    if ev_rows:
+        lines += ["", "## Evidence", "", "| condition | coverage | mean spans | by source |",
+                  "|---|---|---|---|"]
+        for cond, ev in ev_rows:
+            lines.append(f"| {cond} | {ev['coverage']:.2f} | {ev['mean_spans']:.2f} | {ev['by_source']} |")
     lines += ["", "## Per-label F1 (actions)", "", "| condition | implemented | planning | indeterminate |",
               "|---|---|---|---|"]
     for cond, block in results.items():
