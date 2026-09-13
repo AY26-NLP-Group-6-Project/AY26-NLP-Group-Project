@@ -88,7 +88,7 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument(
         "stage",
         choices=[*STAGES, "build", "stats", "export-extract", "export-gold", "score-extraction",
-                 "canon-pools", "canon-tune"],
+                 "canon-pools", "canon-tune", "canon-verify"],
     )
     ap.add_argument("--config", default="configs/graph.dev.yaml")
     ap.add_argument("--build-id")
@@ -102,7 +102,11 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--method", choices=stage_canonical.METHODS, default="exact",
                     help="canonicalisation method for the canonical stage")
     ap.add_argument("--threshold", type=float, help="cosine similarity threshold for --method hac")
-    ap.add_argument("--labels", help="annotated pool partitions JSONL for canon-tune")
+    ap.add_argument("--labels", help="annotated pool partitions JSONL for canon-tune / canon-verify")
+    ap.add_argument("--split", choices=["val", "test"], default="val")
+    ap.add_argument("--variant", choices=["rules", "rules+demos"], default="rules")
+    ap.add_argument("--k", type=int, default=5)
+    ap.add_argument("--floor", type=float, default=0.70)
     args = ap.parse_args(argv)
 
     cfg = GraphConfig.load(args.config, build_id=args.build_id)
@@ -131,6 +135,20 @@ def main(argv: list[str] | None = None) -> int:
         pools = Path(args.out or cfg.out_dir / "canon_pools.jsonl")
         result = tuning.tune(cfg, pools, Path(args.labels))
         print(json.dumps(result["summary"], indent=2))
+        return 0
+    if args.stage == "canon-verify":
+        from graph_rag.canonical import tuning
+
+        if not args.labels:
+            ap.error("--labels is required for canon-verify")
+        pools = Path(args.out or cfg.out_dir / "canon_pools.jsonl")
+        r = tuning.verify_eval(cfg, pools, Path(args.labels), args.split, args.variant, args.k, args.floor)
+        pw = r["metrics"]["pairwise"]
+        print(json.dumps({k: r[k] for k in ("split", "variant", "candidates", "gold_pairs",
+                                            "gold_pairs_among_candidates", "verifier_confusion", "usage")},
+                         indent=2))
+        print(f"pairwise P {pw['precision']:.3f}  R {pw['recall']:.3f}  F1 {pw['f1']:.3f}  "
+              f"F0.5 {r['pairwise_f05']:.3f}")
         return 0
     if args.stage == "score-extraction":
         if not args.pred:

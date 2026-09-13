@@ -62,7 +62,7 @@ Rules we hold ourselves to:
 |---|---|---|
 | **M0 scaffold** ✅ 2026-09-12 | uv workspace, `src/common` (schemas, Protocols, registry, frozen datasets, metrics, runner, report, FastAPI factory), stubs for `baseline-rag` / `graph-rag` / `agentic-graph-rag`, 8 tests | done: `gw-data build gw1000` froze 1,000 items at `fddce492c10d`; `gw-eval --system majority` gives macro-F1 0.2264 / acc 0.5143, `random` 0.3109 / 0.2877; both write `metrics.json`, `manifest.json`, `report.md` |
 | **M1 graph build (narrow)** ✅ 2026-09-12 | 52 companies, 233 reports, **108,948 statements**, 734 aspects, 19,586 mentions, 7,146 `follows_up` edges, DuckDB store, 13 tests | **passed**: 2,804 cross-year chains (1,931 span >=3 years) against a gate of 20; all 1,000 eval sentences matched a parsed statement, so the graph joins the eval set exactly |
-| **M2 canonicalisation** ⚠ gate failed 2026-09-13 | pipeline, CESI metrics, 59 pools and a first gold clustering (Claude, blind to method output: 593 forms, 518 groups, 70 val / 44 test same-aspect pairs). Embedding + complete-linkage HAC alone does **not** reach the precision the graph needs: test pairwise precision 0.47 [95 % CI 0.34-0.61], recall 0.39 at the val-selected threshold 0.82. The graph keeps morph canonicalisation; HAC merges stay off | pairwise precision >= 0.80 on test pools (revised from micro precision, see 4c) |
+| **M2 canonicalisation** ⚠ gate not met 2026-09-13 | M2a embedding + HAC alone: test pairwise P 0.47 / R 0.39. **M2b embeddings propose, LLM verifies** (EDC-style; forced Yes/No with the gold guideline as matching rules; variant chosen on val): test pairwise **P 0.733 [95 % CI 0.55-0.88] / R 0.750 / F1 0.742**, val P 0.819 / R 0.971. Graph still runs morph canonicalisation until the gate is settled | pairwise precision >= 0.80 on test pools; current point estimate misses it but the CI covers it (44 gold pairs), so a fresh, larger test set decides |
 | **M3 metrics & targets** | regex + unit extraction (Scope 1/2/3, kWh, m³, tCO₂e, %, target year, baseline year) | precision ≥0.9 on a 100-row manual check |
 | **M4 retrieval arm** | `graph-rag` implements `Retriever`; RQ1 five-condition ablation runs end to end | graph arm reported next to RRF arm, whatever the sign of the delta |
 | **M5 trajectories** | `TrajectoryBuilder`; transition F1 on the ~60 (company, aspect) trajectory set | — |
@@ -114,6 +114,32 @@ Next step for M2 (to be grounded before building): use HAC at a low threshold on
 candidate merges and let an LLM verify each candidate under the same granularity rules, the analogue
 of the side information CESI adds on top of embeddings.
 
+## 4d. M2b: LLM-verified merges (2026-09-13)
+
+- **Method.** Within each category (here: each pool), every phrase's top-5 embedding neighbours with
+  cosine >= 0.70 become candidate pairs (EDC retrieves top-5). `gpt-5.6-luna` answers Yes/No under the
+  gold guideline written as matching rules; clusters are unions of accepted pairs that never cross a
+  rejected pair. Temperature could not be set for this model (`temperature_applied=False`); every
+  response is cached, so re-runs are identical.
+- **Candidate recall is not the bottleneck.** 68 of 70 val and 40 of 44 test gold pairs are among the
+  candidates.
+- **Variant selection on val only.** rules: P 0.778 / R 0.900 / F0.5 0.799; rules+demos: P 0.819 /
+  R 0.971 / F0.5 0.846 -> rules+demos. Consistent with Peeters et al., who find demonstrations help
+  strong GPT models on most, not all, datasets.
+- **Test, run once for this method:** P 0.733 [0.55-0.88], R 0.750, F1 0.742 (M2a at its val-selected
+  threshold: 0.472 / 0.386 / 0.425). 317 LLM calls, 157,612 input tokens.
+- **What the 27 accepted non-gold pairs are.** About two thirds break the rules the verifier was given:
+  broader vs narrower ("electricity and fuel consumption" ~ "fuel and energy consumption", "clean
+  and/or renewable energy" ~ "clean energy"), thing vs instrument ("social distancing" ~
+  "safe-distancing measures"), class vs instance ("oil spill contingency plan" ~ "SOPEP"), different
+  referents ("customer privacy" ~ "data privacy"). About one third are calls the gold itself marked
+  as borderline and kept apart under "when unsure, keep apart" ("employment contracts" ~ "Written
+  employment contracts", "zero fatalities" ~ "zero work-related fatalities"). The verifier is also
+  inconsistent: it accepted "Anti-Corruption Policy" ~ "anti-corruption and bribery policies" but
+  rejected "Anti-Corruption Policy" ~ "anti-corruption related policies".
+- **The test split has now been looked at twice** (M2a, M2b). Further prompt or threshold iteration
+  must be judged on val, and the M2 number for the report needs fresh test pools.
+
 ## 5. Risks
 
 1. **Aspect canonicalisation is the whole ball game.** If "Scope 1 emissions", "direct emissions"
@@ -159,6 +185,9 @@ row may reach the report without becoming one of the other two first.
 | Cross-year chain count is not a quality measure for canonicalisation | [measured] | merging aspects fuses chains, so the count can fall while coverage rises: morph normalisation moved chains from 3,932 to 3,906. Canonicalisation is judged on the gold clustering, chains are only descriptive |
 | On singleton-heavy gold, macro and micro canonicalisation metrics reward not merging | [measured] | no-merge baseline on our test pools: micro precision 1.0, macro F1 0.949, micro F1 0.938, pairwise recall 0; HAC at 0.82: macro F1 0.946, micro F1 0.944, pairwise P 0.472 / R 0.386 |
 | Embedding + complete-linkage HAC alone is not precise enough to merge ESG aspects | [measured] | test pairwise precision 0.472 [95 % CI 0.34-0.61] at the val-selected threshold; 0.281 [0.18-0.40] at 0.74 |
+| LLM verification of embedding-proposed merges counters embedding over-generalisation | [cited] | EDC (Zhang & Soh, EMNLP 2024), phase 3: candidates by vector similarity (top-5), LLM verifies "to prevent issues of over-generalization"; CESI observed merging 'place of birth' with 'date of death' |
+| Forced binary answers, handwritten matching rules and demonstrations are the levers for LLM pair matching, and no single prompt is best | [cited] | Peeters, Steiner & Bizer, arXiv 2310.11244: prompt must be tuned per model/dataset; in-context learning helped in ~61 % of model/dataset combinations; GPT-4-class models do best with related demonstrations |
+| On our pools, LLM verification roughly doubles pairwise F1 over embedding + HAC | [measured] | test pairwise F1 0.742 vs 0.425; precision 0.733 [0.55-0.88] vs 0.472; recall 0.750 vs 0.386 |
 | A3CG and its follow-up classify isolated sentences | [cited] | A3CG, ACL 2025, and COGLM, arXiv 2601.21722 |
 | Vector RAG is already the right tool for locally answerable queries; GraphRAG targets global sensemaking | [cited] | Microsoft GraphRAG, arXiv 2404.16130: "RAG works well for queries that can be answered with information localized within a small set of records", whereas vector RAG "do not support sensemaking queries ... such as What are the key trends". Settles A2: our queries are local and structured, so community-summary GraphRAG is out of scope |
 | Community-summary indexing is expensive | [cited] | GraphRAG: graph indexing with a 600-token window took 281 minutes for the ~1M-token Podcast dataset on a 16 GB VM; datasets were 1669 chunks (~1M tokens) and 3197 chunks (~1.7M tokens); evaluation is LLM-as-judge on comprehensiveness, diversity, empowerment and directness with 72-83 % win rates |

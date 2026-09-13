@@ -105,3 +105,82 @@ def tune(cfg: GraphConfig, pools_path: Path, labels_path: Path) -> dict:
     out = cfg.out_dir / "canon_tuning.json"
     out.write_text(json.dumps(report, indent=2), encoding="utf-8")
     return report
+
+
+def verify_eval(
+    cfg: GraphConfig,
+    pools_path: Path,
+    labels_path: Path,
+    split: str,
+    variant: str = "rules",
+    k: int = 5,
+    floor: float = 0.70,
+    workers: int = 8,
+) -> dict:
+    """Embeddings propose within each pool, the LLM verifies, clusters never cross a rejection."""
+    from itertools import combinations
+
+    from gw_common.llm import LLMClient
+
+    from graph_rag.canonical.verify import candidate_pairs, cluster_from_verdicts, verify
+
+    gold = load_gold(pools_path, labels_path)
+    pools = {json.loads(line)["pool_id"]: json.loads(line)
+             for line in pools_path.read_text(encoding="utf-8").splitlines() if line.strip()}
+    with DuckDBGraphStore(cfg.db_path, read_only=True) as store:
+        phrases, _, _ = load_phrases(store)
+    embedder = PhraseEmbedder()
+    vectors = embedder.embed([p.key for p in phrases])
+    index = {form_id(p): i for i, p in enumerate(phrases)}
+
+    texts = [p.display or p.key for p in phrases]
+    examples = [""] * len(phrases)
+    categories = [p.category for p in phrases]
+    groups = []
+    for pid, g in gold.items():
+        if g["split"] != split:
+            continue
+        idx = []
+        for f in pools[pid]["forms"]:
+            i = index[f["form_id"]]
+            texts[i], examples[i] = f["text"], f.get("example", "")
+            idx.append(i)
+        groups.append(idx)
+
+    candidates = candidate_pairs(vectors, groups, k=k, floor=floor)
+    client = LLMClient()
+    verdicts = verify(client, candidates, texts, examples, categories, variant=variant, workers=workers)
+    clusters = cluster_from_verdicts(len(phrases), verdicts)
+    assignment = {form_id(phrases[i]): f"c{n}" for n, members in enumerate(clusters) for i in members}
+    metrics = evaluate_against_gold(assignment, gold, split)
+
+    # verifier accuracy on the candidate pairs it actually judged
+    same_pairs = {frozenset(pr) for g in gold.values() if g["split"] == split
+                  for grp in g["groups"] for pr in combinations(sorted(grp), 2)}
+    tp = fp = fn = tn = 0
+    for v in verdicts:
+        truth = frozenset((form_id(phrases[v.a]), form_id(phrases[v.b]))) in same_pairs
+        tp += v.same and truth
+        fp += v.same and not truth
+        fn += (not v.same) and truth
+        tn += (not v.same) and (not truth)
+    reachable = tp + fn
+    result = {
+        "split": split,
+        "variant": variant,
+        "k": k,
+        "floor": floor,
+        "embedder": embedder.label,
+        "chat": client.settings.describe(),
+        "candidates": len(candidates),
+        "gold_pairs": sum(1 for _ in same_pairs),
+        "gold_pairs_among_candidates": reachable,
+        "verifier_confusion": {"tp": tp, "fp": fp, "fn": fn, "tn": tn},
+        "temperature_applied": None,
+        "usage": client.usage,
+        "metrics": metrics,
+        "pairwise_f05": _pairwise_f05(metrics),
+    }
+    out = cfg.out_dir / f"canon_verify_{split}_{variant.replace('+', '_')}_k{k}_f{int(floor * 100)}.json"
+    out.write_text(json.dumps(result, indent=2), encoding="utf-8")
+    return result

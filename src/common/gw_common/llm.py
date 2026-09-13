@@ -30,6 +30,7 @@ import hashlib
 import json
 import os
 import sqlite3
+import threading
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -113,18 +114,24 @@ class ChatResult:
 
 
 class _Cache:
+    """SQLite response cache, safe to share across the worker threads of a batched run."""
+
     def __init__(self, path: Path) -> None:
         path.parent.mkdir(parents=True, exist_ok=True)
-        self.con = sqlite3.connect(path)
+        self._lock = threading.Lock()
+        self.con = sqlite3.connect(path, check_same_thread=False)
         self.con.execute("CREATE TABLE IF NOT EXISTS responses (key TEXT PRIMARY KEY, kind TEXT, body TEXT)")
 
     def get(self, key: str) -> dict | None:
-        row = self.con.execute("SELECT body FROM responses WHERE key = ?", (key,)).fetchone()
+        with self._lock:
+            row = self.con.execute("SELECT body FROM responses WHERE key = ?", (key,)).fetchone()
         return json.loads(row[0]) if row else None
 
     def put(self, key: str, kind: str, body: dict) -> None:
-        self.con.execute("INSERT OR REPLACE INTO responses VALUES (?, ?, ?)", (key, kind, json.dumps(body)))
-        self.con.commit()
+        with self._lock:
+            self.con.execute("INSERT OR REPLACE INTO responses VALUES (?, ?, ?)",
+                             (key, kind, json.dumps(body)))
+            self.con.commit()
 
 
 def _request_key(kind: str, payload: dict) -> str:
@@ -145,6 +152,7 @@ class LLMClient:
         self._chat_client = client            # injectable for tests
         self._embed_client = embed_client or client
         self.usage = {"calls": 0, "cache_hits": 0, "input_tokens": 0, "output_tokens": 0}
+        self._usage_lock = threading.Lock()
 
     # ----------------------------------------------------------------- transport
     def _make(self, api_key: str | None, base_url: str | None, what: str):
@@ -185,7 +193,8 @@ class LLMClient:
                    "max_completion_tokens": max_tokens, "response_format": response_format}
         key = _request_key("chat", payload)
         if self._cache and (hit := self._cache.get(key)):
-            self.usage["cache_hits"] += 1
+            with self._usage_lock:
+                self.usage["cache_hits"] += 1
             return ChatResult(**{**hit, "cached": True, "latency_ms": 0.0})
 
         kwargs = {k: v for k, v in payload.items() if v is not None}
@@ -209,9 +218,10 @@ class LLMClient:
             latency_ms=latency,
             temperature_applied=temperature_applied,
         )
-        self.usage["calls"] += 1
-        self.usage["input_tokens"] += result.input_tokens
-        self.usage["output_tokens"] += result.output_tokens
+        with self._usage_lock:
+            self.usage["calls"] += 1
+            self.usage["input_tokens"] += result.input_tokens
+            self.usage["output_tokens"] += result.output_tokens
         if self._cache:
             self._cache.put(key, "chat", {"text": result.text, "model": result.model,
                                           "input_tokens": result.input_tokens,

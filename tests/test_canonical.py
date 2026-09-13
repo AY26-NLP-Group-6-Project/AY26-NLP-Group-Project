@@ -69,3 +69,27 @@ def test_gold_must_partition_each_pool(tmp_path):
     split_all = evaluate_against_gold({"a": "k1", "b": "k2", "c": "k3"}, gold, "val")
     assert split_all["pairwise"]["recall"] == 0.0
     assert split_all["micro"]["precision"] == 1.0   # singletons are pure, which is why purity alone misleads
+
+
+def test_verdict_clustering_never_crosses_a_rejection():
+    from graph_rag.canonical.verify import Verdict, cluster_from_verdicts, parse_yes_no
+
+    v = [
+        Verdict(0, 1, 0.95, True, "Yes", False, 0, 0),
+        Verdict(1, 2, 0.90, True, "Yes", False, 0, 0),
+        Verdict(0, 2, 0.80, False, "No", False, 0, 0),   # A~B, B~C accepted, but A vs C rejected
+        Verdict(3, 4, 0.85, True, "Yes", False, 0, 0),
+    ]
+    clusters = sorted(cluster_from_verdicts(5, v))
+    assert [0, 1] in clusters and [2] in clusters and [3, 4] in clusters
+    assert parse_yes_no("Yes.") and parse_yes_no(" yes") and not parse_yes_no("No") and not parse_yes_no("Maybe yes")
+
+
+def test_candidate_pairs_respect_floor_and_groups():
+    from graph_rag.canonical.verify import candidate_pairs
+
+    v = np.array([[1, 0], [0.99, 0.141], [0, 1], [0.1, 0.995]], dtype=np.float32)
+    v /= np.linalg.norm(v, axis=1, keepdims=True)
+    pairs = candidate_pairs(v, [[0, 1], [2, 3]], k=5, floor=0.9)
+    assert {(c.a, c.b) for c in pairs} == {(0, 1), (2, 3)}
+    assert candidate_pairs(v, [[0, 2]], k=5, floor=0.9) == []
