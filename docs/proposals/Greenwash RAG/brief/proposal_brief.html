@@ -1,0 +1,277 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Greenwash-RAG Proposal Brief</title>
+<style>
+  @page { size: A4; margin: 18mm 17mm 18mm 17mm; }
+  :root { --ink:#1d2327; --muted:#5b646b; --rule:#d5dadd; --accent:#1f6f50; --soft:#eef5f1; }
+  * { box-sizing: border-box; }
+  body { font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif; color: var(--ink);
+         font-size: 10pt; line-height: 1.45; margin: 0; }
+  h1 { font-size: 18pt; line-height: 1.2; margin: 0 0 4pt; color: var(--accent); }
+  .subtitle { color: var(--muted); font-size: 10pt; margin-bottom: 10pt; }
+  h2 { font-size: 12.5pt; color: var(--accent); margin: 16pt 0 5pt; padding-bottom: 2pt;
+       border-bottom: 1px solid var(--rule); break-after: avoid; }
+  h3 { font-size: 10.5pt; margin: 10pt 0 3pt; break-after: avoid; }
+  p { margin: 0 0 6pt; }
+  ul, ol { margin: 0 0 6pt; padding-left: 16pt; }
+  li { margin-bottom: 2pt; }
+  table { border-collapse: collapse; width: 100%; margin: 4pt 0 8pt; font-size: 9pt; break-inside: avoid; }
+  th, td { border: 1px solid var(--rule); padding: 3pt 5pt; vertical-align: top; text-align: left; }
+  th { background: var(--soft); font-weight: 600; }
+  .box { background: var(--soft); border-left: 3px solid var(--accent); padding: 6pt 9pt; margin: 6pt 0 8pt;
+         break-inside: avoid; }
+  .note { color: var(--muted); font-size: 8.8pt; }
+  pre { font-family: Consolas, "Courier New", monospace; font-size: 8.6pt; background: #f6f7f8;
+        border: 1px solid var(--rule); padding: 6pt 8pt; margin: 4pt 0 8pt; white-space: pre-wrap;
+        break-inside: avoid; }
+  .flow { display: flex; flex-wrap: wrap; gap: 4pt; align-items: stretch; margin: 6pt 0 8pt; break-inside: avoid; }
+  .flow div { flex: 1 1 0; border: 1px solid var(--accent); border-radius: 3pt; padding: 4pt 5pt;
+              font-size: 8.6pt; background: #fff; }
+  .flow div b { display: block; color: var(--accent); font-size: 8.8pt; margin-bottom: 1pt; }
+  .flow span { align-self: center; color: var(--accent); font-weight: 700; }
+  .tag { display: inline-block; font-size: 8pt; padding: 0 4pt; border-radius: 2pt; background: #e3ece7;
+         color: var(--accent); font-weight: 600; }
+  .avoid { break-inside: avoid; }
+  code { font-family: Consolas, "Courier New", monospace; font-size: 8.8pt; background: #f1f3f4; padding: 0 2pt; border-radius: 2pt; }
+</style>
+</head>
+<body>
+
+<h1>Greenwash-RAG: Evidence-Grounded, Cross-Year Tracking of SGX Sustainability Claims</h1>
+<div class="subtitle">AI6127 Deep Neural Networks for NLP · Group project proposal, draft for feedback · 13 September 2026</div>
+
+<div class="box">
+<b>In one paragraph.</b> Given a company and a sustainability commitment or aspect (e.g. "Scope 1 emissions"),
+the system retrieves the company's own sustainability-report evidence across years, labels each statement
+<i>implemented / planning / indeterminate</i> following the A3CG scheme (ACL 2025), and returns a page-cited
+commitment timeline. The research question is whether retrieved evidence <b>changes and improves</b> A3CG-style
+action classification compared with classifying a sentence in isolation, which is how every published A3CG result
+works. The output is evidence-backed <b>risk screening</b>, never a verdict that a company is greenwashing.
+</div>
+
+<h2>1. Problem and motivation</h2>
+
+<p>Every SGX mainboard issuer publishes an annual sustainability report (Listing Rule 711A), typically 40–150 pages.
+Analysts, investors, regulators and journalists need to answer questions such as <i>"Company X committed to an
+emissions target in 2021; was it delivered, and on which pages is the evidence?"</i> Doing this by hand means reading
+three to four years of heavily templated reports. The target output looks like this (illustrative, fictional quotes):</p>
+
+<pre>2021  p.34  "we aim to reduce ... by 2025"            → planning
+2022  p.41  "we remain committed to this target"      → planning
+2023  p.38  "we continue to explore options"          → indeterminate
+2024  —     aspect no longer mentioned
+⚠ Risk signal: commitment stayed planning / indeterminate for 3 years with no implemented evidence
+  (assistive screening, not a verdict)</pre>
+
+<p>Existing approaches handle this poorly for three reasons:</p>
+<ol>
+  <li><b>Sentence-level judgement lacks context.</b> "We have achieved this target ahead of schedule" does not say which
+    target; "Industry players are expected to reduce plastic packaging" does not say whether the company itself acts.
+    These match the dominant error types A3CG reports: <i>ellipsis</i> for supervised models and <i>unattributed
+    statements</i> for LLMs.</li>
+  <li><b>ESG language is templated.</b> Near-identical sentences recur across companies, so similarity search without
+    company and year constraints tends to return other issuers' passages.</li>
+  <li><b>No prior work compares across years.</b> A3CG, ML-Promise and EmeraldMind all work on single statements or
+    single reports.</li>
+</ol>
+
+<h2>2. Research questions and positioning</h2>
+
+<ul>
+  <li><b>RQ1 (headline).</b> Does retrieved report-internal context (local, same-report, cross-year) make aspect–action
+    classification more accurate than sentence-only input, on seen and unseen aspect categories?</li>
+  <li><b>RQ2.</b> Can cross-year retrieval reconstruct a commitment's trajectory (planning → implemented, stuck at
+    planning, weakened, dropped)?</li>
+  <li><b>RQ3.</b> Do company/year metadata constraints, and a company-scoped temporal claim graph, reduce
+    wrong-company retrieval compared with hybrid similarity search?</li>
+</ul>
+<p><b>Out of scope:</b> any company-level "is this greenwashing" verdict.</p>
+
+<table>
+  <tr><th style="width:24%">Closest prior work</th><th style="width:44%">What it already does</th><th>What remains open for us</th></tr>
+  <tr><td>A3CG (ACL 2025); COGLM (arXiv 2601.21722, Jan 2026)</td>
+      <td>Aspect–action scheme, 2,004 SGX statements, seen/unseen category protocol; COGLM is the current model-side
+      state of the art (AAA F1 72.4 full / 67.6 seen / 49.0 unseen)</td>
+      <td>Both classify an isolated sentence: no retrieved context, no document provenance, no temporal dimension.
+      We do not claim contrastive/ordinal objectives as ours.</td></tr>
+  <tr><td>EmeraldMind (WWW 2026)</td>
+      <td>KG + vector RAG for greenwashing detection with evidence-grounded justification and abstention</td>
+      <td>37 reports, semi-synthetic claims, no aspect–action granularity, no cross-year view, no SGX</td></tr>
+  <tr><td>ML-Promise (EMNLP 2025)</td>
+      <td>Promise identification and evidence located within the same ESG report, text and image RAG baselines</td>
+      <td>Single-year; evidence stays within one document</td></tr>
+  <tr><td>SwissText 2025 ESG hints</td>
+      <td>Specificity and internal-substantiation signals over German DAX reports</td>
+      <td>Not per aspect–action pair, no page-level provenance, no SGX</td></tr>
+</table>
+
+<p><b>Claimed contribution:</b> (1) retrieval-conditioned aspect–action classification with a controlled
+evidence-condition ablation; (2) cross-year claim tracking; (3) a 2020–2025 SGX report corpus with company, year and
+page provenance, extending past A3CG's 2022 cut-off (A3CG's own source-report list is not published).</p>
+
+<h2>3. Task definition</h2>
+
+<ul>
+  <li><b>Input:</b> <code>(company, aspect or claim text)</code>, optional year range.</li>
+  <li><b>Knowledge base:</b> sustainability reports of SGX-listed issuers, 2020–2025, parsed into sentences and
+    passages with <code>{company, year, page, section}</code> metadata. External news or regulator pages are an
+    optional extension only.</li>
+  <li><b>Output:</b> (1) an evidence set with company, year and page; (2) a label per statement–aspect pair;
+    (3) a cross-year trajectory for the aspect; (4) risk signals (vague wording, missing target year or number,
+    internal inconsistency), each with page citations and an "assistive screening, not a verdict" notice.</li>
+</ul>
+
+<table>
+  <tr><th style="width:18%">Label</th><th>Definition (A3CG wording, condensed)</th></tr>
+  <tr><td>implemented</td><td>An action has already been taken to address the aspect (in place, advanced or achieved).</td></tr>
+  <tr><td>planning</td><td>An action is planned or a commitment is made by the company (including "strive to").</td></tr>
+  <tr><td>indeterminate</td><td>Unclear whether or how the company addresses the aspect: hedged or unattributed wording,
+      disclosure of figures only, statements of belief or risk. Not evidence of greenwashing.</td></tr>
+  <tr><td>none</td><td>The sentence has no sustainability aspect, or the highlighted phrase is not one (A3CG's no-aspect class).</td></tr>
+</table>
+
+<h2>4. Data</h2>
+
+<h3>4.1 Knowledge base (collected 10 September 2026)</h3>
+<table>
+  <tr><th>Reports</th><th>Issuers</th><th>Years</th><th>Pages / words</th><th>Passages</th></tr>
+  <tr><td>240 sustainability reports</td><td>56 SGX-listed companies, REITs and trusts; 41 with ≥3 years, 29 with all six</td>
+      <td>2020–2025 (38–43 per year)</td><td>10,635 pages / 3.48 M words</td>
+      <td>~11.6k at 300 words (course minimum 10k); 108,948 parsed sentences</td></tr>
+</table>
+<p>Reports were fetched from the companies' own investor-relations sites at ≤1 request/s, with source URL and fetch date
+recorded per file; an 11-step filter removed annual reports, AGM notices, GRI indexes, non-English editions and
+duplicates, keeping one report per company-year. Report aggregators were used only to discover which reports exist.
+The PDFs remain the issuers' copyright and are not redistributed; only derived passages and metadata are shared
+as the course requires.</p>
+
+<h3>4.2 Evaluation set (eval.xls, 1,000 sentences)</h3>
+<ul>
+  <li><b>Sampling.</b> 1,000 sentences from 52 issuers' 2023–2025 reports, each with company, year, page and
+    surrounding context. Each sentence carries <b>one</b> highlighted candidate aspect and its A3CG category
+    (10 categories), or no aspect.</li>
+  <li><b>Labelling.</b> A single four-way decision per row (implemented / planning / indeterminate / none), using a
+    guideline written from A3CG's definitions and indeterminate sub-rules. Candidate aspects and a pre-label were
+    produced by an LLM; human annotators label <b>blind</b> to the pre-label. Among rows with an aspect, the pre-label split
+    (implemented 51 %, indeterminate 27 %, planning 22 %) resembles A3CG's (54 % / 32 % / 14 %); 20 % of rows have no
+    aspect, against 33 % of A3CG statements.</li>
+  <li><b>Agreement.</b> A pilot of 50 sentences with 6 annotators is under way, with Fleiss' κ and raw agreement
+    reported; the full set then gets at least two independent annotators per row plus adjudication, to meet the
+    course's ≥80 % agreement requirement.</li>
+  <li><b>Seen/unseen.</b> The category column lets us map A3CG's three fold-wise category splits onto our set.</li>
+  <li><b>Retrieval qrels.</b> ≥50 queries (company-specific claim lookup, cross-year same-aspect lookup, generic)
+    with pooled top-10 manual relevance judgements.</li>
+</ul>
+
+<h2>5. Method</h2>
+
+<div class="flow">
+  <div><b>Query</b>company, aspect / claim, year range; alias and aspect-synonym expansion</div><span>→</span>
+  <div><b>Hybrid retrieval</b>BM25 + dense + RRF, company/year filters, cross-encoder rerank</div><span>→</span>
+  <div><b>Temporal claim graph</b>same company, same aspect, other years; BM25 fallback when the graph is sparse</div><span>→</span>
+  <div><b>Classifier</b>one fixed classifier under every evidence condition</div><span>→</span>
+  <div><b>Output</b>page-cited timeline, risk signals, UI</div>
+</div>
+
+<h3>5.1 Evidence conditions (the RQ1 ablation)</h3>
+<p>The same classifier and prompt run under each condition, so differences come from the evidence alone:</p>
+<table>
+  <tr><th style="width:26%">Condition</th><th>Evidence given to the classifier</th></tr>
+  <tr><td>sentence_only</td><td>The target sentence (A3CG setting, the baseline)</td></tr>
+  <tr><td>local</td><td>Plus the neighbouring sentences from the same report</td></tr>
+  <tr><td>same_report</td><td>Plus top-k passages retrieved from the same report (hybrid retrieval)</td></tr>
+  <tr><td>cross_year (hybrid)</td><td>Plus top-k passages from the same company's other years (hybrid retrieval with filters)</td></tr>
+  <tr><td>cross_year (graph / fused)</td><td>Plus statements reached through the temporal claim graph, with text fallback</td></tr>
+  <tr><td>cross_year (agentic, stretch)</td><td>A bounded plan–retrieve–stop loop (≤3 hops) over the same tools, with cost and latency reported</td></tr>
+</table>
+
+<h3>5.2 Components</h3>
+<ul>
+  <li><b>Temporal claim graph.</b> A narrow, mostly deterministic graph (DuckDB + networkx): companies → reports →
+    statements → aspects, with <code>follows_up</code> edges linking the same aspect across years. Cross-year
+    links are marked when the sentence is a verbatim repeat, so trajectory analysis can separate "the claim
+    progressed" from "the paragraph was copied". No open-domain entity extraction and no community summaries.</li>
+  <li><b>Classifiers.</b> A zero-shot LLM classifier with A3CG definitions (shared by all systems), and a
+    model fine-tuned on A3CG as the supervised reference (the GRACE checkpoints released by the A3CG authors).</li>
+  <li><b>Cross-year consistency.</b> Label transitions per (company, aspect) across years, plus structured target
+    extraction (target year, baseline year, Scope 1/2/3 and units) to detect moved or dropped targets.</li>
+  <li><b>Risk-signal explanation.</b> Rules for vague wording and missing numbers or years, plus a cited LLM
+    explanation; always labelled as screening.</li>
+  <li><b>Optional.</b> Visual page retrieval on a capped table/chart subset (≤1,200 pages); external evidence only as
+    a stretch goal.</li>
+</ul>
+
+<h2>6. Evaluation and acceptance criteria</h2>
+<table>
+  <tr><th style="width:20%">Layer</th><th style="width:40%">Metrics</th><th>Minimum target</th></tr>
+  <tr><td>Knowledge base</td><td>reports, passages, words, types, parse success</td><td>≥10k passages, ≥100k words (met)</td></tr>
+  <tr><td>Retrieval (RQ3)</td><td>P@5, R@10, MRR, nDCG@10; wrong-company@10</td>
+      <td>hybrid beats BM25 and dense alone; filters or graph lower wrong-company@10</td></tr>
+  <tr><td>Classification</td><td>macro-F1 over the three action labels, per-class F1, accuracy; none-vs-aspect F1</td>
+      <td>around A3CG's published action-classification level (AC F1 51.8–60.5 seen, 21.6–36.5 unseen), reported as a
+      reference rather than a like-for-like comparison</td></tr>
+  <tr><td><b>Evidence ablation (RQ1)</b></td>
+      <td>ΔF1 vs sentence_only, flip analysis (wrong→right vs right→wrong), McNemar / bootstrap CI, repeated runs;
+      Δ bucketed by A3CG error type</td>
+      <td>reported for every condition with confidence intervals; a null or negative result is still a result.
+      Prediction: gains on ellipsis / unattributed, none on negation / modality</td></tr>
+  <tr><td>Trajectories (RQ2)</td><td>trajectory exact match, transition F1</td><td>~60 (company, aspect) trajectories over ≥3 years</td></tr>
+  <tr><td>Generation</td><td>RAGAS faithfulness, answer and context relevance; citation precision on 50 checked answers</td><td>faithfulness ≥0.75</td></tr>
+  <tr><td>System</td><td>p50/p95 latency per stage, indexing time, cost; 5 timed queries in the UI</td><td>end to end ≤8 s</td></tr>
+</table>
+
+<h2>7. Current status and early observations</h2>
+<ul>
+  <li><b>Done:</b> corpus collection and filtering; sentence parsing with provenance (all 1,000 eval sentences map
+    back to a parsed report sentence); the 1,000-sentence evaluation sheet and pilot annotation files; a shared
+    evaluation harness (frozen dataset snapshots, per-condition metrics, significance tests, run manifests) with a
+    FastAPI interface for the UI; a first temporal claim graph (52 issuers, 233 reports, 2,804 cross-year aspect chains).</li>
+  <li><b>Templated reporting is measurable.</b> About 27 % of cross-year links join a sentence repeated verbatim a year
+    later, which both motivates RQ2 and means cross-year evidence must skip verbatim repeats.</li>
+  <li><b>Aspect normalisation is hard.</b> Merging differently worded aspects with embeddings plus LLM verification reached
+    only 0.60 pairwise precision on a held-out check, so the graph uses conservative normalisation and matches aspects
+    at query time.</li>
+  <li><b>Proof of concept on 300 items</b> <span class="tag">development numbers</span> Scored against the LLM pre-labels
+    (not human gold), the zero-shot classifier reaches macro-F1 ≈0.77–0.80 under every condition; the cross-year graph
+    condition neither helps nor hurts beyond run-to-run variation (the same prompt re-sampled changes 9 % of labels).
+    The pipeline therefore runs end to end, and the final ablation must use repeated runs and bucketed analysis rather
+    than a single run.</li>
+</ul>
+
+<h2>8. Main risks and mitigations</h2>
+<table>
+  <tr><th style="width:30%">Risk</th><th>Mitigation</th></tr>
+  <tr><td>Reaching ≥80 % inter-annotator agreement on implemented vs indeterminate</td>
+      <td>Pilot round before scaling; guideline quotes A3CG's indeterminate sub-rules; "unsure" flag and adjudication</td></tr>
+  <tr><td>Evidence effect is small relative to classifier variance</td>
+      <td>Repeated runs, flip analysis against a sentence_only-vs-itself baseline, error-type buckets; report nulls honestly</td></tr>
+  <tr><td>PDF extraction noise (tables, multi-column layouts)</td>
+      <td>Sentence filter against GRI index and page furniture; A3CG's own released text shows similar noise is tolerable</td></tr>
+  <tr><td>Reputational sensitivity of naming companies</td>
+      <td>Risk-screening framing throughout; no company-level verdicts in the report or UI</td></tr>
+</table>
+
+<h2>9. Plan to 7 November</h2>
+<table>
+  <tr><th style="width:22%">Period</th><th>Work</th></tr>
+  <tr><td>Mid – late September</td><td>Pilot agreement and guideline revision; full annotation; hybrid RAG baseline (BM25 + dense + RRF + reranker) and UI</td></tr>
+  <tr><td>October, first half</td><td>Evidence-condition ablation on human labels; graph and fused arms; retrieval qrels; seen/unseen mapping</td></tr>
+  <tr><td>October, second half</td><td>Trajectories and structured targets; RAGAS, citation precision, latency; optional agentic and visual arms</td></tr>
+  <tr><td>1 – 7 November</td><td>Error analysis, report, slides</td></tr>
+</table>
+
+<h2>10. Questions we would value your view on</h2>
+<ol>
+  <li>Is retrieval-conditioned aspect–action classification with a cross-year view a sound and sufficiently distinct
+    direction relative to A3CG and COGLM?</li>
+  <li>Is the evaluation-set design acceptable: an LLM proposes one candidate aspect per sentence and a pre-label, and
+    annotators assign the four-way label blind to that pre-label?</li>
+  <li>Could the A3CG company/year report list (paper footnote 2) be shared, and are there usage terms for the A3CG data
+    and checkpoints we should follow?</li>
+  <li>Any guidance on presenting named SGX issuers in the report and demo, given the sensitivity of the topic?</li>
+</ol>
+
+</body>
+</html>
