@@ -57,3 +57,27 @@ def test_harness_drops_target_and_counts_it():
     assert dropped == 1
     kept, n = drop_target([other], query())
     assert kept == [other] and n == 0
+
+
+def test_a3cg_reader_one_row_per_aspect(tmp_path):
+    import json
+
+    from gw_common.datasets import _read_a3cg
+
+    recs = [
+        {"text": "We cut water use and plan solar.", "sentence_id": 7,
+         "aspect_categories": {"resource optimisation": ["water use", "solar"]},
+         "aspects": {"water use": ["implemented"], "solar": ["planning"]}},
+        {"text": "Revenue grew.", "sentence_id": 8,
+         "aspect_categories": {"no aspect category": ["no aspect"]}, "aspects": {"no aspect": ["no action"]}},
+        {"text": "Recycling, recycling.", "sentence_id": 9,
+         "aspect_categories": {"waste management": ["recycling"]},
+         "aspects": {"recycling": ["implemented", "planning"]}},
+    ]
+    path = tmp_path / "t.json"
+    path.write_text(json.dumps(recs), encoding="utf-8")
+    items, skipped = _read_a3cg(path)
+    assert [(i.item_id, i.aspect, i.gold_label) for i in items] == [
+        ("7:0", "water use", Label.IMPLEMENTED), ("7:1", "solar", Label.PLANNING), ("8:0", None, Label.NONE)]
+    assert items[0].category == "resource optimisation"
+    assert skipped == 1

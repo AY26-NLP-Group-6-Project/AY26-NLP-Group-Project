@@ -52,7 +52,9 @@ class LLMActionClassifier:
             evidence_block = ("Evidence from the same company's reports in other years:\n"
                               + "\n".join(lines) + "\n")
         user = self._prompt["user"].format(
-            company=item.company, year=item.year, aspect=item.aspect or "(none proposed)", text=item.text,
+            # A3CG items carry no provenance; say so rather than inventing a company or year.
+            company=item.company or "(not given)", year=item.year or "year not given",
+            aspect=item.aspect or "(none proposed)", text=item.text,
             context_block=context_block, evidence_block=evidence_block,
         )
         return [{"role": "system", "content": self._prompt["system"]}, {"role": "user", "content": user}]

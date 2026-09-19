@@ -16,8 +16,18 @@ from gw_common.schemas import GoldItem, Label
 REPO_ROOT = Path(__file__).resolve().parents[3]
 EVAL_DIR = REPO_ROOT / "data" / "eval"
 MASTER_CSV = REPO_ROOT / "kb" / "annotation" / "GW_master_1000.csv"
+A3CG_DIR = REPO_ROOT / "tmp" / "data" / "a3cg"  # keanepotato/a3cg_greenwash release, git-ignored
 
-LABEL_SOURCES = ("llm_pre", "human_majority")
+LABEL_SOURCES = ("llm_pre", "human_majority", "a3cg_gold")
+# A3CG test files -> dataset ids. Seen/unseen follow the paper's three category folds.
+A3CG_SPLITS = {
+    "a3cg-full-test": "full/full_test.json",
+    **{
+        f"a3cg-f{k}-{s}-test": f"fold_{k}/fold_{k}_{s}_test.json"
+        for k in (1, 2, 3)
+        for s in ("seen", "unseen")
+    },
+}
 
 
 def _hash_items(items: list[GoldItem]) -> str:
@@ -75,6 +85,55 @@ def build_gw1000(label_source: str = "llm_pre", master_csv: Path | None = None) 
     with out.open("w", encoding="utf-8") as f:
         for it in items:
             f.write(it.model_dump_json() + "\n")
+    return out
+
+
+def _read_a3cg(path: Path) -> tuple[list[GoldItem], int]:
+    """One item per (statement, aspect), the unit of A3CG's action-classification sub-task (AC).
+
+    A3CG releases isolated statements with no company, year or page, so those fields stay empty and
+    only `sentence_only` can run. A statement without aspects becomes one `none` row, as in gw1000.
+    Aspects annotated with two different actions (the phrase occurs twice) have no single gold label
+    and are skipped; the count is returned so it can be reported.
+    """
+    items: list[GoldItem] = []
+    skipped = 0
+    for rec in json.loads(path.read_text(encoding="utf-8")):
+        category_of = {a: c for c, aspects in rec["aspect_categories"].items() for a in aspects}
+        for i, (aspect, actions) in enumerate(rec["aspects"].items()):
+            if len(set(actions)) != 1:
+                skipped += 1
+                continue
+            no_aspect = aspect == "no aspect"
+            items.append(GoldItem(
+                item_id=f"{rec['sentence_id']}:{i}",
+                text=rec["text"],
+                aspect=None if no_aspect else aspect,
+                category=None if no_aspect else category_of.get(aspect),
+                company="",
+                year=0,
+                gold_label=Label.NONE if no_aspect else Label(actions[0]),
+                label_source="a3cg_gold",
+            ))
+    return items, skipped
+
+
+def build_a3cg(root: Path | None = None) -> list[tuple[Path, int, int]]:
+    """Freeze every A3CG test split; returns (snapshot, items, skipped multi-action aspects)."""
+    out = []
+    for dataset_id, rel in A3CG_SPLITS.items():
+        src = (root or A3CG_DIR) / rel
+        if not src.exists():
+            raise FileNotFoundError(f"A3CG split not found: {src}")
+        items, skipped = _read_a3cg(src)
+        EVAL_DIR.mkdir(parents=True, exist_ok=True)
+        for old in EVAL_DIR.glob(f"{dataset_id}.a3cg_gold.*.jsonl"):
+            old.unlink()  # the release is fixed; a rebuild replaces rather than accumulates
+        path = EVAL_DIR / f"{dataset_id}.a3cg_gold.{_hash_items(items)}.jsonl"
+        with path.open("w", encoding="utf-8") as f:
+            for it in items:
+                f.write(it.model_dump_json() + "\n")
+        out.append((path, len(items), skipped))
     return out
 
 

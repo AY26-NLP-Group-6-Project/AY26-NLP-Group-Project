@@ -71,6 +71,10 @@ def data_main(argv: list[str] | None = None) -> int:
         for p in sorted(datasets.EVAL_DIR.glob("*.jsonl")):
             print(p.name)
         return 0
+    if args.dataset == "a3cg":
+        for path, n, skipped in datasets.build_a3cg():
+            print(f"wrote {path.name} ({n} items, {skipped} multi-action aspects skipped)")
+        return 0
     if args.dataset != "gw1000":
         raise SystemExit(f"no builder for dataset {args.dataset!r} yet")
     out = datasets.build_gw1000(args.labels)
