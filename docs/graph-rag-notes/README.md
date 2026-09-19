@@ -191,6 +191,33 @@ company's other-year statements fills to k. Runs `20260913T152226Z` (cached) and
   flips counted against a sentence_only-vs-sentence_only baseline. Cross-year evidence should skip
   verbatim repeats and not be retrieved for items without an aspect.
 
+## 4g. Calibration on A3CG's own test sets (2026-09-19)
+
+Question: is the shared zero-shot classifier in a sensible range when scored against **human** gold?
+A3CG test splits frozen as AC-style snapshots (`gw-data build a3cg`: one row per statement–aspect,
+gold aspect given, no-aspect statements as `none`; 3 aspects with two different actions skipped).
+`sentence_only` only, since A3CG statements carry no provenance. One run, every call fresh (no cache).
+
+| split | action rows | macro-F1 | micro-F1 | impl. F1 | plan. F1 | indet. F1 | none recall |
+|---|---|---|---|---|---|---|---|
+| full test | 545 | 0.748 | 0.798 | 0.882 | 0.795 | 0.567 | 0.585 |
+| seen avg (3 folds) | 985 | 0.714 | 0.757 | — | — | 0.44–0.59 | 0.56–0.66 |
+| unseen avg (3 folds) | 984 | 0.723 | 0.771 | — | — | 0.46–0.61 | 0.59–0.68 |
+
+- **Reference, not a like-for-like comparison.** A3CG's AC sub-task (supervised models) is 59.5–65.7
+  full / 51.8–60.5 seen / 21.6–36.5 unseen, but it is scored on pairs whose aspect the model itself
+  extracted; here the gold aspect is handed over, and the A3CG release may be in the LLM's training data.
+  What the numbers do show: the classifier is not broken, and as a zero-shot model it has no seen/unseen
+  gap (A3CG reports the same for its LLM baselines on AAA).
+- **The weak class is `indeterminate`**, and its dominant error is towards `implemented` (26–54 rows per
+  split), i.e. over-crediting the company, the LLM failure mode A3CG describes. It is also the class
+  context is supposed to help (unattributed and hedged statements), so RQ1's bucketed analysis should
+  centre on it.
+- **`none` recall is only 0.56–0.68**: given a sentence with no aspect, the model still assigns an action.
+- **Consistency with the gw1000 dev numbers.** On gw1000 against `llm_pre`, the same classifier scored
+  macro-F1 0.77–0.79; against A3CG human gold it scores 0.71–0.75. Similar range, which is weak evidence
+  that `llm_pre` is not flattering the classifier much; it does not replace the human-gold rerun.
+
 ## 5. Risks
 
 1. **Aspect canonicalisation is the whole ball game.** If "Scope 1 emissions", "direct emissions"
