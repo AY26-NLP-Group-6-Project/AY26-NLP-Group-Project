@@ -15,6 +15,7 @@ from pathlib import Path
 from gw_common import datasets
 from gw_common.eval import metrics as M
 from gw_common.eval.report import write_report
+from gw_common.evidence import drop_target
 from gw_common.registry import load as load_system
 from gw_common.schemas import (
     EvidenceCondition,
@@ -40,11 +41,18 @@ def _git() -> tuple[str, bool]:
         return "unknown", True
 
 
-def _collect_evidence(system, items: list[GoldItem], condition: EvidenceCondition) -> dict[str, list]:
+def _collect_evidence(
+    system, items: list[GoldItem], condition: EvidenceCondition
+) -> tuple[dict[str, list], int]:
+    """Evidence per item, and how many returned spans were the target sentence itself.
+
+    The harness removes the target whatever the retriever did, so no arm can score by re-reading the
+    sentence it classifies; the count is reported so a retriever that leaks is visible.
+    """
     retriever = system.retriever()
     if retriever is None or condition in (EvidenceCondition.SENTENCE_ONLY, EvidenceCondition.LOCAL):
-        return {}
-    evidence = {}
+        return {}, 0
+    evidence, dropped = {}, 0
     for it in items:
         q = Query(
             text=it.text,
@@ -53,11 +61,13 @@ def _collect_evidence(system, items: list[GoldItem], condition: EvidenceConditio
             year_from=None if condition.value.startswith("cross_year") else it.year,
             year_to=None if condition.value.startswith("cross_year") else it.year,
             anchor_year=it.year,
-            exclude_statement_ids=[it.item_id],
+            target_text=it.text,
             condition=condition,
         )
-        evidence[it.item_id] = retriever.retrieve(q, k=EVIDENCE_K)
-    return evidence
+        spans, n = drop_target(retriever.retrieve(q, k=EVIDENCE_K), q)
+        evidence[it.item_id] = spans
+        dropped += n
+    return evidence, dropped
 
 
 def _condition_metrics(gold: list[Label], preds: list[Prediction]) -> dict:
@@ -108,7 +118,7 @@ def run_task(
             if cond not in supported:
                 results[cond.value] = {"status": "n/a"}
                 continue
-            evidence = _collect_evidence(system, items, cond)
+            evidence, target_dropped = _collect_evidence(system, items, cond)
             for item_id, spans in evidence.items():
                 record = {"condition": cond.value, "item_id": item_id,
                           "spans": [s.model_dump(mode="json") for s in spans]}
@@ -129,6 +139,7 @@ def run_task(
                     "coverage": sum(c > 0 for c in counts) / len(counts) if counts else 0.0,
                     "mean_spans": sum(counts) / len(counts) if counts else 0.0,
                     "by_source": {w: why.count(w) for w in sorted(set(why))},
+                    "target_dropped": target_dropped,
                 }
             labels = [p.label for p in preds]
             if cond is EvidenceCondition.SENTENCE_ONLY:

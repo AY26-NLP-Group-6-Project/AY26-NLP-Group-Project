@@ -11,6 +11,11 @@ class Retriever(Protocol):
     def retrieve(self, query: Query, *, k: int = 10) -> list[EvidenceSpan]: ...
     # Query carries: text, optional company, optional year window, optional aspect,
     # and `condition` in {local, same_report, cross_year}. Honouring the filters is the system's job.
+    # `target_text` + `anchor_year` name the sentence being classified. A span from the same company-year
+    # whose normalised text equals or contains it is the target itself (gw_common.evidence.is_target_span):
+    # retrievers should skip it before cutting to k, and the harness drops any that slip through and
+    # reports the count as `evidence.target_dropped`. Statement ids are system-specific, so the harness
+    # never passes eval item ids as `exclude_statement_ids`.
 
 class ActionClassifier(Protocol):
     def classify(self, items: Sequence[EvalItem], *, condition: EvidenceCondition,

@@ -20,6 +20,7 @@ import re
 from collections import Counter
 from functools import lru_cache
 
+from gw_common.evidence import is_target_span
 from gw_common.schemas import EvidenceCondition, EvidenceSpan, Query
 
 from graph_rag.build.text import aspect_key
@@ -74,9 +75,12 @@ class GraphRetriever:
             if norm in seen:                      # templated reports repeat sentences verbatim
                 continue
             seen.add(norm)
-            out.append(EvidenceSpan(statement_id=r["stmt_id"], text=r["text"], company=r["company"],
-                                    year=r["year"], page=r["page"], file=r["sha256"], score=1.0,
-                                    why=f"graph:{r['method']}"))
+            span = EvidenceSpan(statement_id=r["stmt_id"], text=r["text"], company=r["company"],
+                                year=r["year"], page=r["page"], file=r["sha256"], score=1.0,
+                                why=f"graph:{r['method']}")
+            if is_target_span(span, query):
+                continue
+            out.append(span)
             if len(out) >= k:
                 break
         return out
@@ -114,9 +118,15 @@ class GraphRetriever:
             if s > 0:
                 scored.append((s, sid, text, year, page, sha))
         scored.sort(reverse=True)
-        return [EvidenceSpan(statement_id=sid, text=text, company=query.company, year=year, page=page,
-                             file=sha, score=round(s, 3), why="bm25")
-                for s, sid, text, year, page, sha in scored[:k]]
+        out = []
+        for s, sid, text, year, page, sha in scored:
+            span = EvidenceSpan(statement_id=sid, text=text, company=query.company, year=year, page=page,
+                                file=sha, score=round(s, 3), why="bm25")
+            if not is_target_span(span, query):
+                out.append(span)
+            if len(out) >= k:
+                break
+        return out
 
     # --------------------------------------------------------------- protocol
     def retrieve(self, query: Query, *, k: int = 3) -> list[EvidenceSpan]:

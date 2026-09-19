@@ -73,7 +73,10 @@ class Query(BaseModel):
     year_from: int | None = None
     year_to: int | None = None
     anchor_year: int | None = None  # the year of the statement being classified; cross-year excludes it
-    exclude_statement_ids: list[str] = Field(default_factory=list)
+    # The sentence being classified. Retrievers must never return it (see gw_common.evidence); kept apart
+    # from `text` so a rewritten query does not change what counts as the target.
+    target_text: str | None = None
+    exclude_statement_ids: list[str] = Field(default_factory=list)  # system-native ids only
     condition: EvidenceCondition = EvidenceCondition.CROSS_YEAR_RRF
 
 
