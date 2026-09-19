@@ -88,7 +88,8 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument(
         "stage",
         choices=[*STAGES, "build", "stats", "export-extract", "export-gold", "score-extraction",
-                 "canon-pools", "canon-tune", "canon-verify", "canon-spotcheck", "canon-spotcheck-score"],
+                 "canon-pools", "canon-tune", "canon-verify", "canon-spotcheck", "canon-spotcheck-score",
+                 "export-a3cg"],
     )
     ap.add_argument("--config", default="configs/graph.dev.yaml")
     ap.add_argument("--build-id")
@@ -123,6 +124,11 @@ def main(argv: list[str] | None = None) -> int:
     if args.stage == "export-extract":
         out = Path(args.out or cfg.out_dir / "extract_input.jsonl")
         print(json.dumps(extraction.export_input(cfg, out, args.limit, args.per_report), indent=2))
+        return 0
+    if args.stage == "export-a3cg":
+        from graph_rag import a3cg_match
+
+        print(json.dumps(a3cg_match.export(cfg), indent=2))
         return 0
     if args.stage == "export-gold":
         out = Path(args.out or REPO_ROOT / "data" / "eval" / "extract_gold.jsonl")

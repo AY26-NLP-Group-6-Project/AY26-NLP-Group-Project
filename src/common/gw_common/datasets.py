@@ -96,9 +96,16 @@ def _read_a3cg(path: Path) -> tuple[list[GoldItem], int]:
     Aspects annotated with two different actions (the phrase occurs twice) have no single gold label
     and are skipped; the count is returned so it can be reported.
     """
+    return a3cg_items(json.loads(path.read_text(encoding="utf-8")))
+
+
+def a3cg_items(records: list[dict], provenance: dict[int, dict] | None = None) -> tuple[list[GoldItem], int]:
+    """Expand A3CG records into per-aspect rows; `provenance` optionally maps sentence_id to the
+    company / year / page / file / context fields recovered from our own corpus."""
     items: list[GoldItem] = []
     skipped = 0
-    for rec in json.loads(path.read_text(encoding="utf-8")):
+    for rec in records:
+        prov = (provenance or {}).get(rec["sentence_id"], {})
         category_of = {a: c for c, aspects in rec["aspect_categories"].items() for a in aspects}
         for i, (aspect, actions) in enumerate(rec["aspects"].items()):
             if len(set(actions)) != 1:
@@ -110,8 +117,12 @@ def _read_a3cg(path: Path) -> tuple[list[GoldItem], int]:
                 text=rec["text"],
                 aspect=None if no_aspect else aspect,
                 category=None if no_aspect else category_of.get(aspect),
-                company="",
-                year=0,
+                company=prov.get("company", ""),
+                year=prov.get("year", 0),
+                page=prov.get("page"),
+                file=prov.get("file"),
+                context_prev=prov.get("context_prev", ""),
+                context_next=prov.get("context_next", ""),
                 gold_label=Label.NONE if no_aspect else Label(actions[0]),
                 label_source="a3cg_gold",
             ))
@@ -126,15 +137,22 @@ def build_a3cg(root: Path | None = None) -> list[tuple[Path, int, int]]:
         if not src.exists():
             raise FileNotFoundError(f"A3CG split not found: {src}")
         items, skipped = _read_a3cg(src)
-        EVAL_DIR.mkdir(parents=True, exist_ok=True)
-        for old in EVAL_DIR.glob(f"{dataset_id}.a3cg_gold.*.jsonl"):
-            old.unlink()  # the release is fixed; a rebuild replaces rather than accumulates
-        path = EVAL_DIR / f"{dataset_id}.a3cg_gold.{_hash_items(items)}.jsonl"
-        with path.open("w", encoding="utf-8") as f:
-            for it in items:
-                f.write(it.model_dump_json() + "\n")
-        out.append((path, len(items), skipped))
+        out.append((write_snapshot(dataset_id, "a3cg_gold", items, replace=True), len(items), skipped))
     return out
+
+
+def write_snapshot(dataset_id: str, label_source: str, items: list[GoldItem], replace: bool = False) -> Path:
+    """Write a hash-named snapshot. `replace` drops older snapshots of the same id, for sources that are
+    fixed releases, so a rebuild replaces rather than accumulates."""
+    EVAL_DIR.mkdir(parents=True, exist_ok=True)
+    if replace:
+        for old in EVAL_DIR.glob(f"{dataset_id}.{label_source}.*.jsonl"):
+            old.unlink()
+    path = EVAL_DIR / f"{dataset_id}.{label_source}.{_hash_items(items)}.jsonl"
+    with path.open("w", encoding="utf-8") as f:
+        for it in items:
+            f.write(it.model_dump_json() + "\n")
+    return path
 
 
 def snapshot_path(dataset_id: str, label_source: str) -> Path:
