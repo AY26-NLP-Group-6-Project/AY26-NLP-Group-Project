@@ -27,18 +27,20 @@ def write_report(run_dir: Path, manifest: RunManifest, results: dict[str, dict])
         f"- git: `{manifest.git_sha[:8]}`{' (dirty)' if manifest.git_dirty else ''}"
         + (f" · wall: {manifest.wall_seconds:.1f}s" if manifest.wall_seconds else ""),
         "",
-        "| condition | macro-F1 (actions) | acc | pairdet F1 | Δ vs sentence_only | net flips |"
+        "| condition | macro-F1 (actions) | micro-F1 (actions) | acc | pairdet F1 | Δ vs sentence_only"
+        " | net flips |"
         " p (McNemar) | p50 ms | p95 ms | LLM calls |",
-        "|---|---|---|---|---|---|---|---|---|---|",
+        "|---|---|---|---|---|---|---|---|---|---|---|",
     ]
     for cond, block in results.items():
         if block.get("status") != "ok":
-            lines.append(f"| {cond} | n/a | | | | | | | | |")
+            lines.append(f"| {cond} | n/a | | | | | | | | | |")
             continue
         a, pd_, ops = block["action"], block["pairdet"], block["ops"]
         vs = block.get("vs_sentence_only", {})
         lines.append(
-            f"| {cond} | {_fmt(a['macro_f1'])} | {_fmt(a['accuracy'])} | {_fmt(pd_['f1'])} "
+            f"| {cond} | {_fmt(a['macro_f1'])} | {_fmt(a.get('micro_f1'))} | {_fmt(a['accuracy'])} "
+            f"| {_fmt(pd_['f1'])} "
             f"| {_fmt(vs.get('delta_macro_f1'), '+.4f') if vs else '—'} "
             f"| {vs.get('flips', {}).get('net', '—')} "
             f"| {_fmt(vs.get('mcnemar', {}).get('p_value'), '.3f') if vs else '—'} "

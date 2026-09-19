@@ -52,6 +52,7 @@ def eval_main(argv: list[str] | None = None) -> int:
             continue
         print(
             f"  {cond:22s} macro-F1 {block['action']['macro_f1']:.4f}"
+            f"  micro-F1 {block['action']['micro_f1']:.4f}"
             f"  acc {block['action']['accuracy']:.4f}"
             f"  pairdet-F1 {block['pairdet']['f1']:.4f}"
             f"  p95 {block['ops']['p95_ms']:.1f} ms"

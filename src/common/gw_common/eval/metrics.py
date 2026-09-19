@@ -20,23 +20,32 @@ def _prf(tp: int, fp: int, fn: int) -> tuple[float, float, float]:
 def classification_report(
     gold: Sequence[Label], pred: Sequence[Label], labels: Sequence[Label] = ALL_LABELS
 ) -> dict:
-    """Accuracy, per-label P/R/F1, macro-F1 over `labels`, and the confusion matrix."""
+    """Accuracy, per-label P/R/F1, macro- and micro-F1 over `labels`, and the confusion matrix.
+
+    Micro-F1 pools TP/FP/FN over `labels`, so a prediction outside `labels` (e.g. `none` on an action
+    row) costs recall but not precision. It is reported next to macro-F1 because published A3CG scores
+    are pooled over pairs.
+    """
     assert len(gold) == len(pred), "gold/pred length mismatch"
     per_label = {}
+    tot_tp = tot_fp = tot_fn = 0
     for lab in labels:
         tp = sum(g == lab and p == lab for g, p in zip(gold, pred, strict=True))
         fp = sum(g != lab and p == lab for g, p in zip(gold, pred, strict=True))
         fn = sum(g == lab and p != lab for g, p in zip(gold, pred, strict=True))
+        tot_tp, tot_fp, tot_fn = tot_tp + tp, tot_fp + fp, tot_fn + fn
         p, r, f = _prf(tp, fp, fn)
         per_label[lab.value] = {"precision": p, "recall": r, "f1": f, "support": tp + fn}
     macro_f1 = sum(v["f1"] for v in per_label.values()) / len(per_label) if per_label else 0.0
+    micro_p, micro_r, micro_f1 = _prf(tot_tp, tot_fp, tot_fn)
     acc = sum(g == p for g, p in zip(gold, pred, strict=True)) / len(gold) if gold else 0.0
     pairs = list(zip(gold, pred, strict=True))
     confusion = {
         g.value: {p.value: sum(a == g and b == p for a, b in pairs) for p in ALL_LABELS}
         for g in ALL_LABELS
     }
-    return {"n": len(gold), "accuracy": acc, "macro_f1": macro_f1, "per_label": per_label,
+    return {"n": len(gold), "accuracy": acc, "macro_f1": macro_f1, "micro_f1": micro_f1,
+            "micro_precision": micro_p, "micro_recall": micro_r, "per_label": per_label,
             "confusion": confusion}
 
 
@@ -44,7 +53,8 @@ def action_metrics(gold: Sequence[Label], pred: Sequence[Label]) -> dict:
     """rq1 primary: macro-F1 over the three actions, on rows whose gold is one of them."""
     pairs = [(g, p) for g, p in zip(gold, pred, strict=True) if g in ACTION_LABELS]
     if not pairs:
-        return {"n": 0, "accuracy": 0.0, "macro_f1": 0.0, "per_label": {}, "confusion": {}}
+        return {"n": 0, "accuracy": 0.0, "macro_f1": 0.0, "micro_f1": 0.0, "micro_precision": 0.0,
+                "micro_recall": 0.0, "per_label": {}, "confusion": {}}
     g2, p2 = zip(*pairs, strict=True)
     return classification_report(g2, p2, ACTION_LABELS)
 

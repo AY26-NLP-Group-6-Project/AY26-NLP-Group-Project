@@ -23,6 +23,16 @@ def test_macro_f1_hand_computed():
     assert abs(r["macro_f1"] - (2 / 3 + 2 / 3 + 0) / 3) < 1e-9
 
 
+
+def test_micro_f1_counts_none_as_missed_not_wrong():
+    # gold: IM IM P U ; pred: IM P P N -> TP 2 (IM, P); FP 1 (P on IM row); FN 2 (IM row, U row)
+    r = M.action_metrics([IM, IM, P, U], [IM, P, P, N])
+    assert abs(r["micro_precision"] - 2 / 3) < 1e-9
+    assert abs(r["micro_recall"] - 2 / 4) < 1e-9
+    assert abs(r["micro_f1"] - 2 * (2 / 3) * 0.5 / (2 / 3 + 0.5)) < 1e-9
+    assert r["accuracy"] == 0.5
+
+
 def test_pairdet_binary():
     r = M.pairdet_metrics([IM, N, N, P], [IM, N, P, N])
     assert (r["tp"], r["fp"], r["fn"], r["tn"]) == (1, 1, 1, 1)
