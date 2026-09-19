@@ -218,6 +218,29 @@ gold aspect given, no-aspect statements as `none`; 3 aspects with two different 
   macro-F1 0.77–0.79; against A3CG human gold it scores 0.71–0.75. Similar range, which is weak evidence
   that `llm_pre` is not flattering the classifier much; it does not replace the human-gold rerun.
 
+## 4h. Evidence conditions on A3CG human gold (2026-09-19)
+
+`gw-graph export-a3cg`: 100 of 1,994 A3CG statements occur verbatim (>= 6 tokens) in our corpus; 8 are
+shared by several companies and dropped; 93 statements from 24 companies remain (88 anchored in 2020–2022,
+inside A3CG's range), 165 rows (130 action, 35 none), with neighbouring sentences as local context.
+Three uncached repeats per condition.
+
+| condition | macro-F1 (3 reps) | mean | indet. F1 mean | labels unstable across reps | pooled flips vs sentence_only |
+|---|---|---|---|---|---|
+| sentence_only | 0.735 / 0.740 / 0.735 | 0.737 | 0.620 | 16 / 165 | — |
+| local | 0.757 / 0.727 / 0.767 | 0.750 | 0.647 | 13 | +22 / -20 |
+| cross_year_graph (coverage 0.24) | 0.733 / 0.741 / 0.732 | 0.735 | 0.648 | 13 | +15 / -16 |
+| cross_year_fused (coverage 0.92) | 0.745 / 0.757 / 0.764 | 0.755 | 0.686 | 11 | +24 / -17 |
+
+- **No arm hurts; none helps significantly.** The fused arm beats sentence_only in all three repeats
+  (+0.018 mean) and its gain sits in `indeterminate` (+0.07 F1), the direction section 4g predicted, but
+  24 vs 17 fixes over three repeats is a sign-test p of about 0.35. Graph-only evidence is neutral (it
+  reaches 24 % of rows, mostly verbatim repeats).
+- **What this subset can and cannot say.** The gold is human, but A3CG annotated statements in isolation,
+  so context can only help where the model misreads the sentence, not where the sentence is genuinely
+  ambiguous. The subset is also biased towards boilerplate that companies repeat year to year, which is
+  exactly where cross-year evidence adds the least. n = 130 action rows; treat it as a direction check.
+
 ## 5. Risks
 
 1. **Aspect canonicalisation is the whole ball game.** If "Scope 1 emissions", "direct emissions"
