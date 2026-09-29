@@ -17,6 +17,8 @@ import re
 from dataclasses import dataclass
 from pathlib import Path
 
+from gw_common.text import looks_like_sentence  # re-exported: the filter is shared
+
 from graph_rag.config import REPO_ROOT, GraphConfig
 from graph_rag.store.duckdb_store import DuckDBGraphStore
 
@@ -36,33 +38,6 @@ CATEGORIES = (
 
 # Gate A8 (project thresholds, provisional until the first real run):
 GATE = {"partial_f1": 0.60, "category_accuracy": 0.70, "no_aspect_false_positive_rate": 0.35}
-
-_WORDY = re.compile(
-    r"\b(is|are|was|were|has|have|had|will|shall|can|may|we|our|the group|the company)\b", re.I
-)
-
-
-def looks_like_sentence(text: str) -> bool:
-    """Coarse pre-filter so we do not pay an LLM to read table fragments and page furniture.
-
-    Not the annotation filter — that one is stricter and lives in the sampling pipeline. This only
-    removes obvious junk before hand-off.
-    """
-    words = text.split()
-    if not 8 <= len(words) <= 60:
-        return False
-    chars = [c for c in text if not c.isspace()]
-    letters = [c for c in chars if c.isalpha()]
-    if not chars or len(letters) / len(chars) < 0.75:
-        return False
-    if sum(c.isdigit() for c in chars) / len(chars) > 0.10:
-        return False
-    if sum(c.isupper() for c in letters) / max(1, len(letters)) > 0.30:
-        return False
-    if re.search(r"https?:|www\.|\.{4,}|@", text):
-        return False
-    return bool(_WORDY.search(text))
-
 
 # --------------------------------------------------------------------------- export
 def export_input(

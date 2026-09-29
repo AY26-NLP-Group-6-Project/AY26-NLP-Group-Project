@@ -8,9 +8,11 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 from pathlib import Path
 
 from gw_common import datasets, registry
+from gw_common.eval import retrieval as retrieval_eval
 from gw_common.eval.exchange import export_queries
 from gw_common.eval.runner import compare, run_task
 from gw_common.eval.select import SLICERS, describe, parse_slices, select
@@ -38,6 +40,12 @@ def eval_main(argv: list[str] | None = None) -> int:
     ap.add_argument("--predictions", type=Path, help="score labels produced outside this package")
     ap.add_argument("--export-queries", type=Path, metavar="OUT",
                     help="write the questions for one condition and exit")
+    ap.add_argument("--queries", type=Path, help="retrieval task: query file (JSONL)")
+    ap.add_argument("--qrels", type=Path, help="retrieval task: judgements (JSONL)")
+    ap.add_argument("--export-pool", type=Path, metavar="OUT",
+                    help="retrieval task: write a pooled judging sheet over --modes and exit")
+    ap.add_argument("--modes", default="bm25,dense,rrf,rrf+rerank",
+                    help="retrieval task: retriever configurations to compare")
     ap.add_argument("--list", action="store_true", help="list registered systems and exit")
     ap.add_argument("--compare", nargs=2, metavar=("RUN_A", "RUN_B"))
     args = ap.parse_args(argv)
@@ -65,6 +73,8 @@ def eval_main(argv: list[str] | None = None) -> int:
 
     if not args.system:
         ap.error("--system is required (or use --list / --compare / --export-queries)")
+    if args.task == "retrieval":
+        return _retrieval(ap, args)
     run_dir = run_task(
         args.system,
         task=args.task,
@@ -95,6 +105,33 @@ def eval_main(argv: list[str] | None = None) -> int:
             f"  vote {vote['macro_f1']:.4f}"
             f"  unstable {'n/a' if unstable is None else unstable}/{metrics['n_items']}"
         )
+    return 0
+
+
+def _retrieval(ap: argparse.ArgumentParser, args) -> int:
+    """Rank-aware retrieval evaluation, run over one or more retriever configurations."""
+    if not args.queries:
+        ap.error("--queries is required for --task retrieval")
+    queries = retrieval_eval.load_queries(args.queries)
+    modes = [m.strip() for m in args.modes.split(",") if m.strip()]
+    results = {}
+    for mode in modes:
+        os.environ["GW_BASELINE_MODE"] = mode          # systems that support modes read this
+        retriever = registry.load(args.system).retriever()
+        if retriever is None:
+            ap.error(f"system {args.system!r} has no retriever")
+        results[mode] = retrieval_eval.run(retriever, queries, k=args.k)
+
+    if args.export_pool:
+        print(json.dumps(retrieval_eval.export_pool(results, queries, args.export_pool), indent=2))
+        return 0
+    if not args.qrels:
+        ap.error("--qrels is required to score retrieval (or use --export-pool first)")
+    qrels = retrieval_eval.load_qrels(args.qrels)
+    summary = {mode: {k: v for k, v in retrieval_eval.score(per_query, qrels, queries, args.k).items()
+                      if k != "per_query"}
+               for mode, per_query in results.items()}
+    print(json.dumps(summary, indent=2))
     return 0
 
 

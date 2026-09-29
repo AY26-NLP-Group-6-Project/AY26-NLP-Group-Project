@@ -16,6 +16,10 @@ from gw_common.llm import REPO_ROOT, LLMClient
 from gw_common.schemas import EvalItem, EvidenceCondition, EvidenceSpan, Label, Prediction
 
 PROMPT_PATH = REPO_ROOT / "configs" / "prompts" / "action_classifier.md"
+# One evidence budget for every system. Sentence retrievers (graph) use a fraction of it; passage
+# retrievers (the hybrid baseline, ~290-word chunks) need the room, and cutting them to a sentence's
+# length would hand the comparison to whoever picked the smaller unit.
+EVIDENCE_CHARS = 800
 _LABEL_RE = re.compile(r"\b(implemented|planning|indeterminate|none)\b", re.I)
 
 
@@ -47,7 +51,7 @@ class LLMActionClassifier:
                              f"Context after: {item.context_next[:400]}\n")
         evidence_block = ""
         if evidence:
-            lines = [f"- ({e.company}, {e.year}, p.{e.page}) {e.text[:300]}"
+            lines = [f"- ({e.company}, {e.year}, p.{e.page}) {e.text[:EVIDENCE_CHARS]}"
                      for e in evidence[: self.max_evidence]]
             evidence_block = ("Evidence from the same company's reports in other years:\n"
                               + "\n".join(lines) + "\n")
