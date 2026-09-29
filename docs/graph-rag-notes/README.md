@@ -241,6 +241,37 @@ Three uncached repeats per condition.
   ambiguous. The subset is also biased towards boilerplate that companies repeat year to year, which is
   exactly where cross-year evidence adds the least. n = 130 action rows; treat it as a direction check.
 
+## 4i. First run on human gold (2026-09-29)
+
+Annotation finished: `kb/annotation/annotation.xlsx`, 1,000 rows, six annotators (pilot 50 rows all
+six, the rest one each, one tie adjudicated). Recomputed in the pipeline: Fleiss κ 0.809 overall,
+0.789 on aspect rows, 0.492 on no-aspect rows; the three LLM pre-annotators agree with the human
+majority 0.79–0.80. 34 no-aspect rows got an action label, i.e. the annotators saw an aspect our
+proposer missed (17 % of that stratum); their spans were reviewed on 2026-09-29 and layered on as
+`kb/annotation/aspect_overrides.csv`. Snapshot `gw1000.human_majority.23dc51f1d9de`, split dev 331 /
+test 669 (stratified; pilot rows pinned to dev). Model fixed at `gpt-5.6-luna`, reasoning effort
+`low`. Dev, 3 uncached repeats per condition.
+
+| condition | macro-F1 (mean ± sd) | vote | Δ vs sentence_only | flips (pooled) | p (McNemar) | indet. F1 | coverage |
+|---|---|---|---|---|---|---|---|
+| sentence_only | 0.7186 ± 0.020 | 0.7215 | — | — | — | 0.559 | — |
+| local | 0.7509 ± 0.009 | 0.7689 | +0.032 | +76 / −43 | 0.035 | 0.626 | — |
+| cross_year_graph | 0.7482 ± 0.014 | 0.7544 | +0.030 | +58 / −37 | 0.152 | 0.613 | 0.40 |
+| cross_year_fused | 0.7710 ± 0.008 | 0.7904 | **+0.052** | +76 / −35 | **0.001** | **0.683** | 0.89 |
+
+- **Retrieved evidence helps, and on human gold the fused arm clears the noise.** Rep-to-rep churn is
+  44–48 of 331 labels (≈14 %) and sd ≤ 0.02, so +0.052 with p = 0.001 is not resampling noise. This is
+  the first result where the effect survives; the PoC and A3CG subsets could not separate it.
+- **The gain sits where it was predicted.** `indeterminate` F1 0.559 → 0.683; the confusion matrix
+  shows indeterminate→implemented errors falling and correct indeterminate calls rising 33 → 43.
+  No-aspect detection also improves (0.764 → 0.824).
+- **Fused beats local** (0.771 vs 0.751), so retrieval adds something the neighbouring sentences do
+  not — but the delta was measured against sentence_only; re-run with `--baseline local` before
+  claiming it.
+- **The 34 human-filled rows are the hard ones** (macro-F1 0.25–0.40): the model must judge an aspect
+  it was not given. Reported separately, never mixed into the headline.
+- Dev numbers. Test (669 rows) stays closed until the report.
+
 ## 5. Risks
 
 1. **Aspect canonicalisation is the whole ball game.** If "Scope 1 emissions", "direct emissions"
