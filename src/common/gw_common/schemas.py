@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from enum import StrEnum
+from typing import ClassVar
 
 from pydantic import BaseModel, Field
 
@@ -50,9 +51,15 @@ class EvalItem(BaseModel):
 class GoldItem(EvalItem):
     gold_label: Label
     label_source: str
+    split: str = "dev"  # dev for anything tuned on; test is opened once, for the report
+    # Annotation provenance and quality: annotator count, agreement, tie/adjudication, per-model
+    # pre-labels, row_type, aspect_source. Slices read it; systems never see it.
+    meta: dict[str, object] = Field(default_factory=dict)
+
+    HIDDEN: ClassVar[set[str]] = {"gold_label", "label_source", "split", "meta"}
 
     def to_eval_item(self) -> EvalItem:
-        return EvalItem(**self.model_dump(exclude={"gold_label", "label_source"}))
+        return EvalItem(**self.model_dump(exclude=self.HIDDEN))
 
 
 class EvidenceSpan(BaseModel):

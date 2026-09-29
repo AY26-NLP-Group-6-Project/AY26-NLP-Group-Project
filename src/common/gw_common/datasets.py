@@ -18,7 +18,8 @@ EVAL_DIR = REPO_ROOT / "data" / "eval"
 MASTER_CSV = REPO_ROOT / "kb" / "annotation" / "GW_master_1000.csv"
 A3CG_DIR = REPO_ROOT / "tmp" / "data" / "a3cg"  # keanepotato/a3cg_greenwash release, git-ignored
 
-LABEL_SOURCES = ("llm_pre", "human_majority", "a3cg_gold")
+LABEL_SOURCES = ("human_majority", "llm_pre", "llm_pre_claude", "llm_pre_deepseek", "llm_pre_gpt",
+                 "a3cg_gold")
 # A3CG test files -> dataset ids. Seen/unseen follow the paper's three category folds.
 A3CG_SPLITS = {
     "a3cg-full-test": "full/full_test.json",
