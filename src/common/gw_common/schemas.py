@@ -125,6 +125,8 @@ class RunManifest(BaseModel):
     git_sha: str
     git_dirty: bool
     graph_build_id: str | None = None
+    llm: dict[str, object] = Field(default_factory=dict)  # model, effort, temperature, cache (no keys)
+    repeats: int = 1
     seed: int = 20260912
     started_at: str
     finished_at: str | None = None

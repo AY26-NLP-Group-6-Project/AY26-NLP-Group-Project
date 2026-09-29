@@ -41,6 +41,8 @@ import numpy as np
 REPO_ROOT = Path(__file__).resolve().parents[3]
 CACHE_PATH = REPO_ROOT / "artifacts" / "cache" / "llm.sqlite"
 DEFAULT_EMBED_MODEL = "text-embedding-3-small"
+# Reasoning models bill and think per effort level; the project fixes it so runs stay comparable.
+DEFAULT_EFFORT = "low"
 
 
 def load_env() -> None:
@@ -74,6 +76,7 @@ class LLMSettings:
     embed_base_url: str | None = None
     embed_model: str = DEFAULT_EMBED_MODEL
     temperature: float = 0.0
+    reasoning_effort: str | None = DEFAULT_EFFORT
     use_cache: bool = True
     timeout_s: float = 60.0
     max_retries: int = 3
@@ -91,6 +94,7 @@ class LLMSettings:
             embed_base_url=_first("EMB_BASE_URL") or chat_url,
             embed_model=_first("EMB_MODEL", "GW_EMBED_MODEL") or DEFAULT_EMBED_MODEL,
             temperature=float(os.getenv("GW_LLM_TEMPERATURE", "0")),
+            reasoning_effort=_first("LLM_REASONING_EFFORT", "GW_LLM_EFFORT") or DEFAULT_EFFORT,
             use_cache=os.getenv("GW_LLM_CACHE", "1") != "0",
         )
 
@@ -98,7 +102,8 @@ class LLMSettings:
         """What goes into run manifests. Never includes a key."""
         return {"chat_model": self.chat_model, "chat_base_url": self.chat_base_url,
                 "embed_model": self.embed_model, "embed_base_url": self.embed_base_url,
-                "temperature": self.temperature, "cache": self.use_cache}
+                "temperature": self.temperature, "reasoning_effort": self.reasoning_effort,
+                "cache": self.use_cache}
 
 
 @dataclass(slots=True)
@@ -110,6 +115,7 @@ class ChatResult:
     latency_ms: float = 0.0
     cached: bool = False
     temperature_applied: bool = True
+    effort_applied: bool = True
     raw: dict[str, Any] = field(default_factory=dict)
 
 
@@ -184,13 +190,16 @@ class LLMClient:
         temperature: float | None = None,
         max_tokens: int | None = None,
         response_format: dict | None = None,
+        reasoning_effort: str | None = None,
     ) -> ChatResult:
         model = model or self.settings.chat_model
         if not model:
             raise RuntimeError("no chat model configured: set LLM_MODEL in .env")
         temp = self.settings.temperature if temperature is None else temperature
+        effort = self.settings.reasoning_effort if reasoning_effort is None else reasoning_effort
         payload = {"model": model, "messages": messages, "temperature": temp,
-                   "max_completion_tokens": max_tokens, "response_format": response_format}
+                   "max_completion_tokens": max_tokens, "response_format": response_format,
+                   "reasoning_effort": effort}
         key = _request_key("chat", payload)
         if self._cache and (hit := self._cache.get(key)):
             with self._usage_lock:
@@ -199,15 +208,20 @@ class LLMClient:
 
         kwargs = {k: v for k, v in payload.items() if v is not None}
         t0 = time.perf_counter()
-        temperature_applied = True
-        try:
-            resp = self._chat_transport().chat.completions.create(**kwargs)
-        except Exception as exc:  # noqa: BLE001 - only the temperature rejection is retried
-            if "temperature" not in str(exc).lower():
-                raise
-            kwargs.pop("temperature", None)
-            temperature_applied = False
-            resp = self._chat_transport().chat.completions.create(**kwargs)
+        # Models differ in which knobs they accept. Drop the rejected one and record that it did not
+        # apply, rather than reporting a setting the model never honoured.
+        applied = {"temperature": True, "reasoning_effort": effort is not None}
+        for _ in range(len(applied) + 1):
+            try:
+                resp = self._chat_transport().chat.completions.create(**kwargs)
+                break
+            except Exception as exc:  # noqa: BLE001 - only unsupported-parameter errors are retried
+                rejected = next((p for p in applied if p in kwargs and p in str(exc).lower()), None)
+                if rejected is None:
+                    raise
+                kwargs.pop(rejected)
+                applied[rejected] = False
+        temperature_applied, effort_applied = applied["temperature"], applied["reasoning_effort"]
         latency = (time.perf_counter() - t0) * 1000
         usage = getattr(resp, "usage", None)
         result = ChatResult(
@@ -217,6 +231,7 @@ class LLMClient:
             output_tokens=getattr(usage, "completion_tokens", 0) or 0,
             latency_ms=latency,
             temperature_applied=temperature_applied,
+            effort_applied=effort_applied,
         )
         with self._usage_lock:
             self.usage["calls"] += 1
@@ -226,7 +241,8 @@ class LLMClient:
             self._cache.put(key, "chat", {"text": result.text, "model": result.model,
                                           "input_tokens": result.input_tokens,
                                           "output_tokens": result.output_tokens,
-                                          "temperature_applied": temperature_applied})
+                                          "temperature_applied": temperature_applied,
+                                          "effort_applied": effort_applied})
         return result
 
     # ----------------------------------------------------------------- embeddings

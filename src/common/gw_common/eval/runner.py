@@ -156,6 +156,12 @@ def run_task(
 
     ev_fp.close()
     sha, dirty = _git()
+    try:
+        from gw_common.llm import LLMSettings
+
+        llm_info = LLMSettings.from_env().describe()
+    except Exception:  # noqa: BLE001 - a system may not use an LLM at all
+        llm_info = {}
     manifest = RunManifest(
         run_id=run_id,
         system=system_name,
@@ -167,6 +173,7 @@ def run_task(
         n_items=len(items),
         git_sha=sha,
         git_dirty=dirty,
+        llm=llm_info,
         started_at=started.isoformat(),
         finished_at=datetime.now(UTC).isoformat(),
         wall_seconds=time.perf_counter() - t0,
