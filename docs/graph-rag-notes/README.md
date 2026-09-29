@@ -272,6 +272,40 @@ test 669 (stratified; pilot rows pinned to dev). Model fixed at `gpt-5.6-luna`, 
   it was not given. Reported separately, never mixed into the headline.
 - Dev numbers. Test (669 rows) stays closed until the report.
 
+## 4j. Ordinary RAG vs the graph arms (2026-09-29)
+
+First run with a real baseline: `baseline-rag` (BM25 + `text-embedding-3-small` + RRF + MiniLM
+cross-encoder over 18,839 passages of ~200 words, 56 companies, 240 reports) against `graph-rag`
+(sentence-level evidence). Same classifier, same 800-character evidence budget, dev split, 3 uncached
+repeats each. Both systems ran their own `sentence_only`, which doubles as a cross-run noise check.
+
+| system | condition | macro-F1 (mean ± sd) | vote | indet. F1 | none F1 | coverage | input tokens |
+|---|---|---|---|---|---|---|---|
+| baseline | sentence_only | 0.7471 ± 0.011 | 0.7591 | 0.624 | 0.788 | — | 394 |
+| baseline | local | 0.7458 ± 0.016 | 0.7640 | 0.621 | 0.784 | — | 505 |
+| baseline | same_report_rrf | 0.7335 ± 0.026 | 0.7484 | 0.588 | 0.689 | 1.00 | 717 |
+| baseline | cross_year_rrf | 0.7409 ± 0.012 | 0.7464 | 0.586 | 0.598 | 0.89 | 839 |
+| graph | sentence_only | 0.7259 ± 0.014 | 0.7343 | 0.605 | 0.766 | — | 394 |
+| graph | local | 0.7441 ± 0.004 | 0.7529 | 0.593 | 0.772 | — | 505 |
+| graph | cross_year_graph | 0.7493 ± 0.013 | 0.7523 | 0.623 | 0.771 | 0.40 | 437 |
+| graph | cross_year_fused | 0.7664 ± 0.016 | **0.7810** | **0.677** | 0.808 | 0.89 | 522 |
+
+- **Passage-level hybrid retrieval does not help this task.** Both retrieval conditions land at or
+  below the baseline's own sentence_only, and **no-aspect detection collapses** (F1 0.788 → 0.689 →
+  0.598): a 200-word passage of ESG prose talks the model into finding an aspect-action in sentences
+  that have none.
+- **The best arm is sentence-level cross-year evidence.** Graph fused beats the baseline's retrieval
+  arms on paired majority votes: p = 0.002 vs `cross_year_rrf`, p = 0.024 vs `same_report_rrf`; its
+  advantage over graph-only sentences is not significant (p = 0.281).
+- **Cross-run noise is bigger than it looks.** The two independent `sentence_only` estimates differ by
+  0.025 macro-F1 (16 of 331 labels), so only paired tests on the same items may be quoted across
+  systems; a bare difference of means below ~0.03 says nothing.
+- **Confound to resolve before claiming "the graph helps".** The winning arm differs from the baseline
+  in two ways at once: graph traversal *and* sentence-sized evidence. The next ablation is a
+  sentence-granularity baseline (BM25 + dense over statements, no graph), which separates retrieval
+  unit from graph structure. Until it runs, the honest claim is "sentence-level cross-year evidence
+  beats passage-level hybrid retrieval".
+
 ## 5. Risks
 
 1. **Aspect canonicalisation is the whole ball game.** If "Scope 1 emissions", "direct emissions"
