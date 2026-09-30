@@ -7,9 +7,11 @@ indeterminate / none**, following the A3CG scheme (Ong et al., ACL 2025). The re
 whether retrieved evidence changes and improves that label compared with reading the sentence alone.
 
 This README is the operating manual: how to set the repo up, how to run an evaluation, how to plug in
-your own retriever or classifier, what the numbers mean and what not to do. Design notes and every
-experiment recorded so far live in [`docs/graph-rag-notes/`](docs/graph-rag-notes/README.md); the
-proposal is in [`docs/proposals/Greenwash RAG/`](docs/proposals/Greenwash%20RAG/README.md).
+your own retriever or classifier, what the numbers mean and what not to do. It takes no position on
+which system is better; that is what the evaluation is for. The proposal is in
+[`docs/proposals/Greenwash RAG/`](docs/proposals/Greenwash%20RAG/README.md); the shared contracts
+(`01`–`04`) and the graph-RAG line's own design notes and experiment log are in
+[`docs/graph-rag-notes/`](docs/graph-rag-notes/README.md).
 
 ---
 
@@ -184,9 +186,10 @@ Micro-F1 (pooled) is reported next to it because A3CG pools over pairs.
 | cost | p50/p95 latency, input/output tokens, LLM calls | the course asks for it |
 | retrieval (`--task retrieval`) | P@5, R@10, MRR, nDCG@10, wrong-company@10, by query type | needs pooled human judgements (§6.3) |
 
-Noise reference on dev: three independent `sentence_only` runs gave majority-vote macro-F1 0.7416 /
-0.7591 / 0.7343. **A difference of means below ~0.03 across runs means nothing; compare systems with the
-paired McNemar on the same items.**
+Re-running an identical configuration does not reproduce its macro-F1 exactly: the classifier
+re-samples, and independent runs differ by a few points. **Do not compare systems by a difference of
+means across runs; compare them with the paired McNemar on the same items** (the run directory keeps
+per-item predictions for exactly this).
 
 ## 6. Plugging in your own RAG or classifier
 
@@ -297,25 +300,8 @@ output, or the judged system wins by construction.
    and, for retrieval, the passage-store hash.
 8. **Keep the 34 human-filled rows out of the headline.** They are reported in the `aspect_source`
    slice and as an aspect-recall figure (17 % of no-aspect rows).
-9. **Passage vs sentence evidence is a design choice, not a detail.** On dev, 200-word passages made
-   no-aspect detection collapse (none F1 0.79 → 0.60) while sentence-sized evidence helped; see notes §4j–4k.
-10. **Data handling.** Raw PDFs stay in `kb/raw/` and are never shared. The passage package is derived
+9. **Data handling.** Raw PDFs stay in `kb/raw/` and are never shared. The passage package is derived
     text for academic use inside the group. A3CG snapshots are for reference runs only (no licence file
     in the release); do not redistribute them.
-11. **Commits.** One line, prefixed (`feat:`, `fix:`, `docs:`, `test:`, `chore:`), one commit per finished
-    step; record the step's results in `docs/graph-rag-notes/README.md` in the same change.
-
-## 8. Where things stand
-
-Results so far (dev split, human gold, 3 repeats each; details and run ids in
-[`docs/graph-rag-notes/README.md`](docs/graph-rag-notes/README.md) §4i–4k):
-
-- Sentence-only classification: macro-F1 ≈ 0.72–0.76 depending on the run (noise floor).
-- Sentence-level evidence from the company's own reports raises action F1 (best arm 0.766 ± 0.016,
-  majority vote 0.781) and lifts `indeterminate` F1 from ~0.60 to ~0.68; passage-level hybrid RAG does
-  not help and hurts no-aspect detection.
-- Retrieval unit explains the difference; the claim graph adds no measurable accuracy at k = 3. Its
-  case rests on trajectories (RQ2) and the timeline UI.
-
-Open work: retrieval qrels (≥ 50 queries), trajectories and promise-fulfilment case studies (RQ2),
-RAGAS and citation precision, UI with five timed queries, test-split run at the end.
+10. **Commits.** One line, prefixed (`feat:`, `fix:`, `docs:`, `test:`, `chore:`), one commit per finished
+    step. Each line of work keeps its own experiment log under `docs/`, with run ids next to every number.
