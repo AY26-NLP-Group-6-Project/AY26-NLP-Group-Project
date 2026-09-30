@@ -14,6 +14,7 @@ from __future__ import annotations
 from collections import defaultdict
 from functools import lru_cache
 
+from gw_common.evidence import normalise
 from gw_common.llm import LLMClient
 from gw_common.schemas import EvidenceCondition, EvidenceSpan, Query
 
@@ -82,13 +83,18 @@ class HybridRetriever:
             ranked = sorted(zip([i for i, _ in head], scores, strict=True),
                             key=lambda kv: -kv[1]) + ranked[RERANK_DEPTH:]
 
-        why = {"bm25": "bm25", "dense": "dense", "rrf": "rrf", "rrf+rerank": "rrf+rerank"}[self.mode]
-        out = []
-        for i, score in ranked[:k]:
+        out, seen = [], set()
+        for i, score in ranked:
             c = self.chunks[i]
+            key = normalise(c.text)
+            if key in seen:      # templated reports repeat sentences verbatim across years
+                continue
+            seen.add(key)
             out.append(EvidenceSpan(statement_id=c.chunk_id, text=c.text, company=c.company,
                                     year=c.year, page=c.page, file=c.file, score=round(float(score), 4),
-                                    why=why))
+                                    why=self.mode))
+            if len(out) >= k:
+                break
         return out
 
 

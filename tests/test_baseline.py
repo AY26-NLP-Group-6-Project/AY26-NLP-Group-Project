@@ -105,3 +105,14 @@ def test_store_round_trip_and_year_filters(tmp_path, monkeypatch):
     q_same = Query(text=prose, company="Acme", anchor_year=2024, year_from=2024, year_to=2024,
                    target_text=prose, condition=EvidenceCondition.SAME_REPORT_RRF)
     assert [s.year for s in r.retrieve(q_same, k=5)] == [2024]
+
+
+def test_sentence_unit_is_one_prose_statement_per_chunk(tmp_path):
+    prose = "We have reduced our Scope 1 emissions by twelve per cent compared with the prior year."
+    rows = [("sha1", "Acme", 2024, 3, 0, "s0", prose), ("sha1", "Acme", 2024, 3, 1, "s1", prose),
+            ("sha1", "Acme", 2024, 3, 2, "junk", "GRI 102-54 Page 3 of 26")]
+    built = chunk_store.build_chunks(_tiny_db(tmp_path, rows), unit="sentence")
+    assert [c.chunk_id for c in built] == ["s0", "s1"]
+    assert all(c.prose_ratio == 1.0 and c.statement_ids == [c.chunk_id] for c in built)
+    with pytest.raises(ValueError):
+        chunk_store.build_chunks(_tiny_db(tmp_path / "b", rows), unit="paragraph")

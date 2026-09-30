@@ -70,8 +70,23 @@ def _statements(db_path: Path) -> list[tuple]:
         con.close()
 
 
-def build_chunks(db_path: Path | None = None) -> list[Chunk]:
+UNITS = ("passage", "sentence")
+
+
+def build_chunks(db_path: Path | None = None, unit: str = "passage") -> list[Chunk]:
+    """`passage`: ~TARGET_WORDS-word windows over every statement. `sentence`: one chunk per prose
+    statement, the same unit and the same prose filter the graph arm retrieves over, so the two can be
+    compared with retrieval granularity held fixed."""
+    if unit not in UNITS:
+        raise ValueError(f"unit must be one of {UNITS}")
     rows = _statements(db_path or GRAPH_DB)
+    if unit == "sentence":
+        return [
+            Chunk(chunk_id=stmt_id, text=text, company=company, year=year, page=page, file=sha,
+                  statement_ids=[stmt_id], prose_ratio=1.0)
+            for sha, company, year, page, _idx, stmt_id, text in rows
+            if text and looks_like_sentence(text)
+        ]
     chunks: list[Chunk] = []
     current: list[tuple] = []          # (stmt_id, text, page, is_prose)
     key: tuple | None = None
@@ -116,8 +131,9 @@ def embed_chunks(chunks: list[Chunk], client: LLMClient | None = None) -> np.nda
     return np.vstack(vectors)
 
 
-def build(build_id: str = "dev", db_path: Path | None = None, store_root: Path | None = None) -> dict:
-    chunks = build_chunks(db_path)
+def build(build_id: str = "dev", db_path: Path | None = None, store_root: Path | None = None,
+          unit: str = "passage") -> dict:
+    chunks = build_chunks(db_path, unit)
     if not chunks:
         raise ValueError("no chunks built: is the graph DuckDB present?")
     client = LLMClient()
@@ -131,6 +147,7 @@ def build(build_id: str = "dev", db_path: Path | None = None, store_root: Path |
     digest = hashlib.sha256("\n".join(c.text for c in chunks).encode("utf-8")).hexdigest()[:12]
     manifest = {
         "build_id": build_id,
+        "unit": unit,
         "chunks": len(chunks),
         "companies": len({c.company for c in chunks}),
         "reports": len({c.file for c in chunks}),

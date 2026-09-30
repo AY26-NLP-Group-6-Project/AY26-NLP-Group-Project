@@ -15,10 +15,12 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--build-id", default="dev")
     ap.add_argument("--db", type=Path, help="graph DuckDB holding the parsed statements")
     ap.add_argument("--n", type=int, default=3, help="passages to print for `sample`")
+    ap.add_argument("--unit", choices=chunk_store.UNITS, default="passage",
+                    help="passage windows (default) or one chunk per prose sentence")
     args = ap.parse_args(argv)
 
     if args.action == "build":
-        print(json.dumps(chunk_store.build(args.build_id, args.db), indent=2))
+        print(json.dumps(chunk_store.build(args.build_id, args.db, unit=args.unit), indent=2))
         return 0
     chunks, vectors, manifest = chunk_store.load(args.build_id)
     if args.action == "stats":
