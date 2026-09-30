@@ -250,7 +250,8 @@ majority 0.79–0.80. 34 no-aspect rows got an action label, i.e. the annotators
 proposer missed (17 % of that stratum); their spans were reviewed on 2026-09-29 and layered on as
 `kb/annotation/aspect_overrides.csv`. Snapshot `gw1000.human_majority.23dc51f1d9de`, split dev 331 /
 test 669 (stratified; pilot rows pinned to dev). Model fixed at `gpt-5.6-luna`, reasoning effort
-`low`. Dev, 3 uncached repeats per condition.
+`low`. Dev, 3 uncached repeats per condition. Run `20260929T141644Z-graph-rag-rq1` (evidence cap
+still 300 characters; superseded by 4j for comparisons with the baseline).
 
 | condition | macro-F1 (mean ± sd) | vote | Δ vs sentence_only | flips (pooled) | p (McNemar) | indet. F1 | coverage |
 |---|---|---|---|---|---|---|---|
@@ -278,6 +279,8 @@ First run with a real baseline: `baseline-rag` (BM25 + `text-embedding-3-small` 
 cross-encoder over 18,839 passages of ~200 words, 56 companies, 240 reports) against `graph-rag`
 (sentence-level evidence). Same classifier, same 800-character evidence budget, dev split, 3 uncached
 repeats each. Both systems ran their own `sentence_only`, which doubles as a cross-run noise check.
+Runs `20260929T150108Z-baseline-rag-rq1` and `20260929T152702Z-graph-rag-rq1`; snapshot
+`gw1000.human_majority.23dc51f1d9de`; chunk store `dev` (`c80d0ab23191`); effort `low`.
 
 | system | condition | macro-F1 (mean ± sd) | vote | indet. F1 | none F1 | coverage | input tokens |
 |---|---|---|---|---|---|---|---|
