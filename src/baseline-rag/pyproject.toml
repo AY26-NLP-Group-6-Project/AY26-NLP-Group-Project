@@ -1,0 +1,22 @@
+[project]
+name = "baseline-rag"
+version = "0.1.0"
+description = "Hybrid BM25 + dense + RRF retrieval baseline (stub at M0)"
+requires-python = ">=3.12"
+dependencies = ["gw-common", "duckdb>=1.0", "numpy>=1.26", "fastembed>=0.4", "psycopg[binary]>=3.1"]
+
+[project.scripts]
+gw-baseline = "baseline_rag.cli:main"
+
+[project.entry-points."gw.systems"]
+baseline-rag = "baseline_rag:build_system"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["baseline_rag"]
+
+[tool.uv.sources]
+gw-common = { workspace = true }

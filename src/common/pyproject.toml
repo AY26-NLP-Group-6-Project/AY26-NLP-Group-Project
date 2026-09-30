@@ -1,0 +1,32 @@
+[project]
+name = "gw-common"
+version = "0.1.0"
+description = "Shared schemas, evaluation harness and serving surface for all Greenwash-RAG systems"
+requires-python = ">=3.12"
+dependencies = [
+    "pydantic>=2.7",
+    "numpy>=1.26",
+    "pyyaml>=6",
+    "fastapi>=0.115",
+    "uvicorn>=0.30",
+    "openai>=1.40",
+    "python-dotenv>=1.0",
+    "openpyxl>=3.1",
+]
+
+[project.scripts]
+gw-eval = "gw_common.cli:eval_main"
+gw-serve = "gw_common.cli:serve_main"
+gw-data = "gw_common.cli:data_main"
+
+# The two reference systems ship with the harness so `gw-eval` always has a floor to compare against.
+[project.entry-points."gw.systems"]
+majority = "gw_common.baselines:build_majority"
+random = "gw_common.baselines:build_random"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["gw_common"]

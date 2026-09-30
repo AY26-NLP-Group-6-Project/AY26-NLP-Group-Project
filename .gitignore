@@ -227,3 +227,12 @@ kb/raw/
 
 # annotation master / LLM pre-labels: private until annotator sheets are complete
 kb/annotation/
+
+# python / uv
+.venv/
+__pycache__/
+*.pyc
+
+# eval snapshots and run outputs (regenerate with gw-data / gw-eval)
+artifacts/
+data/

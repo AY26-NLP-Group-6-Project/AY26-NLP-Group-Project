@@ -1,0 +1,29 @@
+# Shared knowledge-base store: Postgres 16 with pgvector.
+#
+#   docker compose up -d            # start (first run creates the schema from deploy/postgres/init.sql)
+#   uv run gw-baseline pg-import    # load artifacts/baseline/<build>/ into it, no re-embedding
+#   uv run gw-baseline pg-check     # row count and manifest hash match the files
+#
+# Connection string (also the default of PG_DSN in .env.example):
+#   postgresql://gw:gw@localhost:5432/gw
+services:
+  pg:
+    image: pgvector/pgvector:pg16
+    container_name: gw-pg
+    environment:
+      POSTGRES_USER: gw
+      POSTGRES_PASSWORD: gw
+      POSTGRES_DB: gw
+    ports:
+      - "${PG_PORT:-5432}:5432"
+    volumes:
+      - gw-pgdata:/var/lib/postgresql/data
+      - ./deploy/postgres/init.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U gw -d gw"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+volumes:
+  gw-pgdata:
