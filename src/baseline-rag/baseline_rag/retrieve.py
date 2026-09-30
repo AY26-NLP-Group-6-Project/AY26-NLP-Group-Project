@@ -22,17 +22,30 @@ from baseline_rag import chunks as chunk_store
 from baseline_rag.index import BM25, CANDIDATES, RERANK_DEPTH, CrossEncoderReranker, Dense, rrf
 
 MODES = ("bm25", "dense", "rrf", "rrf+rerank")
+BACKENDS = ("files", "postgres")
 
 
 class HybridRetriever:
     def __init__(self, build_id: str = "dev", mode: str = "rrf+rerank",
-                 client: LLMClient | None = None) -> None:
+                 client: LLMClient | None = None, backend: str = "files") -> None:
         if mode not in MODES:
             raise ValueError(f"mode must be one of {MODES}")
-        self.mode = mode
-        self.chunks, vectors, self.manifest = chunk_store.load(build_id)
+        if backend not in BACKENDS:
+            raise ValueError(f"backend must be one of {BACKENDS}")
+        self.mode, self.backend = mode, backend
+        if backend == "postgres":
+            # Same passages, served by pgvector: chunk text and metadata come from the database,
+            # BM25 is rebuilt in-process over those rows, dense candidates come from the HNSW index.
+            from baseline_rag.pg import PgChunkSource
+
+            self._pg = PgChunkSource(build_id)
+            self.chunks, self.manifest = self._pg.chunks, self._pg.manifest
+            self.dense = None
+        else:
+            self._pg = None
+            self.chunks, vectors, self.manifest = chunk_store.load(build_id)
+            self.dense = Dense(vectors)
         self.bm25 = BM25([c.indexed_text() for c in self.chunks])
-        self.dense = Dense(vectors)
         self.reranker = CrossEncoderReranker() if mode.endswith("rerank") else None
         self.client = client or LLMClient()
         self._by_company: dict[str, list[int]] = defaultdict(list)
@@ -62,6 +75,12 @@ class HybridRetriever:
     def _query_vector(self, text: str) -> tuple[float, ...]:
         return tuple(self.client.embed([text])[0])
 
+    def _dense_search(self, text: str, allowed: set[int] | None) -> list[tuple[int, float]]:
+        vector = self._query_vector(text)
+        if self._pg is not None:
+            return self._pg.dense_search(vector, allowed, CANDIDATES)
+        return self.dense.search(vector, allowed, CANDIDATES)
+
     # ------------------------------------------------------------------ protocol
     def retrieve(self, query: Query, *, k: int = 3) -> list[EvidenceSpan]:
         allowed = self._allowed(query)
@@ -72,10 +91,9 @@ class HybridRetriever:
         if self.mode == "bm25":
             ranked = self.bm25.search(text, allowed, CANDIDATES)
         elif self.mode == "dense":
-            ranked = self.dense.search(self._query_vector(text), allowed, CANDIDATES)
+            ranked = self._dense_search(text, allowed)
         else:
-            ranked = rrf(self.bm25.search(text, allowed, CANDIDATES),
-                         self.dense.search(self._query_vector(text), allowed, CANDIDATES))
+            ranked = rrf(self.bm25.search(text, allowed, CANDIDATES), self._dense_search(text, allowed))
 
         if self.reranker is not None and ranked:
             head = ranked[:RERANK_DEPTH]

@@ -3,7 +3,7 @@ name = "baseline-rag"
 version = "0.1.0"
 description = "Hybrid BM25 + dense + RRF retrieval baseline (stub at M0)"
 requires-python = ">=3.12"
-dependencies = ["gw-common", "duckdb>=1.0", "numpy>=1.26", "fastembed>=0.4"]
+dependencies = ["gw-common", "duckdb>=1.0", "numpy>=1.26", "fastembed>=0.4", "psycopg[binary]>=3.1"]
 
 [project.scripts]
 gw-baseline = "baseline_rag.cli:main"

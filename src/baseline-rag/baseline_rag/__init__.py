@@ -21,6 +21,7 @@ class BaselineRagSystem(BaseSystem):
     def __init__(self, build_id: str = "dev", mode: str | None = None) -> None:
         self.build_id = os.getenv("GW_BASELINE_BUILD", build_id)
         self.mode = mode or os.getenv("GW_BASELINE_MODE", "rrf+rerank")
+        self.backend = os.getenv("GW_BASELINE_BACKEND", "files")
         self._retriever: HybridRetriever | None = None
         self._classifier: LLMActionClassifier | None = None
 
@@ -29,7 +30,7 @@ class BaselineRagSystem(BaseSystem):
 
     def retriever(self) -> Retriever | None:
         if self._retriever is None:
-            self._retriever = HybridRetriever(self.build_id, self.mode)
+            self._retriever = HybridRetriever(self.build_id, self.mode, backend=self.backend)
         return self._retriever
 
     def classifier(self) -> ActionClassifier | None:

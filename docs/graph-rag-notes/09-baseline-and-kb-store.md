@@ -47,21 +47,35 @@ The shared classifier shows at most `EVIDENCE_CHARS = 800` per span (was 300). P
 need the room; sentence retrievers use a fraction of it. Runs made before this change (sections 4f–4i)
 used 300 and must be re-run before being compared with baseline numbers.
 
-## 4. Queued: Postgres + pgvector in Docker Compose
+## 4. Postgres + pgvector in Docker Compose (done 2026-09-30)
 
-To be done **after** the current round of experiments, so the numbers in flight stay on one store.
+`docker-compose.yml` starts one service, `pgvector/pgvector:pg16`, and `deploy/postgres/init.sql`
+creates the schema on first start: `chunks(build_id, chunk_id, company, year, page, file,
+statement_ids, prose_ratio, text, embedding vector(1536))` with a btree on `(build_id, company, year)`
+for the condition filters and an HNSW cosine index for the dense stage, plus `kb_manifest` holding each
+loaded build's manifest.
 
-- `docker compose up` brings up one service, Postgres with pgvector (ParadeDB's image also gives a
-  real BM25 index in SQL; otherwise BM25 stays in Python and Postgres serves the vectors).
-- Schema: `chunks(chunk_id pk, company, year, page, file, statement_ids text[], text, embedding
-  vector(1536))`, btree on `(company, year)` for the condition filters, HNSW on `embedding`.
-- Seeding without re-embedding: `gw-baseline export-sql` writes a `COPY`-ready dump from the same
-  `chunks.jsonl` + `embeddings.npy`, so a new developer runs compose up, loads the dump and is on the
-  identical KB; `pg_dump` of the loaded database is the artefact we share.
-- The retriever keeps its current interface: only the candidate-fetch step changes, so the ablation
-  and every recorded run stay comparable.
-- Course constraint to respect: retrieval must stay our own pipeline. pgvector for ANN and a real
-  BM25 index are fine; `LIKE` queries are not.
+```bash
+docker compose up -d
+uv run gw-baseline pg-import --build-id dev    # COPY from the files, ~40 s, no re-embedding
+uv run gw-baseline pg-check  --build-id dev    # row count + text hash must equal the files
+GW_BASELINE_BACKEND=postgres uv run gw-eval --system baseline-rag --split dev --repeats 3
+```
+
+- The files stay the source of truth; the database is a mirror, verified by `pg-check` (18,839 rows,
+  hash `c80d0ab23191`). Several builds coexist (`dev`, `dev-sent`), keyed by `build_id`.
+- With `GW_BASELINE_BACKEND=postgres` the retriever reads chunk text and metadata from the database,
+  rebuilds BM25 in-process over those rows and takes dense candidates from pgvector. On 6 dev queries
+  the `files` and `postgres` backends returned identical top-5 lists.
+- Course constraint respected: retrieval is still our pipeline (BM25 + embeddings + RRF + rerank);
+  Postgres serves vectors and metadata, no `LIKE` search.
+
+### Distribution package
+
+`uv run gw-baseline package --build-id dev` writes `dist/gw-kb-dev-<hash>.zip` (~100 MB): the three
+store files, `SHA256SUMS`, and a README with both import paths (files-only, or compose + `pg-import`).
+Derived passages and metadata only; the PDFs are never included. `dist/` is git-ignored; the archive is
+shared through a channel the group controls, not the repository.
 
 ## 5. Open question: passage count vs the course minimum
 

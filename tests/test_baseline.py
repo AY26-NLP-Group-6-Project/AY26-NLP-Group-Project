@@ -117,3 +117,30 @@ def test_sentence_unit_is_one_prose_statement_per_chunk(tmp_path):
     other.mkdir()
     with pytest.raises(ValueError):
         chunk_store.build_chunks(_tiny_db(other, rows), unit="paragraph")
+
+
+def test_vector_literal_and_package(tmp_path, monkeypatch):
+    from baseline_rag import pg
+
+    assert pg._vector_literal(np.array([0.5, -0.25, 1.0], dtype=np.float32)) == "[0.5,-0.25,1]"
+
+    store = tmp_path / "store" / "dev"
+    store.mkdir(parents=True)
+    chunk = chunk_store.Chunk(chunk_id="c1", text="Zero incidents were recorded across all sites.",
+                              company="Acme", year=2024, page=1, file="sha1", statement_ids=["s1"])
+    (store / "chunks.jsonl").write_text(json.dumps(asdict(chunk)) + "\n", encoding="utf-8")
+    np.save(store / "embeddings.npy", np.ones((1, 4), dtype=np.float32))
+    (store / "manifest.json").write_text(json.dumps({
+        "chunks": 1, "unit": "passage", "target_words": 200, "companies": 1, "reports": 1, "words": 7,
+        "embed_model": "m", "dim": 4, "chunks_sha256": "abc"}), encoding="utf-8")
+    monkeypatch.setattr(chunk_store, "STORE_ROOT", tmp_path / "store")
+    info = pg.package("dev", tmp_path / "kb.zip")
+    assert info["chunks"] == 1 and set(info["files"]) == {"chunks.jsonl", "embeddings.npy", "manifest.json"}
+    import zipfile
+
+    with zipfile.ZipFile(tmp_path / "kb.zip") as zf:
+        names = set(zf.namelist())
+        readme = zf.read("dev/README.md").decode("utf-8")
+    assert {"dev/chunks.jsonl", "dev/embeddings.npy", "dev/manifest.json", "dev/SHA256SUMS",
+            "dev/README.md"} <= names
+    assert "Academic use only" in readme and "pg-import" in readme and "`abc`" in readme

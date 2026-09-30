@@ -11,13 +11,28 @@ from baseline_rag import chunks as chunk_store
 
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser("gw-baseline", description="Chunk store for the hybrid baseline")
-    ap.add_argument("action", choices=["build", "stats", "sample"])
+    ap.add_argument("action", choices=["build", "stats", "sample", "pg-import", "pg-check", "package"])
     ap.add_argument("--build-id", default="dev")
     ap.add_argument("--db", type=Path, help="graph DuckDB holding the parsed statements")
     ap.add_argument("--n", type=int, default=3, help="passages to print for `sample`")
     ap.add_argument("--unit", choices=chunk_store.UNITS, default="passage",
                     help="passage windows (default) or one chunk per prose sentence")
+    ap.add_argument("--dsn", help="Postgres connection string (default PG_DSN or the compose default)")
+    ap.add_argument("--out", type=Path, help="zip path for `package`")
     args = ap.parse_args(argv)
+
+    if args.action in ("pg-import", "pg-check", "package"):
+        from baseline_rag import pg
+
+        if args.action == "pg-import":
+            print(json.dumps(pg.import_store(args.build_id, args.dsn), indent=2))
+        elif args.action == "pg-check":
+            result = pg.check(args.build_id, args.dsn)
+            print(json.dumps(result, indent=2))
+            return 0 if result["ok"] else 1
+        else:
+            print(json.dumps(pg.package(args.build_id, args.out), indent=2))
+        return 0
 
     if args.action == "build":
         print(json.dumps(chunk_store.build(args.build_id, args.db, unit=args.unit), indent=2))
