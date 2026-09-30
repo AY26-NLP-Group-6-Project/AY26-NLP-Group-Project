@@ -1,0 +1,10 @@
+# One line-ending convention for every platform: text is stored and checked out with LF.
+* text=auto eol=lf
+
+# never treated as text
+*.xlsx binary
+*.xls binary
+*.pdf binary
+*.npy binary
+*.duckdb binary
+*.zip binary
