@@ -1,0 +1,57 @@
+{
+  "items": 1000,
+  "snapshots": {
+    "human_majority": "gw1000.human_majority.23dc51f1d9de.jsonl",
+    "llm_pre_claude": "gw1000.llm_pre_claude.43e5acdbe1e7.jsonl",
+    "llm_pre_deepseek": "gw1000.llm_pre_deepseek.723e6f155f4e.jsonl",
+    "llm_pre_gpt": "gw1000.llm_pre_gpt.708cdd0f5f24.jsonl"
+  },
+  "splits": {
+    "dev": 331,
+    "test": 669
+  },
+  "labels": {
+    "indeterminate": 222,
+    "planning": 191,
+    "none": 170,
+    "implemented": 417
+  },
+  "row_types": {
+    "aspect": 803,
+    "no_aspect": 197
+  },
+  "aspect_source": {
+    "llm_proposed": 803,
+    "none_proposed": 163,
+    "human_filled": 34
+  },
+  "action_rows_with_aspect": 830,
+  "agreement": {
+    "fleiss_all": {
+      "n_rows": 50,
+      "raters": 6,
+      "observed": 0.8613333333333333,
+      "chance": 0.2740222222222222,
+      "kappa": 0.8089932351770791
+    },
+    "fleiss_aspect": {
+      "n_rows": 39,
+      "raters": 6,
+      "observed": 0.8666666666666666,
+      "chance": 0.36854408649280446,
+      "kappa": 0.7888477556686718
+    },
+    "fleiss_no_aspect": {
+      "n_rows": 11,
+      "raters": 6,
+      "observed": 0.8424242424242423,
+      "chance": 0.6900826446280993,
+      "kappa": 0.4915555555555549
+    }
+  },
+  "llm_pre_vs_human": {
+    "claude": 0.804,
+    "deepseek": 0.791,
+    "gpt": 0.795
+  }
+}

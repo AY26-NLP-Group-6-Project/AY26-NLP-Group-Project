@@ -28,12 +28,12 @@ which system is better; that is what the evaluation is for. The proposal is in
 | Disk | ~1 GB: passage store 150 MB, LLM response cache, run directories |
 | Keys | an OpenAI-compatible key for chat and one for embeddings, in `.env` (see below). Never commit `.env` |
 
-Data that is **not** in git (git-ignored, distributed inside the group):
+Data and where it comes from (the evaluation set is versioned; the corpus-derived stores are distributed inside the group):
 
 | what | where it must sit | how you get it |
 |---|---|---|
 | passage store (18,839 passages + vectors + manifest) | `artifacts/baseline/dev/` | the `gw-kb-dev-<hash>.zip` package, or `gw-baseline build` if you hold the parsed corpus |
-| frozen evaluation snapshot | `data/eval/gw1000.human_majority.<hash>.jsonl` | same package (`--with-eval`), or `gw-data build gw1000` from `kb/annotation/annotation.xlsx` |
+| frozen evaluation snapshot | `data/eval/gw1000.*.jsonl` | **in git** (built from `kb/annotation/annotation.xlsx` + `aspect_overrides.csv`, also versioned); rebuild with `gw-data build gw1000` only after an annotation change |
 | parsed corpus and claim graph (`graph-rag` only) | `artifacts/graph/dev/graph.duckdb` | `gw-graph build`, needs the raw PDFs under `kb/raw/` |
 | raw reports | `kb/raw/` | never redistributed; see `kb/README.md` |
 
@@ -44,7 +44,7 @@ uv sync                                   # workspace: src/common, src/baseline-
 cp .env.example .env                      # fill LLM_API_KEY, LLM_MODEL=gpt-5.6-luna, EMB_API_KEY
 unzip gw-kb-dev-<hash>.zip -d artifacts/baseline/    # -> artifacts/baseline/dev/{chunks.jsonl,embeddings.npy,manifest.json}
 uv run gw-baseline stats                  # prints the manifest; hash must match the package README
-uv run gw-data list                       # the eval snapshot(s) present in data/eval/
+uv run gw-data list                       # the versioned eval snapshots in data/eval/ (hashes must match git)
 uv run pytest -q                          # 52 tests, no network needed
 ```
 
@@ -79,11 +79,13 @@ src/baseline-rag/            hybrid BM25 + dense + RRF + rerank over the passage
 src/graph-rag/               temporal claim graph (DuckDB + networkx), graph/fused retrieval, agentic stub
 configs/prompts/             every prompt, versioned; action_classifier.md is the shared classifier prompt
 configs/graph.dev.yaml       graph build config
-data/eval/                   frozen snapshots (git-ignored), one file per (dataset, label source, hash)
+data/eval/                   frozen gw1000 snapshots (versioned), one file per (dataset, label source, hash);
+                             A3CG-derived snapshots are local only
 artifacts/runs/<run_id>/     one directory per evaluation run (see §4.4)
 artifacts/baseline/<build>/  passage stores; artifacts/graph/<build>/ the graph
 docs/graph-rag-notes/        roadmap, contracts, experiment log (sections 4b–4k), literature screens
-kb/                          corpus and annotation (git-ignored); kb/README.md documents collection and filtering
+kb/                          kb/raw/ the reports (git-ignored, see kb/README.md); kb/annotation/ the workbook,
+                             aspect overrides and their README (versioned)
 tests/                       pytest; hand-checked metric values, contract tests, retriever tests
 ```
 

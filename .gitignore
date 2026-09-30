@@ -225,14 +225,19 @@ tmp/
 # local academic-use corpus of company sustainability reports (never commit / redistribute)
 kb/raw/
 
-# annotation master / LLM pre-labels: private until annotator sheets are complete
-kb/annotation/
+# annotation workbook, aspect overrides and build scripts are versioned (annotation finished 2026-09-29);
+# only the raw reports above stay out of git
 
 # python / uv
 .venv/
 __pycache__/
 *.pyc
 
-# eval snapshots and run outputs (regenerate with gw-data / gw-eval)
+# run outputs, caches, passage stores and the graph (regenerate, or take the distributed package)
 artifacts/
-data/
+# frozen gw1000 evaluation snapshots are versioned so everyone scores the same items and split;
+# A3CG-derived snapshots (no licence in that release) and scratch files are not
+data/*
+!data/eval/
+data/eval/*
+!data/eval/gw1000.*
