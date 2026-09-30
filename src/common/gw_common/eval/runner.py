@@ -27,6 +27,7 @@ from pathlib import Path
 
 from gw_common import datasets
 from gw_common.eval import metrics as M
+from gw_common.eval import ops
 from gw_common.eval.exchange import align, read_evidence, read_predictions
 from gw_common.eval.report import write_report
 from gw_common.eval.select import SLICERS, describe, select
@@ -72,12 +73,15 @@ def build_query(item: GoldItem, condition: EvidenceCondition) -> Query:
 
 
 def collect_evidence(
-    system, items: list[GoldItem], condition: EvidenceCondition, k: int = EVIDENCE_K
+    system, items: list[GoldItem], condition: EvidenceCondition, k: int = EVIDENCE_K,
+    timings_ms: dict[str, float] | None = None,
 ) -> tuple[dict[str, list[EvidenceSpan]], int]:
     """Evidence per item, and how many returned spans were the target sentence itself.
 
     The harness removes the target whatever the retriever did, so no arm can score by re-reading the
-    sentence it classifies; the count is reported so a retriever that leaks is visible.
+    sentence it classifies; the count is reported so a retriever that leaks is visible. When
+    `timings_ms` is given it is filled with each item's retrieval time, measured here so that every
+    retriever is timed the same way.
     """
     retriever = getattr(system, "retriever", lambda: None)()
     if retriever is None or condition in (EvidenceCondition.SENTENCE_ONLY, EvidenceCondition.LOCAL):
@@ -85,10 +89,21 @@ def collect_evidence(
     evidence, dropped = {}, 0
     for it in items:
         q = build_query(it, condition)
-        spans, n = drop_target(retriever.retrieve(q, k=k), q)
+        t0 = time.perf_counter()
+        returned = retriever.retrieve(q, k=k)
+        if timings_ms is not None:
+            timings_ms[it.item_id] = (time.perf_counter() - t0) * 1000
+        spans, n = drop_target(returned, q)
         evidence[it.item_id] = spans
         dropped += n
     return evidence, dropped
+
+
+def _embed_tokens(system) -> int:
+    """Embedding tokens a system's retriever has spent so far, when it exposes an LLM client."""
+    retriever = getattr(system, "_retriever", None)
+    usage = getattr(getattr(retriever, "client", None), "usage", None) or {}
+    return int(usage.get("embed_tokens", 0))
 
 
 def evidence_stats(items: list[GoldItem], evidence: dict[str, list], target_dropped: int) -> dict:
@@ -103,19 +118,18 @@ def evidence_stats(items: list[GoldItem], evidence: dict[str, list], target_drop
     }
 
 
-def _rep_metrics(gold: list[Label], preds: list[Prediction]) -> dict:
+def _rep_metrics(
+    gold: list[Label], preds: list[Prediction], *, wall_s: float = 0.0,
+    retrieval_ms: dict[str, float] | None = None, evidence: dict[str, list] | None = None,
+    settings=None, embed_tokens: int = 0,
+) -> dict:
     labels = [p.label for p in preds]
     return {
         "action": M.action_metrics(gold, labels),
         "pairdet": M.pairdet_metrics(gold, labels),
         "all_labels": M.classification_report(gold, labels),
-        "ops": {
-            **M.latency_summary([p.latency_ms for p in preds]),
-            "input_tokens": sum(p.input_tokens for p in preds),
-            "output_tokens": sum(p.output_tokens for p in preds),
-            "llm_calls": sum(p.llm_calls for p in preds),
-            "graph_hops": sum(p.graph_hops for p in preds),
-        },
+        "ops": ops.speed_and_cost(preds, wall_s, retrieval_ms, settings, embed_tokens),
+        "grounding": ops.grounding(preds, evidence),
     }
 
 
@@ -208,8 +222,15 @@ def run_task(
     run_dir = (out_root or RUNS_DIR) / run_id
     run_dir.mkdir(parents=True, exist_ok=True)
 
+    try:
+        from gw_common.llm import LLMSettings
+
+        settings = LLMSettings.from_env()
+    except Exception:  # noqa: BLE001 - a system may not use an LLM at all
+        settings = None
     results: dict[str, dict] = {}
     baseline_runs: list[list[Label]] | None = None
+    classifier_info: dict[str, object] = {}
     with (run_dir / "predictions.jsonl").open("w", encoding="utf-8") as fp, \
          (run_dir / "evidence.jsonl").open("w", encoding="utf-8") as ev_fp:
         for cond in wanted:
@@ -228,7 +249,14 @@ def run_task(
                 if missing:
                     print(f"  {len(missing)} items had no evidence in {evidence_file.name}")
             else:
-                evidence, target_dropped = collect_evidence(system, items, cond, evidence_k)
+                embed_before = _embed_tokens(system)
+                retrieval_ms = {}
+                evidence, target_dropped = collect_evidence(system, items, cond, evidence_k, retrieval_ms)
+                embed_tokens = _embed_tokens(system) - embed_before
+            if evidence_file is not None:
+                retrieval_ms, embed_tokens = {}, 0
+            if clf is not None and hasattr(clf, "describe"):
+                classifier_info = clf.describe()
             for item_id, spans in evidence.items():
                 ev_fp.write(json.dumps({"condition": cond.value, "item_id": item_id,
                                         "spans": [s.model_dump(mode="json") for s in spans]}) + "\n")
@@ -239,12 +267,18 @@ def run_task(
                     supplied, _ = align(items, read_predictions(predictions_file), "predictions")
                     preds = [p or Prediction(item_id=it.item_id, label=Label.INDETERMINATE)
                              for it, p in zip(items, supplied, strict=True)]
+                    wall_s = 0.0
                 else:
+                    t_rep = time.perf_counter()
                     preds = clf.classify(eval_items, condition=cond, evidence=evidence or None)
+                    wall_s = time.perf_counter() - t_rep
                 for p in preds:
                     fp.write(json.dumps({"condition": cond.value, "rep": rep,
                                          **p.model_dump(mode="json")}) + "\n")
-                reps.append(_rep_metrics(gold, preds))
+                # Retrieval runs once per condition, so its embedding cost is charged to the first repeat.
+                reps.append(_rep_metrics(gold, preds, wall_s=wall_s, retrieval_ms=retrieval_ms,
+                                         evidence=evidence, settings=settings,
+                                         embed_tokens=embed_tokens if rep == 0 else 0))
                 runs.append([p.label for p in preds])
 
             vote = majority_labels(runs)
@@ -264,6 +298,28 @@ def run_task(
                              "all_labels": M.classification_report(gold, vote)},
                 "bootstrap": M.bootstrap_ci(gold, vote),
                 "slices": slice_metrics(items, gold, vote),
+                "speed_cost": {
+                    "classify_p50_ms": ops.mean_of(reps, "ops", "p50_ms"),
+                    "classify_p95_ms": ops.mean_of(reps, "ops", "p95_ms"),
+                    "end_to_end_p50_ms": ops.mean_of(reps, "ops", "end_to_end", "p50_ms"),
+                    "end_to_end_p95_ms": ops.mean_of(reps, "ops", "end_to_end", "p95_ms"),
+                    "items_per_s": ops.mean_of(reps, "ops", "items_per_s"),
+                    "input_tokens_per_item": ops.mean_of(reps, "ops", "input_tokens_per_item"),
+                    "output_tokens_per_item": ops.mean_of(reps, "ops", "output_tokens_per_item"),
+                    "cost_per_1k_items_usd": ops.mean_of(reps, "ops", "cost_per_1k_items_usd"),
+                    "cost_usd_total": (
+                        sum(r["ops"]["cost_usd"] for r in reps)
+                        if all(r["ops"]["cost_usd"] is not None for r in reps) else None
+                    ),
+                    "cached_calls": sum(r["ops"]["cached_calls"] for r in reps),
+                    "retrieval": ops.retrieval_speed(retrieval_ms),
+                },
+                "grounding": {
+                    key: ops.mean_of(reps, "grounding", key)
+                    for key in ("parse_ok_rate", "rationale_rate", "mean_rationale_words",
+                                "cites_target_rate", "mean_citations", "evidence_use_rate",
+                                "evidence_spans_cited_share", "invalid_citations")
+                },
             }
             if evidence:
                 block["evidence"] = evidence_stats(items, evidence, target_dropped)
@@ -288,12 +344,7 @@ def run_task(
             results[cond.value] = block
 
     sha, dirty = _git()
-    try:
-        from gw_common.llm import LLMSettings
-
-        llm_info = LLMSettings.from_env().describe()
-    except Exception:  # noqa: BLE001 - a system may not use an LLM at all
-        llm_info = {}
+    llm_info = settings.describe() if settings is not None else {}
     manifest = RunManifest(
         run_id=run_id,
         system=system_name,
@@ -313,7 +364,8 @@ def run_task(
         wall_seconds=time.perf_counter() - t0,
         config={"split": split, "slices": {k: sorted(v) for k, v in (slices or {}).items()},
                 "sample": sample, "limit": limit, "evidence_k": evidence_k,
-                "baseline": baseline.value, "selection": describe(items)},
+                "baseline": baseline.value, "selection": describe(items),
+                "classifier": classifier_info},
     )
     (run_dir / "manifest.json").write_text(manifest.model_dump_json(indent=2), encoding="utf-8")
     (run_dir / "metrics.json").write_text(

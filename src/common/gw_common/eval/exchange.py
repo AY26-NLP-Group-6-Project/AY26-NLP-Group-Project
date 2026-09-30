@@ -20,7 +20,7 @@ import json
 from collections.abc import Sequence
 from pathlib import Path
 
-from gw_common.schemas import EvidenceCondition, EvidenceSpan, GoldItem, Label, Prediction
+from gw_common.schemas import Citation, EvidenceCondition, EvidenceSpan, GoldItem, Label, Prediction
 
 
 def export_queries(
@@ -72,7 +72,10 @@ def read_evidence(path: Path) -> dict[str, list[EvidenceSpan]]:
 
 
 def read_predictions(path: Path) -> dict[str, Prediction]:
-    """Read `{item_id, label}` lines from a system that classifies on its own."""
+    """Read `{item_id, label}` lines from a system that classifies on its own.
+
+    Optional per line: `rationale` (text) and `citations`, a list of `{ref, statement_id?, company?,
+    year?, page?, file?, quote?}`; without them the grounding metrics simply report no rationale."""
     out: dict[str, Prediction] = {}
     for line_no, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
         if not line.strip():
@@ -86,6 +89,8 @@ def read_predictions(path: Path) -> dict[str, Prediction]:
             item_id=str(record["item_id"]),
             label=label,
             evidence_ids=[str(e) for e in record.get("evidence_ids", [])],
+            rationale=str(record.get("rationale") or ""),
+            citations=[Citation(**c) for c in record.get("citations", [])],
             latency_ms=float(record.get("latency_ms", 0.0)),
             input_tokens=int(record.get("input_tokens", 0)),
             output_tokens=int(record.get("output_tokens", 0)),

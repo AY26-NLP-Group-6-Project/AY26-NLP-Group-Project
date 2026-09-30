@@ -22,6 +22,60 @@ def _mean_sd(block: dict, key: str) -> str:
     return f"{agg['mean']:.4f}{sd}"
 
 
+def _num(v, spec: str = ".0f", none: str = "—") -> str:
+    return none if v is None else format(v, spec)
+
+
+def _speed_cost_section(results: dict[str, dict]) -> list[str]:
+    rows = [(c, b["speed_cost"]) for c, b in results.items()
+            if b.get("status") == "ok" and b.get("speed_cost")]
+    if not rows:
+        return []
+    lines = ["", "## Speed and cost (mean over repeats)", "",
+             "| condition | retrieval p50 / p95 ms | classify p50 / p95 ms | end-to-end p50 / p95 ms"
+             " | items/s | tokens in / out per item | USD per 1k items | cached calls |",
+             "|---|---|---|---|---|---|---|---|"]
+    cached = 0
+    for cond, sc in rows:
+        r = sc.get("retrieval") or {}
+        cached += sc.get("cached_calls") or 0
+        lines.append(
+            f"| {cond} | {_num(r.get('p50_ms'))} / {_num(r.get('p95_ms'))} "
+            f"| {_num(sc['classify_p50_ms'])} / {_num(sc['classify_p95_ms'])} "
+            f"| {_num(sc['end_to_end_p50_ms'])} / {_num(sc['end_to_end_p95_ms'])} "
+            f"| {_num(sc['items_per_s'], '.2f')} "
+            f"| {_num(sc['input_tokens_per_item'])} / {_num(sc['output_tokens_per_item'])} "
+            f"| {_num(sc['cost_per_1k_items_usd'], '.3f', 'prices not set')} "
+            f"| {sc.get('cached_calls', 0)} |"
+        )
+    lines += ["", "Latency is per call; items/s is wall-clock throughput at the classifier's concurrency."]
+    if cached:
+        lines.append("Some calls were served from the cache: their latency and cost are not real. "
+                     "Use `--repeats 2` or more (or `GW_LLM_CACHE=0`) for speed and cost figures.")
+    return lines
+
+
+def _grounding_section(results: dict[str, dict]) -> list[str]:
+    rows = [(c, b["grounding"]) for c, b in results.items()
+            if b.get("status") == "ok" and (b.get("grounding") or {}).get("rationale_rate")]
+    if not rows:
+        return []
+    lines = ["", "## Rationale and citations (mean over repeats)", "",
+             "| condition | format ok | has rationale | words | cites target | citations / item"
+             " | evidence used | spans cited | invalid refs |",
+             "|---|---|---|---|---|---|---|---|---|"]
+    for cond, g in rows:
+        lines.append(
+            f"| {cond} | {_num(g['parse_ok_rate'], '.3f')} | {_num(g['rationale_rate'], '.3f')} "
+            f"| {_num(g['mean_rationale_words'], '.1f')} | {_num(g['cites_target_rate'], '.3f')} "
+            f"| {_num(g['mean_citations'], '.2f')} | {_num(g['evidence_use_rate'], '.3f')} "
+            f"| {_num(g['evidence_spans_cited_share'], '.3f')} | {_num(g['invalid_citations'], '.1f')} |"
+        )
+    lines += ["", "`evidence used` = share of items that had retrieved evidence and cited at least one "
+                  "span of it; `spans cited` = share of all shown spans that were cited."]
+    return lines
+
+
 def write_report(run_dir: Path, manifest: RunManifest, results: dict[str, dict]) -> Path:
     lines = [f"# {manifest.run_id}", ""]
     if manifest.label_source != "human_majority":
@@ -40,6 +94,9 @@ def write_report(run_dir: Path, manifest: RunManifest, results: dict[str, dict])
         f" · repeats: {manifest.repeats}",
         f"- model: `{llm.get('chat_model', 'n/a')}` · effort: `{llm.get('reasoning_effort', 'n/a')}`"
         f" · temperature: {llm.get('temperature', 'n/a')} · cache: {llm.get('cache', 'n/a')}",
+        f"- classifier: `{(manifest.config.get('classifier') or {}).get('style', 'n/a')}`"
+        f" · prompt `{(manifest.config.get('classifier') or {}).get('prompt', 'n/a')}`"
+        f" @ `{(manifest.config.get('classifier') or {}).get('prompt_sha256', 'n/a')}`",
         f"- git: `{manifest.git_sha[:8]}`{' (dirty)' if manifest.git_dirty else ''}"
         + (f" · wall: {manifest.wall_seconds:.1f}s" if manifest.wall_seconds else ""),
     ]
@@ -81,6 +138,9 @@ def write_report(run_dir: Path, manifest: RunManifest, results: dict[str, dict])
         for cond, ev in ev_rows:
             lines.append(f"| {cond} | {ev['coverage']:.2f} | {ev['mean_spans']:.2f} "
                          f"| {ev['target_dropped']} | {ev['by_source']} |")
+
+    lines += _speed_cost_section(results)
+    lines += _grounding_section(results)
 
     lines += ["", "## Per-label F1 (majority vote over repeats)", "",
               "| condition | implemented | planning | indeterminate | none (detection F1) |",

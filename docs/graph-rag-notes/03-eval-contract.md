@@ -21,7 +21,12 @@ class ActionClassifier(Protocol):
     def classify(self, items: Sequence[EvalItem], *, condition: EvidenceCondition,
                  evidence: Mapping[str, list[EvidenceSpan]] | None = None) -> list[Prediction]: ...
     # Prediction: {item_id, label in {implemented, planning, indeterminate, none},
-    #              scores: dict[str, float] | None, evidence_ids: list[str], latency_ms: float}
+    #              rationale: str, citations: list[Citation], evidence_ids: list[str],
+    #              scores: dict[str, float] | None, parse_ok, invalid_citations,
+    #              latency_ms, input_tokens, output_tokens, llm_calls}
+    # Citation:   {ref: "T" | "C" | "E1".."Ek", statement_id, company, year, page, file, quote}
+    #   A prediction names the sources its rationale rests on; the harness resolves nothing itself,
+    #   it only measures: format ok, rationale present, evidence_use_rate, invalid refs.
 
 class TrajectoryBuilder(Protocol):
     def trajectory(self, company: str, aspect: str, years: range) -> Trajectory: ...

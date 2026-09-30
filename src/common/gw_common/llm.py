@@ -62,6 +62,11 @@ def _first(*names: str) -> str | None:
     return None
 
 
+def _price(name: str) -> float | None:
+    raw = os.getenv(name, "").strip()
+    return float(raw) if raw else None
+
+
 def embeddings_configured() -> bool:
     load_env()
     return bool(_first("EMB_API_KEY", "LLM_API_KEY", "OPENAI_API_KEY"))
@@ -80,6 +85,11 @@ class LLMSettings:
     use_cache: bool = True
     timeout_s: float = 60.0
     max_retries: int = 3
+    # USD per million tokens. Not hard-coded: prices change and depend on the gateway, so they are read
+    # from the environment and a run reports cost only when they are set.
+    price_in: float | None = None
+    price_out: float | None = None
+    price_embed: float | None = None
 
     @classmethod
     def from_env(cls) -> LLMSettings:
@@ -96,14 +106,26 @@ class LLMSettings:
             temperature=float(os.getenv("GW_LLM_TEMPERATURE", "0")),
             reasoning_effort=_first("LLM_REASONING_EFFORT", "GW_LLM_EFFORT") or DEFAULT_EFFORT,
             use_cache=os.getenv("GW_LLM_CACHE", "1") != "0",
+            price_in=_price("LLM_PRICE_IN_PER_MTOK"),
+            price_out=_price("LLM_PRICE_OUT_PER_MTOK"),
+            price_embed=_price("EMB_PRICE_PER_MTOK"),
         )
+
+    def cost_usd(self, input_tokens: int = 0, output_tokens: int = 0, embed_tokens: int = 0) -> float | None:
+        """Cost of a token count, or None when the chat prices are not configured."""
+        if self.price_in is None or self.price_out is None:
+            return None
+        return (input_tokens * self.price_in + output_tokens * self.price_out
+                + embed_tokens * (self.price_embed or 0.0)) / 1_000_000
 
     def describe(self) -> dict[str, Any]:
         """What goes into run manifests. Never includes a key."""
         return {"chat_model": self.chat_model, "chat_base_url": self.chat_base_url,
                 "embed_model": self.embed_model, "embed_base_url": self.embed_base_url,
                 "temperature": self.temperature, "reasoning_effort": self.reasoning_effort,
-                "cache": self.use_cache}
+                "cache": self.use_cache,
+                "prices_usd_per_mtok": {"chat_in": self.price_in, "chat_out": self.price_out,
+                                        "embed": self.price_embed}}
 
 
 @dataclass(slots=True)
@@ -262,8 +284,9 @@ class LLMClient:
         for start in range(0, len(todo), batch_size):
             batch = todo[start:start + batch_size]
             resp = self._embed_transport().embeddings.create(model=model, input=[texts[i] for i in batch])
-            self.usage["calls"] += 1
-            self.usage["input_tokens"] += getattr(getattr(resp, "usage", None), "prompt_tokens", 0) or 0
+            self.usage["embed_calls"] = self.usage.get("embed_calls", 0) + 1
+            self.usage["embed_tokens"] = self.usage.get("embed_tokens", 0) + (
+                getattr(getattr(resp, "usage", None), "prompt_tokens", 0) or 0)
             for i, item in zip(batch, resp.data, strict=True):
                 vec = np.asarray(item.embedding, dtype=np.float32)
                 out[i] = vec

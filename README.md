@@ -64,6 +64,9 @@ LLM_API_KEY / LLM_BASE_URL / LLM_MODEL          chat model
 EMB_API_KEY / EMB_BASE_URL / EMB_MODEL          embeddings
 LLM_REASONING_EFFORT=low                        fixed for experiments
 GW_LLM_CACHE=1                                  SQLite response cache; bypassed automatically when --repeats > 1
+GW_CLASSIFIER_STYLE=cited                       cited (label + rationale + cited sources) | label (v1, one word)
+LLM_PRICE_IN_PER_MTOK / LLM_PRICE_OUT_PER_MTOK  USD per million tokens; unset = tokens reported, no dollars
+EMB_PRICE_PER_MTOK                              same, for query embeddings
 GW_BASELINE_BUILD=dev                           which passage store; dev-sent is the sentence-unit ablation store
 GW_BASELINE_MODE=rrf+rerank                     bm25 | dense | rrf | rrf+rerank
 GW_BASELINE_BACKEND=files                       files | postgres
@@ -77,7 +80,8 @@ src/common/gw_common/        shared contract and harness (schemas, Protocols, re
                              eval runner/metrics/report, shared LLM client and classifier, FastAPI)
 src/baseline-rag/            hybrid BM25 + dense + RRF + rerank over the passage store; Postgres backend
 src/graph-rag/               temporal claim graph (DuckDB + networkx), graph/fused retrieval, agentic stub
-configs/prompts/             every prompt, versioned; action_classifier.md is the shared classifier prompt
+configs/prompts/             every prompt, versioned; action_classifier_cited.md is the shared classifier
+                             prompt (action_classifier.md is its label-only v1)
 configs/graph.dev.yaml       graph build config
 data/eval/                   frozen gw1000 snapshots (versioned), one file per (dataset, label source, hash);
                              A3CG-derived snapshots are local only
@@ -121,7 +125,7 @@ uv run gw-data build a3cg                           # A3CG test splits as action
 
 ### 4.2 Evidence conditions
 
-One classifier, one prompt (`configs/prompts/action_classifier.md`); systems differ only in the evidence
+One classifier, one prompt (`configs/prompts/action_classifier_cited.md`); systems differ only in the evidence
 they hand it, at most `k = 3` spans of ≤ 800 characters each.
 
 | condition | evidence the classifier sees | who provides it |
@@ -163,7 +167,7 @@ company, year, pilot, has_aspect, gold, agreement, aspect_weak), `--sample N` (s
 | file | content |
 |---|---|
 | `manifest.json` | dataset id + hash, label source, split, slices, repeats, git sha (and dirty flag), chat model / effort / temperature / cache |
-| `predictions.jsonl` | every prediction, per condition and repeat, with tokens and latency |
+| `predictions.jsonl` | every prediction, per condition and repeat: label, rationale, resolved citations, tokens, latency |
 | `evidence.jsonl` | every span handed to the classifier, per condition and item |
 | `metrics.json` | everything in §5, machine-readable |
 | `report.md` | the same as tables |
@@ -186,7 +190,9 @@ Micro-F1 (pooled) is reported next to it because A3CG pools over pairs.
 | comparison vs baseline condition | Δ macro-F1 (mean and vote), pooled flips wrong→right / right→wrong, McNemar on majority votes, bootstrap 95 % CI | is the delta bigger than the noise |
 | slices | macro-F1 per row_type, aspect_source, agreement (unanimous vs split), category, gold | where the gain lands |
 | evidence | coverage, mean spans, by source, `target_dropped` | did retrieval deliver anything |
-| cost | p50/p95 latency, input/output tokens, LLM calls | the course asks for it |
+| grounding | share of replies in the asked format, with a rationale, citing the target; `evidence_use_rate` (items with retrieved evidence that cite at least one span of it), share of shown spans cited, invalid refs | is the answer tied to sources, and does the classifier actually use what was retrieved |
+| speed | per-call latency p50/p95, retrieval p50/p95, end-to-end per item, items/s (wall-clock throughput) | the course asks for latency and records per second |
+| cost | input/output tokens per item, embedding tokens, USD per 1k items and per run (when prices are set), cached calls | the course asks for cost; cached calls are flagged because they are neither slow nor billed |
 | retrieval (`--task retrieval`) | P@5, R@10, MRR, nDCG@10, wrong-company@10, by query type | needs pooled human judgements (§6.3) |
 
 Re-running an identical configuration does not reproduce its macro-F1 exactly: the classifier
@@ -249,10 +255,14 @@ The contract, in one table:
 | `Query` (in) | `text`, `company`, `aspect`, `year_from`, `year_to`, `anchor_year`, `target_text`, `condition` |
 | `EvidenceSpan` (out) | `statement_id` (your own id space), `text`, `company`, `year`, `page`, `file`, `score`, `why` (a short source tag, e.g. `bm25`, `rrf+rerank`, `graph:follows_up`) |
 | `EvalItem` (in, classifier) | `item_id`, `text`, `aspect`, `category`, `company`, `year`, `page`, `context_prev`, `context_next` — **never the gold label** |
-| `Prediction` (out, classifier) | `item_id`, `label`, optional `scores`, `evidence_ids`, `latency_ms`, `input_tokens`, `output_tokens`, `llm_calls` |
+| `Prediction` (out, classifier) | `item_id`, `label`, **`rationale`** (why, in a sentence or two), **`citations`** (list of `Citation`), `evidence_ids`, optional `scores`, `parse_ok`, `invalid_citations`, `latency_ms`, `input_tokens`, `output_tokens`, `llm_calls` |
+| `Citation` | `ref` (`T` target sentence, `C` neighbouring context, `E1`…`Ek` the k-th span shown), `statement_id`, `company`, `year`, `page`, `file`, `quote` — enough to open the page the claim rests on |
 
 If you write your own classifier, read evidence from the `evidence` mapping (item_id → spans) and
-respect the same budget (k = 3, 800 characters per span) or say in the notes that you did not.
+respect the same budget (k = 3, 800 characters per span) or say in the notes that you did not. It must
+return a `rationale` and the `citations` it rests on: a label without sources cannot be shown in the UI
+or scored for faithfulness. `gw_common.classifiers.llm_action.resolve_citations` turns the tags a model
+cites into `Citation` objects; the harness then reports the grounding block for you.
 
 ### 6.2 File exchange (no Python integration)
 
