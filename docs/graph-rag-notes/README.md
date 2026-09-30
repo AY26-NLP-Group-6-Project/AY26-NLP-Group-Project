@@ -353,6 +353,39 @@ from the snapshot) and the rounding of `agreement` differ, which changes the con
 `gw1000.human_majority.23dc51f1d9de` (runs in 4i–4k) ≡ `gw1000.human_majority.3e18cc14e648` (from here
 on). Results recorded against the old hash remain valid for the new one.
 
+## 4m. Cited classifier output: accuracy, speed, grounding (2026-09-30)
+
+The shared classifier now returns a label, a rationale and the sources it cites (`cited` style, prompt
+`action_classifier_cited.md` @ `f79137d448e4`; label definitions and rules unchanged from v1). Dev,
+3 uncached repeats, `baseline-rag` over the sentence-unit store `dev-sent`. Run
+`20260930T083207Z-baseline-rag-rq1`, snapshot `3e18cc14e648`.
+
+| condition | macro-F1 (mean ± sd) | vote | Δ vs sentence_only | p (McNemar) | indet. F1 | none F1 | evidence used | classify p50 / p95 ms | end-to-end p50 ms | items/s | tokens in / out |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| sentence_only | 0.7553 ± 0.009 | 0.7647 | — | — | 0.613 | 0.800 | — | 1703 / 2906 | 1703 | 4.26 | 540 / 63 |
+| local | 0.7449 ± 0.006 | 0.7519 | -0.010 | 1.000 | 0.598 | 0.825 | — | 1844 / 3259 | 1844 | 3.95 | 656 / 79 |
+| same_report_rrf | 0.7492 ± 0.013 | 0.7550 | -0.006 | 1.000 | 0.610 | 0.825 | 0.074 | 2000 / 3299 | 2347 | 3.77 | 653 / 92 |
+| cross_year_rrf | 0.7657 ± 0.005 | 0.7804 | +0.010 | 0.281 | 0.677 | 0.837 | 0.020 | 1942 / 3119 | 2048 | 3.85 | 675 / 84 |
+
+- **Asking for a rationale does not cost accuracy.** Cited `sentence_only` (vote 0.7647) against the
+  three label-style `sentence_only` runs on the same items (0.7416 / 0.7591 / 0.7343): paired p = 0.60,
+  1.00, 0.27. It costs about 145 more input tokens (the longer instructions) and ~60 output tokens.
+- **Format holds.** 100 % of replies parse, all carry a rationale of ~22 words and cite the target;
+  zero invalid references in 3,972 calls (one reply in the cross-year arm was not JSON).
+- **The classifier rarely relies on retrieved evidence.** Only 7.4 % (same report) and 2.0 %
+  (cross-year) of items that received evidence cite any of it; 4.0 % and 0.7 % of the spans shown are
+  cited. The prompt tells it to label the target and to cite only what changed or confirmed the
+  reading, so this is the rule working, and it is also a direct measure of how seldom evidence decides.
+- **Evidence gains are small and not stable across prompt styles.** Under the cited prompt no evidence
+  condition differs significantly from `sentence_only`; the largest is cross-year at +0.010 (p = 0.28),
+  with `indeterminate` F1 0.613 -> 0.677 as before. Section 4i's +0.052 (p = 0.001) was measured
+  against a label-style baseline that happened to sit at the low end of its own noise range (0.72).
+  The honest reading of 4i-4m together: sentence-level evidence does not hurt, helps `indeterminate`
+  consistently, and its effect on overall macro-F1 on dev is within about two points.
+- **Speed and cost.** About 1.7-2.0 s per classification call at low effort, 3.8-4.3 items/s with 8
+  concurrent calls, retrieval 117-326 ms p50 (one embedding call plus rerank), ~0.6k input and ~80
+  output tokens per item. Dollar figures need prices in `.env`; none were set for this run.
+
 ## 5. Risks
 
 1. **Aspect canonicalisation is the whole ball game.** If "Scope 1 emissions", "direct emissions"
