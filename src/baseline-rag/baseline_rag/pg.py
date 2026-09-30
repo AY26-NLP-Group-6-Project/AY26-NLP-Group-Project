@@ -130,28 +130,48 @@ class PgChunkSource:
             return [(self._index[cid], float(score)) for cid, score in cur.fetchall()]
 
 
-def package(build_id: str = "dev", out: Path | None = None) -> dict:
+def package(build_id: str = "dev", out: Path | None = None, with_eval: bool = False) -> dict:
     """Zip the store for distribution: the three files, a checksum list and a README with the import
-    steps. Derived passages and metadata only, never the source PDFs."""
+    steps. Derived passages and metadata only, never the source PDFs. `with_eval` adds the frozen
+    human-gold evaluation snapshot (`data/eval/gw1000.human_majority.*.jsonl` + build report) under
+    `eval/`, so a teammate evaluates on the identical items; the A3CG snapshots are never included."""
     src = chunk_store.STORE_ROOT / build_id
     chunks, _, manifest = chunk_store.load(build_id)
     out = out or (chunk_store.REPO_ROOT / "dist" / f"gw-kb-{build_id}-{manifest['chunks_sha256']}.zip")
     out.parent.mkdir(parents=True, exist_ok=True)
-    files = ["chunks.jsonl", "embeddings.npy", "manifest.json"]
-    sums = {f: hashlib.sha256((src / f).read_bytes()).hexdigest() for f in files}
+    files = {f"{build_id}/{f}": src / f for f in ("chunks.jsonl", "embeddings.npy", "manifest.json")}
+    if with_eval:
+        eval_dir = chunk_store.REPO_ROOT / "data" / "eval"
+        snapshots = sorted(eval_dir.glob("gw1000.human_majority.*.jsonl"))
+        if not snapshots:
+            raise FileNotFoundError(
+                "no gw1000.human_majority snapshot in data/eval; run `gw-data build gw1000`"
+            )
+        for path in [*snapshots, eval_dir / "gw1000.build_report.json"]:
+            if path.exists():
+                files[f"eval/{path.name}"] = path
+    sums = {arc: hashlib.sha256(path.read_bytes()).hexdigest() for arc, path in files.items()}
     readme = _package_readme(build_id, manifest, sums)
     with zipfile.ZipFile(out, "w", compression=zipfile.ZIP_DEFLATED, compresslevel=6) as zf:
-        for f in files:
-            zf.write(src / f, arcname=f"{build_id}/{f}")
-        zf.writestr(f"{build_id}/SHA256SUMS", "".join(f"{h}  {f}\n" for f, h in sums.items()))
-        zf.writestr(f"{build_id}/README.md", readme)
+        for arc, path in files.items():
+            zf.write(path, arcname=arc)
+        zf.writestr("SHA256SUMS", "".join(f"{h}  {f}\n" for f, h in sums.items()))
+        zf.writestr("README.md", readme)
     return {"out": str(out), "bytes": out.stat().st_size, "chunks": len(chunks),
-            "chunks_sha256": manifest["chunks_sha256"], "files": sums}
+            "chunks_sha256": manifest["chunks_sha256"], "with_eval": with_eval, "files": sums}
 
 
 def _package_readme(build_id: str, manifest: dict, sums: dict[str, str]) -> str:
     passages = (f"{manifest['chunks']:,} ({manifest.get('unit', 'passage')} unit, "
                 f"target {manifest['target_words']} words)")
+    eval_files = [f[5:] for f in sums if f.startswith("eval/")]
+    eval_section = "" if not eval_files else (
+        "\n## Evaluation snapshot (included)\n\n"
+        f"`eval/` holds the frozen human-gold evaluation set ({', '.join(f'`{f}`' for f in eval_files)}). "
+        "Copy the files into `data/eval/` inside the repo; `uv run gw-data list` should show them. The "
+        "hash in the filename is what every run manifest records, so results are comparable only when "
+        "it matches.\n"
+    )
     return f"""# Greenwash-RAG knowledge base · build `{build_id}`
 
 Packaged {datetime.now(UTC):%Y-%m-%d %H:%M} UTC. **Academic use only (AI6127 group project).** These are
@@ -165,14 +185,14 @@ themselves remain the issuers' copyright and are not included. Do not publish or
 | words | {manifest['words']:,} |
 | embedding | `{manifest['embed_model']}`, {manifest['dim']} dims, L2-normalised, float32 |
 | content hash | `{manifest['chunks_sha256']}` (over the passage texts; every run manifest records it) |
-
+{eval_section}
 ## Files
 
 - `chunks.jsonl` — one passage per line: `chunk_id, text, company, year, page, file (report sha256),
   statement_ids, prose_ratio`
 - `embeddings.npy` — row *i* is the vector of line *i* of `chunks.jsonl`
 - `manifest.json` — the table above, machine-readable
-- `SHA256SUMS` — verify with `sha256sum -c SHA256SUMS`
+- `SHA256SUMS` (archive root) — verify with `sha256sum -c SHA256SUMS`
 
 ## Use it
 

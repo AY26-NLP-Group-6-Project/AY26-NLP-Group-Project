@@ -135,12 +135,13 @@ def test_vector_literal_and_package(tmp_path, monkeypatch):
         "embed_model": "m", "dim": 4, "chunks_sha256": "abc"}), encoding="utf-8")
     monkeypatch.setattr(chunk_store, "STORE_ROOT", tmp_path / "store")
     info = pg.package("dev", tmp_path / "kb.zip")
-    assert info["chunks"] == 1 and set(info["files"]) == {"chunks.jsonl", "embeddings.npy", "manifest.json"}
+    assert info["chunks"] == 1
+    assert set(info["files"]) == {"dev/chunks.jsonl", "dev/embeddings.npy", "dev/manifest.json"}
     import zipfile
 
     with zipfile.ZipFile(tmp_path / "kb.zip") as zf:
         names = set(zf.namelist())
-        readme = zf.read("dev/README.md").decode("utf-8")
-    assert {"dev/chunks.jsonl", "dev/embeddings.npy", "dev/manifest.json", "dev/SHA256SUMS",
-            "dev/README.md"} <= names
+        readme = zf.read("README.md").decode("utf-8")
+    assert {"dev/chunks.jsonl", "dev/embeddings.npy", "dev/manifest.json", "SHA256SUMS",
+            "README.md"} <= names
     assert "Academic use only" in readme and "pg-import" in readme and "`abc`" in readme

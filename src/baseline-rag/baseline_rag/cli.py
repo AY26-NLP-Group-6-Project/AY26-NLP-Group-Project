@@ -19,6 +19,8 @@ def main(argv: list[str] | None = None) -> int:
                     help="passage windows (default) or one chunk per prose sentence")
     ap.add_argument("--dsn", help="Postgres connection string (default PG_DSN or the compose default)")
     ap.add_argument("--out", type=Path, help="zip path for `package`")
+    ap.add_argument("--with-eval", action="store_true",
+                    help="package: include the frozen human-gold evaluation snapshot under eval/")
     args = ap.parse_args(argv)
 
     if args.action in ("pg-import", "pg-check", "package"):
@@ -31,7 +33,7 @@ def main(argv: list[str] | None = None) -> int:
             print(json.dumps(result, indent=2))
             return 0 if result["ok"] else 1
         else:
-            print(json.dumps(pg.package(args.build_id, args.out), indent=2))
+            print(json.dumps(pg.package(args.build_id, args.out, with_eval=args.with_eval), indent=2))
         return 0
 
     if args.action == "build":
