@@ -5,7 +5,6 @@ from dataclasses import asdict
 
 import numpy as np
 import pytest
-
 from baseline_rag import chunks as chunk_store
 from baseline_rag.index import BM25, Dense, rrf
 from gw_common.schemas import EvidenceCondition, Query
@@ -114,5 +113,7 @@ def test_sentence_unit_is_one_prose_statement_per_chunk(tmp_path):
     built = chunk_store.build_chunks(_tiny_db(tmp_path, rows), unit="sentence")
     assert [c.chunk_id for c in built] == ["s0", "s1"]
     assert all(c.prose_ratio == 1.0 and c.statement_ids == [c.chunk_id] for c in built)
+    other = tmp_path / "other"
+    other.mkdir()
     with pytest.raises(ValueError):
-        chunk_store.build_chunks(_tiny_db(tmp_path, rows), unit="paragraph")
+        chunk_store.build_chunks(_tiny_db(other, rows), unit="paragraph")
