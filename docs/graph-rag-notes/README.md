@@ -386,6 +386,36 @@ The shared classifier now returns a label, a rationale and the sources it cites 
   concurrent calls, retrieval 117-326 ms p50 (one embedding call plus rerank), ~0.6k input and ~80
   output tokens per item. Dollar figures need prices in `.env`; none were set for this run.
 
+## 4n. Answer-level RAG metrics on dev (2026-09-30)
+
+RAGAS-style metrics (`gw_common/eval/rag_metrics.py`, prompts `rag_judge.md`), scored post hoc on run
+`20260930T083207Z-baseline-rag-rq1` (section 4m), repeat 0, all 331 dev items per condition, 1,324 answers.
+Judge: `gpt-5.6-luna`, effort low, i.e. **the model that wrote the answers**; embeddings
+`text-embedding-3-small`. LLM-judged and not yet calibrated against people.
+
+| condition | faithfulness | answer relevance | context precision | context relevance | statements / answer |
+|---|---|---|---|---|---|
+| sentence_only | 0.952 | 0.618 | n/a | n/a | 2.39 |
+| local | 0.949 | 0.618 | n/a | n/a | 2.47 |
+| same_report_rrf | 0.951 | 0.621 | 0.571 | 0.459 | 2.49 |
+| cross_year_rrf | 0.943 | 0.624 | 0.439 (n = 293) | 0.375 | 2.47 |
+
+- **Faithfulness is high and flat across conditions** (0.94-0.95): 169 of 3,247 rationale statements
+  were judged unsupported. With sentence-only input, wrong labels come with less faithful rationales
+  (0.910 vs 0.965 when right); with evidence the gap closes.
+- **Answer relevance does not discriminate** (0.62 everywhere). Its level is set by the embedding
+  cosine between a generated question and the long original question; report it because the brief asks
+  for it, do not read it as "62 % relevant".
+- **About half of what is retrieved is judged relevant**, more from the same report (0.46) than from
+  other years (0.38); 207 and 181 of 331 items have at least one relevant passage. Yet the classifier
+  cites evidence on only 7 % and 2 % of items (4m). Relevant passages are often there and still not
+  needed to label the sentence, which is the clearest statement so far of why retrieval moves macro-F1
+  so little on this task.
+- **Judge reliability.** 5.6 % of answer-relevance replies were malformed JSON (a missing bracket);
+  those calls are re-asked in JSON mode, all other verdicts unchanged. A blind sheet for human
+  calibration was exported (`ragas_check.csv`: 48 answers, 127 statement rows, 59 passage rows); until
+  it is filled and scored (`--ragas-score-check`) these numbers must be quoted as LLM-judged.
+
 ## 5. Risks
 
 1. **Aspect canonicalisation is the whole ball game.** If "Scope 1 emissions", "direct emissions"

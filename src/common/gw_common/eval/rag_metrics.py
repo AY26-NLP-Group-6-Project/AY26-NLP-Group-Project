@@ -100,11 +100,15 @@ class RagJudge:
         self.prompts = _prompts()
 
     def _ask(self, section: str, user: str) -> dict | None:
-        reply = self.client.chat(
-            [{"role": "system", "content": self.prompts[section]}, {"role": "user", "content": user}],
-            max_tokens=700,
-        )
-        return _json(reply.text)
+        messages = [{"role": "system", "content": self.prompts[section]},
+                    {"role": "user", "content": user}]
+        obj = _json(self.client.chat(messages, max_tokens=700).text)
+        if obj is None:
+            # A few replies are almost-JSON (a missing bracket). Ask again in JSON mode rather than
+            # lose the judgement; only the failed calls are repeated, so earlier verdicts stand.
+            obj = _json(self.client.chat(messages, max_tokens=700,
+                                         response_format={"type": "json_object"}).text)
+        return obj
 
     def faithfulness(self, label: str, rationale: str, sources: list[tuple[str, str]]) -> dict:
         if not rationale.strip():
