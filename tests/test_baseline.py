@@ -115,4 +115,4 @@ def test_sentence_unit_is_one_prose_statement_per_chunk(tmp_path):
     assert [c.chunk_id for c in built] == ["s0", "s1"]
     assert all(c.prose_ratio == 1.0 and c.statement_ids == [c.chunk_id] for c in built)
     with pytest.raises(ValueError):
-        chunk_store.build_chunks(_tiny_db(tmp_path / "b", rows), unit="paragraph")
+        chunk_store.build_chunks(_tiny_db(tmp_path, rows), unit="paragraph")
