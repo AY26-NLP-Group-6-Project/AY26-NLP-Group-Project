@@ -309,6 +309,39 @@ Runs `20260929T150108Z-baseline-rag-rq1` and `20260929T152702Z-graph-rag-rq1`; s
   unit from graph structure. Until it runs, the honest claim is "sentence-level cross-year evidence
   beats passage-level hybrid retrieval".
 
+## 4k. Retrieval unit vs graph structure (2026-09-30)
+
+The confound in 4j resolved: `baseline-rag` over a **sentence-unit** store (`dev-sent`, 71,342 prose
+statements, the same statements and prose filter the graph arm uses, `b1c181dcaf1a`), BM25 + dense +
+RRF + rerank, no graph, verbatim repeats dropped. Dev, 3 uncached repeats. Run
+`20260930T004540Z-baseline-rag-rq1`; paired tests against 4j's runs on the same 331 items.
+
+| arm | unit | macro-F1 (mean ± sd) | vote | indet. F1 | none F1 | p vs own sentence_only | p vs graph fused |
+|---|---|---|---|---|---|---|---|
+| hybrid same_report | sentence | 0.7584 ± 0.002 | 0.7648 | 0.626 | 0.820 | 0.256 | 1.000 |
+| hybrid cross_year | sentence | 0.7424 ± 0.011 | 0.7510 | 0.588 | 0.788 | 0.711 | 0.345 |
+| hybrid same_report | passage | 0.7335 ± 0.026 | 0.7484 | 0.588 | 0.689 | 0.174 | 0.024 |
+| hybrid cross_year | passage | 0.7409 ± 0.012 | 0.7464 | 0.586 | 0.598 | 0.040 (worse) | 0.002 |
+| graph cross_year | sentence | 0.7493 ± 0.013 | 0.7523 | 0.623 | 0.771 | 0.383 | 0.281 |
+| graph fused cross_year | sentence | 0.7664 ± 0.016 | 0.7810 | 0.677 | 0.808 | 0.058 | — |
+
+- **The retrieval unit is what matters, not the graph.** With sentences as evidence the plain hybrid
+  retriever is indistinguishable from the graph fused arm (p = 1.000 on same_report, 0.345 on
+  cross_year); with passages it is significantly worse than both (p ≤ 0.024). No-aspect detection
+  recovers as soon as evidence is sentence-sized (0.598 → 0.788/0.820).
+- **Cross-year evidence is not the ingredient for RQ1 either.** Same-report sentences do as well as
+  cross-year ones for classifying the target sentence. Cross-year retrieval is what RQ2 (trajectories)
+  needs; for RQ1 it is one more source of on-topic sentences.
+- **What the graph still buys.** Nothing measurable on classification accuracy at k = 3. Its
+  remaining value is structural: exact `(company, aspect, year)` joins for trajectories, provenance for
+  the timeline UI, and a deterministic path where similarity search has none. Claims in the report
+  should be phrased that way.
+- **Noise reference.** Three independent `sentence_only` majority votes: 0.7416 / 0.7591 / 0.7343.
+
+Consequences for the plan: the headline RQ1 result becomes "sentence-level evidence from the company's
+own reports raises action F1 and fixes no-aspect detection; passage-level RAG does not"; the graph's
+case rests on RQ2 and the product surface, which is where M3/M5 effort should go.
+
 ## 5. Risks
 
 1. **Aspect canonicalisation is the whole ball game.** If "Scope 1 emissions", "direct emissions"
