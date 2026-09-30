@@ -1,10 +1,10 @@
 {
   "items": 1000,
   "snapshots": {
-    "human_majority": "gw1000.human_majority.23dc51f1d9de.jsonl",
-    "llm_pre_claude": "gw1000.llm_pre_claude.43e5acdbe1e7.jsonl",
-    "llm_pre_deepseek": "gw1000.llm_pre_deepseek.723e6f155f4e.jsonl",
-    "llm_pre_gpt": "gw1000.llm_pre_gpt.708cdd0f5f24.jsonl"
+    "human_majority": "gw1000.human_majority.3e18cc14e648.jsonl",
+    "llm_pre_claude": "gw1000.llm_pre_claude.2553d12ea159.jsonl",
+    "llm_pre_deepseek": "gw1000.llm_pre_deepseek.15897aaad4d6.jsonl",
+    "llm_pre_gpt": "gw1000.llm_pre_gpt.994b9bfbaf27.jsonl"
   },
   "splits": {
     "dev": 331,
@@ -26,6 +26,10 @@
     "human_filled": 34
   },
   "action_rows_with_aspect": 830,
+  "rows_by_annotator_count": {
+    "6": 50,
+    "1": 950
+  },
   "agreement": {
     "fleiss_all": {
       "n_rows": 50,

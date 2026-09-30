@@ -342,6 +342,17 @@ Consequences for the plan: the headline RQ1 result becomes "sentence-level evide
 own reports raises action F1 and fixes no-aspect detection; passage-level RAG does not"; the graph's
 case rests on RQ2 and the product surface, which is where M3/M5 effort should go.
 
+## 4l. Evaluation file de-identified (2026-09-30)
+
+The annotators' workbook was replaced by `kb/annotation/eval.xlsx` (and `eval.xls`, the name the course
+brief asks for): one row per record, `text` / `aspect` / `label` first, annotators as A1–A6, the 34
+human-filled aspects and the dev/test split as columns, names in free-text notes replaced. Verified
+against the previous snapshot: all 1,000 rows identical on id, text, aspect, category, provenance,
+context, label and split; κ recomputes to the same 0.809 / 0.789 / 0.492. Only annotator notes (dropped
+from the snapshot) and the rounding of `agreement` differ, which changes the content hash:
+`gw1000.human_majority.23dc51f1d9de` (runs in 4i–4k) ≡ `gw1000.human_majority.3e18cc14e648` (from here
+on). Results recorded against the old hash remain valid for the new one.
+
 ## 5. Risks
 
 1. **Aspect canonicalisation is the whole ball game.** If "Scope 1 emissions", "direct emissions"

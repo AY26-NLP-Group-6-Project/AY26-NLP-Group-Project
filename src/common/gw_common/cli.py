@@ -137,11 +137,13 @@ def _retrieval(ap: argparse.ArgumentParser, args) -> int:
 
 def data_main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser("gw-data", description="Freeze and inspect evaluation snapshots")
-    ap.add_argument("action", choices=["build", "list", "describe"])
+    ap.add_argument("action", choices=["build", "list", "describe", "export-xls"])
     ap.add_argument("dataset", nargs="?", default="gw1000")
     ap.add_argument("--labels", default="human_majority")
-    ap.add_argument("--from", dest="source", type=Path, help="annotation workbook (default kb/annotation)")
-    ap.add_argument("--dev-fraction", type=float, default=0.30)
+    ap.add_argument(
+        "--from", dest="source", type=Path, help="eval workbook (default: kb/annotation/eval.xlsx)"
+    )
+    ap.add_argument("--out", type=Path, help="export-xls: output path (default kb/annotation/eval.xls)")
     ap.add_argument("--slice", dest="slices")
     ap.add_argument("--split", default="all", choices=["dev", "test", "all"])
     args = ap.parse_args(argv)
@@ -149,6 +151,12 @@ def data_main(argv: list[str] | None = None) -> int:
     if args.action == "list":
         for p in sorted(datasets.EVAL_DIR.glob("*.jsonl")):
             print(p.name)
+        return 0
+    if args.action == "export-xls":
+        from gw_common import annotation
+
+        out = args.out or annotation.EVAL_XLSX.with_suffix(".xls")
+        print(json.dumps(annotation.export_xls(out, args.source), indent=2))
         return 0
     if args.action == "describe":
         items, digest = datasets.load(args.dataset, args.labels)
@@ -165,7 +173,7 @@ def data_main(argv: list[str] | None = None) -> int:
         raise SystemExit(f"no builder for dataset {args.dataset!r} yet")
     from gw_common import annotation
 
-    print(json.dumps(annotation.build(xlsx=args.source, dev_fraction=args.dev_fraction), indent=2))
+    print(json.dumps(annotation.build(xlsx=args.source), indent=2))
     return 0
 
 

@@ -1,25 +1,22 @@
-"""Read `kb/annotation/annotation.xlsx` and turn it into frozen evaluation snapshots.
+"""Read `kb/annotation/eval.xlsx` and turn it into frozen evaluation snapshots.
 
-The workbook is the annotators' file and is never written to. Two things are layered on top here:
+`eval.xlsx` is the evaluation set in the tabular form the course brief asks for: one row per record,
+`text` and `label` up front, everything else as extra columns. It is the de-identified successor of
+the annotators' workbook (annotators appear as A1–A6) and is self-contained:
 
-- **Aspect overrides** (`kb/annotation/aspect_overrides.csv`). 34 rows were shown to annotators with no
-  candidate aspect, and the annotators still assigned an action, meaning they saw an aspect our
-  proposer missed. The spans were reviewed on 2026-09-29 and live in that CSV, keeping the workbook
-  pristine and the change auditable.
-- **A frozen dev/test split.** Everything that is tuned (prompts, thresholds, retrieval settings) is
-  measured on dev; test is opened once for the report. The pilot rows are forced into dev: they carry
-  all six annotators, were used for the agreement analysis and have been read repeatedly.
+- the 34 aspects that annotators saw but the proposer missed are already filled in
+  (`aspect_source = human_filled`; the review trail is `aspect_overrides.csv`);
+- the dev/test split is a column, so the file itself says which rows may be tuned on. Pilot rows are in
+  dev: all six annotators labelled them and they have been read repeatedly.
 
-Agreement is recomputed here from the annotator columns rather than read from the workbook's IAA
-sheet, so every number in the report comes out of the pipeline.
+Agreement is recomputed here from the annotator columns, so every number in the report comes out of
+the pipeline rather than from a spreadsheet formula.
 """
 
 from __future__ import annotations
 
-import csv
 import json
-import random
-from collections import Counter, defaultdict
+from collections import Counter
 from pathlib import Path
 from typing import Any
 
@@ -27,57 +24,25 @@ from gw_common.datasets import EVAL_DIR, write_snapshot
 from gw_common.schemas import ALL_LABELS, GoldItem, Label
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
-ANNOTATION_XLSX = REPO_ROOT / "kb" / "annotation" / "annotation.xlsx"
-ASPECT_OVERRIDES = REPO_ROOT / "kb" / "annotation" / "aspect_overrides.csv"
+EVAL_XLSX = REPO_ROOT / "kb" / "annotation" / "eval.xlsx"
 DATASET_ID = "gw1000"
-SHEET = "Master"
-ANNOTATORS = ["Z. Yanhai", "H. Tingrui", "L. Yu", "L. Yuanzhi", "Z. Minghao", "P. Siddharth"]
-LLM_COLUMNS = {
-    "claude": "LLM_pre-Claude-Fable5.1-xHigh",
-    "deepseek": "LLM_pre-Deepseek-V4.1-Flash",
-    "gpt": "LLM_pre-GPT-6-Astra-xHigh",
-}
-DEV_FRACTION = 0.30
-SPLIT_SEED = 20260929
-TARGET_MARK = "⟦TARGET⟧"
+SHEET = "eval"
+ANNOTATORS = ["A1", "A2", "A3", "A4", "A5", "A6"]          # pseudonymous; the mapping is not kept
+LLM_SOURCES = ["claude", "deepseek", "gpt"]               # columns llm_pre_<name>
+SPLITS = ("dev", "test")
 
 
-def _rows(path: Path) -> list[dict[str, Any]]:
+def read_rows(path: Path | None = None) -> list[dict[str, Any]]:
     from openpyxl import load_workbook  # imported lazily: only snapshot building needs it
 
-    ws = load_workbook(path, data_only=True, read_only=True)[SHEET]
+    ws = load_workbook(path or EVAL_XLSX, data_only=True, read_only=True)[SHEET]
     it = ws.iter_rows(values_only=True)
     head = [str(c).strip() if c is not None else "" for c in next(it)]
-    out = []
-    for raw in it:
-        row = dict(zip(head, raw, strict=False))
-        if row.get("ID") is None:
-            continue
-        out.append(row)
-    return out
+    return [row for raw in it if (row := dict(zip(head, raw, strict=False))).get("id") is not None]
 
 
 def _clean(value: Any) -> str:
     return str(value).strip() if value is not None else ""
-
-
-def _overrides(path: Path) -> dict[str, dict[str, str]]:
-    if not path.exists():
-        return {}
-    with path.open(encoding="utf-8-sig", newline="") as f:
-        out = {}
-        for row in csv.DictReader(f):
-            aspect = row.get("Corrected_Aspect", "").strip() or row["Proposed_Aspect"].strip()
-            if not aspect:
-                continue
-            out[str(int(float(row["ID"])))] = {
-                "aspect": aspect,
-                "category": (row.get("Corrected_Category", "").strip()
-                             or row.get("Category", "").strip()),
-                "weak": row.get("Weak", "").strip(),
-                "source": row.get("Source", "").strip(),
-            }
-    return out
 
 
 def fleiss_kappa(rows: list[list[Label]]) -> dict[str, float]:
@@ -98,87 +63,53 @@ def fleiss_kappa(rows: list[list[Label]]) -> dict[str, float]:
     return {"n_rows": len(rows), "raters": n, "observed": observed, "chance": chance, "kappa": kappa}
 
 
-def _assign_splits(items: list[GoldItem], dev_fraction: float, seed: int) -> None:
-    """Stratified by (row_type, gold label, category); pilot rows are pinned to dev."""
-    strata: dict[tuple, list[GoldItem]] = defaultdict(list)
-    for it in items:
-        if it.pilot:
-            it.split = "dev"
-            continue
-        strata[(it.meta.get("row_type"), it.gold_label.value, it.category)].append(it)
-    rng = random.Random(seed)
-    for _, group in sorted(strata.items(), key=lambda kv: str(kv[0])):
-        group.sort(key=lambda it: int(it.item_id))
-        rng.shuffle(group)
-        n_dev = round(len(group) * dev_fraction)
-        for i, it in enumerate(group):
-            it.split = "dev" if i < n_dev else "test"
-
-
-def build(
-    xlsx: Path | None = None,
-    overrides_csv: Path | None = None,
-    dev_fraction: float = DEV_FRACTION,
-    seed: int = SPLIT_SEED,
-) -> dict[str, Any]:
+def build(xlsx: Path | None = None) -> dict[str, Any]:
     """Write the human-gold snapshot plus one per LLM pre-annotator, and return a build report."""
-    rows = _rows(xlsx or ANNOTATION_XLSX)
-    overrides = _overrides(overrides_csv or ASPECT_OVERRIDES)
+    valid = {lab.value for lab in ALL_LABELS}
     items: list[GoldItem] = []
     human_rows: list[tuple[str, list[Label]]] = []
-    llm_items: dict[str, list[GoldItem]] = {name: [] for name in LLM_COLUMNS}
-    unused = set(overrides)
+    llm_items: dict[str, list[GoldItem]] = {name: [] for name in LLM_SOURCES}
+    seen_text: set[str] = set()
 
-    for row in rows:
-        item_id = str(int(float(row["ID"])))
-        final = _clean(row.get("Final"))
-        if not final:
-            continue
-        context = _clean(row.get("Context"))
-        prev, _, nxt = context.partition(TARGET_MARK)
-        row_type = _clean(row.get("RowType"))
-        aspect, category = _clean(row.get("Aspect")) or None, _clean(row.get("Category")) or None
-        override = overrides.get(item_id)
-        if override:
-            unused.discard(item_id)
-            aspect, category = override["aspect"], override["category"] or category
+    for row in read_rows(xlsx):
+        item_id = str(int(float(row["id"])))
+        label, split, text = _clean(row["label"]).lower(), _clean(row["split"]), _clean(row["text"])
+        if label not in valid:
+            raise ValueError(f"row {item_id}: label {label!r} is not one of {sorted(valid)}")
+        if split not in SPLITS:
+            raise ValueError(f"row {item_id}: split {split!r} is not one of {SPLITS}")
+        if text in seen_text:
+            raise ValueError(f"row {item_id}: duplicate sentence; the brief forbids duplicates")
+        seen_text.add(text)
+        row_type = _clean(row.get("row_type"))
         human = [Label(_clean(row[c]).lower()) for c in ANNOTATORS if _clean(row.get(c))]
         if len(human) == len(ANNOTATORS):
             human_rows.append((row_type, human))
-        llm_pre = {name: _clean(row.get(col)).lower() for name, col in LLM_COLUMNS.items()}
+        llm_pre = {name: _clean(row.get(f"llm_pre_{name}")).lower() for name in LLM_SOURCES}
         meta = {
             "row_type": row_type,
-            "aspect_source": ("human_filled" if override else
-                              ("llm_proposed" if row_type == "aspect" else "none_proposed")),
-            "aspect_weak": bool(override and override["weak"]),
+            "aspect_source": _clean(row.get("aspect_source")),
+            "aspect_weak": _clean(row.get("aspect_weak")).upper() == "Y",
             "n_annotators": len(human),
-            "agreement": float(row["Agree"]) if row.get("Agree") is not None else None,
-            "tie": _clean(row.get("Tie")) == "TIE",
-            "adjudicated": bool(_clean(row.get("Adjudicated"))),
+            "agreement": float(row["agreement"]) if row.get("agreement") is not None else None,
+            "adjudicated": _clean(row.get("adjudicated")).upper() == "Y",
             "llm_pre": llm_pre,
-            "notes": _clean(row.get("Notes")) or None,
         }
         common = dict(
-            item_id=item_id, text=_clean(row["Text"]), aspect=aspect, category=category,
-            company=_clean(row["Company"]), sgx_code=_clean(row.get("SGX_Code")) or None,
-            year=int(float(row["Year"])), page=int(float(row["Page"])) if row.get("Page") else None,
-            file=_clean(row.get("File")) or None, context_prev=prev.strip(), context_next=nxt.strip(),
-            pilot=_clean(row.get("Pilot")).upper() == "Y", meta=meta,
+            item_id=item_id, text=text, aspect=_clean(row.get("aspect")) or None,
+            category=_clean(row.get("category")) or None, company=_clean(row["company"]),
+            sgx_code=_clean(row.get("sgx_code")) or None, year=int(float(row["year"])),
+            page=int(float(row["page"])) if row.get("page") is not None else None,
+            file=_clean(row.get("file")) or None, context_prev=_clean(row.get("context_prev")),
+            context_next=_clean(row.get("context_next")), pilot=_clean(row.get("pilot")).upper() == "Y",
+            split=split, meta=meta,
         )
-        items.append(GoldItem(**common, gold_label=Label(final.lower()), label_source="human_majority"))
-        for name, label in llm_pre.items():
-            if label in {lab.value for lab in ALL_LABELS}:
+        items.append(GoldItem(**common, gold_label=Label(label), label_source="human_majority"))
+        for name, pre in llm_pre.items():
+            if pre in valid:
                 llm_items[name].append(
-                    GoldItem(**common, gold_label=Label(label), label_source=f"llm_pre_{name}")
+                    GoldItem(**common, gold_label=Label(pre), label_source=f"llm_pre_{name}")
                 )
-
-    if unused:
-        raise ValueError(f"aspect overrides for unknown or unlabelled rows: {sorted(unused)}")
-    _assign_splits(items, dev_fraction, seed)
-    by_id = {it.item_id: it.split for it in items}
-    for group in llm_items.values():
-        for it in group:
-            it.split = by_id[it.item_id]
 
     written = {"human_majority": write_snapshot(DATASET_ID, "human_majority", items, replace=True).name}
     for name, group in llm_items.items():
@@ -186,7 +117,7 @@ def build(
             DATASET_ID, f"llm_pre_{name}", group, replace=True
         ).name
 
-    action = {lab.value for lab in ALL_LABELS} - {Label.NONE.value}
+    actions = valid - {Label.NONE.value}
     report = {
         "items": len(items),
         "snapshots": written,
@@ -195,8 +126,9 @@ def build(
         "row_types": dict(Counter(str(it.meta["row_type"]) for it in items)),
         "aspect_source": dict(Counter(str(it.meta["aspect_source"]) for it in items)),
         "action_rows_with_aspect": sum(
-            it.aspect is not None and it.gold_label.value in action for it in items
+            it.aspect is not None and it.gold_label.value in actions for it in items
         ),
+        "rows_by_annotator_count": dict(Counter(int(it.meta["n_annotators"]) for it in items)),
         "agreement": {
             "fleiss_all": fleiss_kappa([h for _, h in human_rows]),
             "fleiss_aspect": fleiss_kappa([h for t, h in human_rows if t == "aspect"]),
@@ -205,10 +137,30 @@ def build(
         "llm_pre_vs_human": {
             name: round(sum(it.meta["llm_pre"][name] == it.gold_label.value for it in items)
                         / len(items), 4)
-            for name in LLM_COLUMNS
+            for name in LLM_SOURCES
         },
     }
     (EVAL_DIR / f"{DATASET_ID}.build_report.json").write_text(
         json.dumps(report, indent=2), encoding="utf-8"
     )
     return report
+
+
+def export_xls(out: Path, xlsx: Path | None = None) -> dict[str, Any]:
+    """Write the legacy `.xls` the course brief names (`eval.xls`): the `eval` sheet, values only."""
+    import xlwt  # optional dependency, only needed for the submission file
+
+    rows = read_rows(xlsx)
+    book = xlwt.Workbook(encoding="utf-8")
+    sheet = book.add_sheet("eval")
+    header = list(rows[0])
+    bold = xlwt.easyxf("font: bold on")
+    for c, name in enumerate(header):
+        sheet.write(0, c, name, bold)
+    for r, row in enumerate(rows, start=1):
+        for c, name in enumerate(header):
+            value = row[name]
+            sheet.write(r, c, "" if value is None else value)
+    out.parent.mkdir(parents=True, exist_ok=True)
+    book.save(str(out))
+    return {"out": str(out), "rows": len(rows), "columns": len(header)}

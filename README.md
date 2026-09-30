@@ -33,7 +33,7 @@ Data and where it comes from (the evaluation set is versioned; the corpus-derive
 | what | where it must sit | how you get it |
 |---|---|---|
 | passage store (18,839 passages + vectors + manifest) | `artifacts/baseline/dev/` | the `gw-kb-dev-<hash>.zip` package, or `gw-baseline build` if you hold the parsed corpus |
-| frozen evaluation snapshot | `data/eval/gw1000.*.jsonl` | **in git** (built from `kb/annotation/annotation.xlsx` + `aspect_overrides.csv`, also versioned); rebuild with `gw-data build gw1000` only after an annotation change |
+| frozen evaluation snapshot | `data/eval/gw1000.*.jsonl` | **in git** (built from `kb/annotation/eval.xlsx`, also versioned); rebuild with `gw-data build gw1000` only after an annotation change |
 | parsed corpus and claim graph (`graph-rag` only) | `artifacts/graph/dev/graph.duckdb` | `gw-graph build`, needs the raw PDFs under `kb/raw/` |
 | raw reports | `kb/raw/` | never redistributed; see `kb/README.md` |
 
@@ -103,7 +103,7 @@ annotator each), one tie adjudicated.
 | aspect rows with an action label | 796 | **the primary-metric population** |
 | aspect rows labelled `none` | 7 | the proposed aspect was rejected |
 | no-aspect rows labelled `none` | 163 | |
-| no-aspect rows with an action label | 34 | annotators saw an aspect the proposer missed; spans filled in by review (`kb/annotation/aspect_overrides.csv`), flagged `aspect_source=human_filled`. Reported separately, never inside the headline |
+| no-aspect rows with an action label | 34 | annotators saw an aspect the proposer missed; spans filled in by review (already in `eval.xlsx`; trail in `kb/annotation/aspect_overrides.csv`), flagged `aspect_source=human_filled`. Reported separately, never inside the headline |
 
 Frozen split, stratified by row type × label × category: **dev 331 / test 669**. Pilot rows are pinned
 to dev. Tune on dev; open test once, for the report.
@@ -113,7 +113,8 @@ label-noise analysis only), `a3cg_gold` (A3CG's released test splits, reference 
 given, their statements carry no provenance, and the release may be in the LLM's training data).
 
 ```bash
-uv run gw-data build gw1000                         # annotation.xlsx (+ overrides) -> snapshots + build report (κ, splits)
+uv run gw-data build gw1000                         # kb/annotation/eval.xlsx -> snapshots + build report (κ, counts)
+uv run gw-data export-xls                           # kb/annotation/eval.xls, the file name the course brief asks for
 uv run gw-data describe gw1000 --split dev          # counts per slice
 uv run gw-data build a3cg                           # A3CG test splits as action-classification snapshots
 ```
