@@ -175,6 +175,35 @@ company, year, pilot, has_aspect, gold, agreement, aspect_weak), `--sample N` (s
 Quote nothing that cannot be traced to a run id, and record the run id next to the number in
 `docs/graph-rag-notes/README.md`.
 
+### 4.5 Answer-level RAG metrics
+
+Faithfulness, answer relevance and context precision follow the RAGAS definitions and are implemented
+in `gw_common/eval/rag_metrics.py` (not through the `ragas` package), so every intermediate judgement
+is stored. They are scored **after** a run, from its directory:
+
+```bash
+uv run gw-eval --ragas artifacts/runs/<run_id>                       # all conditions, repeat 0
+uv run gw-eval --ragas artifacts/runs/<run_id> --conditions cross_year_rrf --sample 100
+uv run gw-eval --ragas artifacts/runs/<run_id> --ragas-export-check check.csv --ragas-n 50
+uv run gw-eval --ragas artifacts/runs/<run_id> --ragas-score-check check.csv
+```
+
+| metric | how it is computed |
+|---|---|
+| faithfulness | the rationale is split into atomic statements; each is judged against the sources the classifier saw (`T`, `C`, `E1`…). Score = supported / total |
+| answer relevance | three questions are generated back from the answer and compared, by embedding cosine, with the question actually asked; 0 if the answer is noncommittal. Absolute values depend on the embedding model; compare conditions, not against 1.0 |
+| context precision | each retrieved passage is judged relevant or not to reaching the reference label; mean of precision@i over the relevant ranks. Undefined where nothing was retrieved (`sentence_only`, `local`) |
+| context relevance | plain share of retrieved passages judged relevant |
+
+Outputs land next to the run: `ragas.jsonl` (per answer: statements and verdicts, generated questions,
+per-passage verdicts), `ragas.json`, `ragas.md`.
+
+**The judge is an LLM, by default the same model that wrote the answers**, so it may be lenient.
+`--ragas-export-check` writes a blind sheet (one row per statement and per passage, no judge verdict
+shown) for a human to fill with Y/N; `--ragas-score-check` then reports agreement and Cohen's κ between
+judge and human, including how often the judge said yes where the human said no. Quote the LLM-judged
+numbers together with that agreement.
+
 ## 5. Metrics
 
 **Primary:** macro-F1 over the three action labels, computed on rows whose gold label is an action
@@ -194,6 +223,7 @@ Micro-F1 (pooled) is reported next to it because A3CG pools over pairs.
 | speed | per-call latency p50/p95, retrieval p50/p95, end-to-end per item, items/s (wall-clock throughput) | the course asks for latency and records per second |
 | cost | input/output tokens per item, embedding tokens, USD per 1k items and per run (when prices are set), cached calls | the course asks for cost; cached calls are flagged because they are neither slow nor billed |
 | retrieval (`--task retrieval`) | P@5, R@10, MRR, nDCG@10, wrong-company@10, by query type | needs pooled human judgements (§6.3) |
+| answer-level RAG (`--ragas`) | faithfulness, answer relevance, context precision, context relevance (§4.5) | is the rationale supported by what was shown, and was what was retrieved relevant |
 
 Re-running an identical configuration does not reproduce its macro-F1 exactly: the classifier
 re-samples, and independent runs differ by a few points. **Do not compare systems by a difference of

@@ -46,6 +46,14 @@ def eval_main(argv: list[str] | None = None) -> int:
                     help="retrieval task: write a pooled judging sheet over --modes and exit")
     ap.add_argument("--modes", default="bm25,dense,rrf,rrf+rerank",
                     help="retrieval task: retriever configurations to compare")
+    ap.add_argument("--ragas", type=Path, metavar="RUN_DIR",
+                    help="score a finished run for faithfulness, answer relevance and context precision")
+    ap.add_argument("--ragas-rep", type=int, default=0, help="which repeat's answers to score")
+    ap.add_argument("--ragas-export-check", type=Path, metavar="CSV",
+                    help="with --ragas: write a blind human spot-check sheet from the scored run")
+    ap.add_argument("--ragas-score-check", type=Path, metavar="CSV",
+                    help="with --ragas: judge-vs-human agreement on a returned sheet")
+    ap.add_argument("--ragas-n", type=int, default=50, help="answers sampled into the spot-check sheet")
     ap.add_argument("--list", action="store_true", help="list registered systems and exit")
     ap.add_argument("--compare", nargs=2, metavar=("RUN_A", "RUN_B"))
     args = ap.parse_args(argv)
@@ -57,6 +65,8 @@ def eval_main(argv: list[str] | None = None) -> int:
     if args.compare:
         print(compare(Path(args.compare[0]), Path(args.compare[1])))
         return 0
+    if args.ragas:
+        return _ragas(args)
 
     conditions = (
         [EvidenceCondition(c.strip()) for c in args.conditions.split(",")] if args.conditions else None
@@ -105,6 +115,25 @@ def eval_main(argv: list[str] | None = None) -> int:
             f"  vote {vote['macro_f1']:.4f}"
             f"  unstable {'n/a' if unstable is None else unstable}/{metrics['n_items']}"
         )
+    return 0
+
+
+def _ragas(args) -> int:
+    """Post-hoc answer-level metrics for a run directory, and the human spot-check around them."""
+    from gw_common.eval import rag_metrics
+
+    if args.ragas_score_check:
+        print(json.dumps(rag_metrics.score_check(args.ragas, args.ragas_score_check), indent=2))
+        return 0
+    if args.ragas_export_check:
+        print(json.dumps(rag_metrics.export_check(args.ragas, args.ragas_export_check, args.ragas_n),
+                         indent=2))
+        return 0
+    conditions = [c.strip() for c in args.conditions.split(",")] if args.conditions else None
+    summary = rag_metrics.score_run(args.ragas, conditions=conditions, rep=args.ragas_rep,
+                                    sample=args.sample)
+    print((args.ragas / "ragas.md").read_text(encoding="utf-8"))
+    print(f"scored {summary['n_scored']} answers -> {args.ragas / 'ragas.json'}")
     return 0
 
 
