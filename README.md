@@ -39,6 +39,24 @@ Data and where it comes from (the evaluation set is versioned; the corpus-derive
 
 ## 2. Setup
 
+### 2.0 Ten-minute start for a teammate building a system
+
+1. Clone, `uv sync`, copy `.env.example` to `.env` and fill the two API keys (model, embedding model,
+   effort and prices are already set).
+2. Unzip the KB package into `artifacts/baseline/` (gives `artifacts/baseline/dev/`); `uv run gw-baseline
+   stats` must print hash `c80d0ab23191`. The evaluation set is already in git (`uv run gw-data list`).
+3. `uv run pytest -q` (65 tests, no network) and a smoke run:
+   `uv run gw-eval --system example-rag --split dev --sample 20 --repeats 1`.
+4. Copy `src/example-rag` to `src/<you>-rag`, rename, add it to the workspace members, `uv sync`
+   (§6.1). Replace the retriever; keep the shared classifier unless the classifier is your contribution.
+5. Develop on `--split dev`; when a configuration is worth keeping, run it with `--repeats 3` and
+   `uv run gw-eval --publish artifacts/runs/<run_id> --note "what this run is"`, then commit `results/`.
+6. Compare against anyone else's published run with `uv run gw-eval --compare <run_A> <run_B>`
+   (paired on items; it refuses different snapshots).
+
+Only `graph-rag` needs more: the parsed corpus and claim graph (`artifacts/graph/dev/graph.duckdb`,
+124 MB), built from the raw reports or copied from a teammate.
+
 ```bash
 uv sync                                   # workspace: src/common, src/baseline-rag, src/graph-rag
 cp .env.example .env                      # fill LLM_API_KEY, LLM_MODEL=gpt-5.6-luna, EMB_API_KEY
@@ -152,8 +170,11 @@ uv run gw-eval --system graph-rag    --split dev --repeats 3 \
                --conditions sentence_only,local,cross_year_graph,cross_year_fused
 uv run gw-eval --system graph-rag --split dev --slice row_type=aspect,category=workplace|management
 uv run gw-eval --system graph-rag --split dev --sample 60 --repeats 1      # quick smoke test
-uv run gw-eval --compare artifacts/runs/<A> artifacts/runs/<B>
+uv run gw-eval --compare artifacts/runs/<A> artifacts/runs/<B>     # paired McNemar on the shared items
+uv run gw-eval --publish artifacts/runs/<A> --note "..."            # small copy into results/ (versioned)
 ```
+
+`results/README.md` indexes every published run with its system, split, snapshot and best condition.
 
 Flags: `--split dev|test|all`, `--slice key=v1|v2,…` (keys: split, row_type, aspect_source, category,
 company, year, pilot, has_aspect, gold, agreement, aspect_weak), `--sample N` (seeded), `--limit N`,
