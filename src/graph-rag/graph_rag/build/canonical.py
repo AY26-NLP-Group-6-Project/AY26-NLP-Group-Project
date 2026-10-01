@@ -70,7 +70,7 @@ def run(
     rows: list[tuple] = []
 
     if method == "exact":
-        for fid, aspect_ids in members.items():
+        for aspect_ids in members.values():
             for aid in aspect_ids:
                 rows.append((aid, aid, aid, "exact", None, None))
     else:
