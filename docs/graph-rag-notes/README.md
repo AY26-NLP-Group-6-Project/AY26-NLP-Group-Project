@@ -416,6 +416,31 @@ Judge: `gpt-5.6-luna`, effort low, i.e. **the model that wrote the answers**; em
   calibration was exported (`ragas_check.csv`: 48 answers, 127 statement rows, 59 passage rows); until
   it is filled and scored (`--ragas-score-check`) these numbers must be quoted as LLM-judged.
 
+**Human calibration (2026-10-01).** One teammate filled the blind sheet (186 rows; sheet, key result and
+summary versioned under `kb/annotation/spotchecks/`).
+
+| judgement | n | agreement | Cohen's κ | judge says yes | human says yes | judge Y / human N | judge N / human Y |
+|---|---|---|---|---|---|---|---|
+| statement supported (faithfulness) | 127 | 0.976 | 0.56 | 0.961 | 0.984 | 0 | 3 |
+| passage relevant (context) | 59 | 0.831 | 0.56 | 0.322 | 0.186 | 9 | 1 |
+
+- **Faithfulness: the judge is not lenient; if anything it is stricter than the person.** All three
+  disagreements are statements the judge rejected and the human accepted: twice "no sustainability
+  aspect is proposed in the sentence" (a label-scheme judgement the human treats as supported) and once a
+  phrase the judge missed in the target. The LLM-judged 0.94-0.95 can be quoted as a lower bound; κ is
+  low only because 97 % of statements are supported, which leaves little room for chance-corrected
+  agreement.
+- **Context relevance: the judge is lenient by about 1.7x.** Nine passages it called relevant the human
+  did not; the pattern is topical or organisational proximity (same company's subsidiaries, the same
+  programme described in general terms, broad sustainability framing) that does not bear on the target
+  sentence's label. Applying the sample ratio (0.186 / 0.322 = 0.58) as a correction: context relevance
+  about **0.27** for same-report and **0.22** for cross-year retrieval, rather than 0.46 / 0.38. With
+  n = 59 the correction is rough; its direction is not in doubt.
+- Consequence: the honest summary is that roughly a quarter of retrieved sentences bear on the target
+  sentence's label, the rationales almost never need them, and the rationales themselves are faithful.
+  A stricter relevance prompt could be written from these nine cases, but it would then have to be
+  re-checked on a fresh sample before its numbers are used.
+
 ## 5. Risks
 
 1. **Aspect canonicalisation is the whole ball game.** If "Scope 1 emissions", "direct emissions"
