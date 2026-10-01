@@ -1,0 +1,2325 @@
+{
+  "run_id": "20260930T004540Z-baseline-rag-rq1",
+  "system": "baseline-rag",
+  "task": "rq1",
+  "label_source": "human_majority",
+  "dataset_hash": "23dc51f1d9de",
+  "n_items": 331,
+  "repeats": 3,
+  "conditions": {
+    "sentence_only": {
+      "status": "ok",
+      "repeats": 3,
+      "reps": [
+        {
+          "action": {
+            "n": 274,
+            "accuracy": 0.7481751824817519,
+            "macro_f1": 0.7330755095396452,
+            "micro_f1": 0.7606679035250465,
+            "micro_precision": 0.7735849056603774,
+            "micro_recall": 0.7481751824817519,
+            "per_label": {
+              "implemented": {
+                "precision": 0.8345864661654135,
+                "recall": 0.8161764705882353,
+                "f1": 0.825278810408922,
+                "support": 136
+              },
+              "planning": {
+                "precision": 0.7073170731707317,
+                "recall": 0.8787878787878788,
+                "f1": 0.7837837837837839,
+                "support": 66
+              },
+              "indeterminate": {
+                "precision": 0.72,
+                "recall": 0.5,
+                "f1": 0.5901639344262295,
+                "support": 72
+              }
+            },
+            "confusion": {
+              "implemented": {
+                "implemented": 111,
+                "planning": 13,
+                "indeterminate": 10,
+                "none": 2
+              },
+              "planning": {
+                "implemented": 4,
+                "planning": 58,
+                "indeterminate": 4,
+                "none": 0
+              },
+              "indeterminate": {
+                "implemented": 18,
+                "planning": 11,
+                "indeterminate": 36,
+                "none": 7
+              },
+              "none": {
+                "implemented": 0,
+                "planning": 0,
+                "indeterminate": 0,
+                "none": 0
+              }
+            }
+          },
+          "pairdet": {
+            "n": 331,
+            "accuracy": 0.9274924471299094,
+            "precision": 0.9464285714285714,
+            "recall": 0.9671532846715328,
+            "f1": 0.9566787003610108,
+            "tp": 265,
+            "fp": 15,
+            "fn": 9,
+            "tn": 42
+          },
+          "all_labels": {
+            "n": 331,
+            "accuracy": 0.7462235649546828,
+            "macro_f1": 0.7295949289589799,
+            "micro_f1": 0.7462235649546827,
+            "micro_precision": 0.7462235649546828,
+            "micro_recall": 0.7462235649546828,
+            "per_label": {
+              "implemented": {
+                "precision": 0.7872340425531915,
+                "recall": 0.8161764705882353,
+                "f1": 0.8014440433212996,
+                "support": 136
+              },
+              "planning": {
+                "precision": 0.6744186046511628,
+                "recall": 0.8787878787878788,
+                "f1": 0.7631578947368421,
+                "support": 66
+              },
+              "indeterminate": {
+                "precision": 0.6792452830188679,
+                "recall": 0.5,
+                "f1": 0.5760000000000001,
+                "support": 72
+              },
+              "none": {
+                "precision": 0.8235294117647058,
+                "recall": 0.7368421052631579,
+                "f1": 0.7777777777777778,
+                "support": 57
+              }
+            },
+            "confusion": {
+              "implemented": {
+                "implemented": 111,
+                "planning": 13,
+                "indeterminate": 10,
+                "none": 2
+              },
+              "planning": {
+                "implemented": 4,
+                "planning": 58,
+                "indeterminate": 4,
+                "none": 0
+              },
+              "indeterminate": {
+                "implemented": 18,
+                "planning": 11,
+                "indeterminate": 36,
+                "none": 7
+              },
+              "none": {
+                "implemented": 8,
+                "planning": 4,
+                "indeterminate": 3,
+                "none": 42
+              }
+            }
+          },
+          "ops": {
+            "p50_ms": 1191.1450999323279,
+            "p95_ms": 2669.84180000145,
+            "mean_ms": 1409.6162725107047,
+            "input_tokens": 130549,
+            "output_tokens": 5248,
+            "llm_calls": 331,
+            "graph_hops": 0
+          }
+        },
+        {
+          "action": {
+            "n": 274,
+            "accuracy": 0.7372262773722628,
+            "macro_f1": 0.7276068636409788,
+            "micro_f1": 0.7551401869158879,
+            "micro_precision": 0.7739463601532567,
+            "micro_recall": 0.7372262773722628,
+            "per_label": {
+              "implemented": {
+                "precision": 0.8257575757575758,
+                "recall": 0.8014705882352942,
+                "f1": 0.8134328358208954,
+                "support": 136
+              },
+              "planning": {
+                "precision": 0.7283950617283951,
+                "recall": 0.8939393939393939,
+                "f1": 0.8027210884353742,
+                "support": 66
+              },
+              "indeterminate": {
+                "precision": 0.7083333333333334,
+                "recall": 0.4722222222222222,
+                "f1": 0.5666666666666667,
+                "support": 72
+              }
+            },
+            "confusion": {
+              "implemented": {
+                "implemented": 109,
+                "planning": 11,
+                "indeterminate": 13,
+                "none": 3
+              },
+              "planning": {
+                "implemented": 4,
+                "planning": 59,
+                "indeterminate": 1,
+                "none": 2
+              },
+              "indeterminate": {
+                "implemented": 19,
+                "planning": 11,
+                "indeterminate": 34,
+                "none": 8
+              },
+              "none": {
+                "implemented": 0,
+                "planning": 0,
+                "indeterminate": 0,
+                "none": 0
+              }
+            }
+          },
+          "pairdet": {
+            "n": 331,
+            "accuracy": 0.9123867069486404,
+            "precision": 0.9422382671480144,
+            "recall": 0.9525547445255474,
+            "f1": 0.9473684210526316,
+            "tp": 261,
+            "fp": 16,
+            "fn": 13,
+            "tn": 41
+          },
+          "all_labels": {
+            "n": 331,
+            "accuracy": 0.7341389728096677,
+            "macro_f1": 0.7146094654047712,
+            "micro_f1": 0.7341389728096677,
+            "micro_precision": 0.7341389728096677,
+            "micro_recall": 0.7341389728096677,
+            "per_label": {
+              "implemented": {
+                "precision": 0.7785714285714286,
+                "recall": 0.8014705882352942,
+                "f1": 0.7898550724637681,
+                "support": 136
+              },
+              "planning": {
+                "precision": 0.6941176470588235,
+                "recall": 0.8939393939393939,
+                "f1": 0.7814569536423842,
+                "support": 66
+              },
+              "indeterminate": {
+                "precision": 0.6538461538461539,
+                "recall": 0.4722222222222222,
+                "f1": 0.5483870967741936,
+                "support": 72
+              },
+              "none": {
+                "precision": 0.7592592592592593,
+                "recall": 0.7192982456140351,
+                "f1": 0.7387387387387387,
+                "support": 57
+              }
+            },
+            "confusion": {
+              "implemented": {
+                "implemented": 109,
+                "planning": 11,
+                "indeterminate": 13,
+                "none": 3
+              },
+              "planning": {
+                "implemented": 4,
+                "planning": 59,
+                "indeterminate": 1,
+                "none": 2
+              },
+              "indeterminate": {
+                "implemented": 19,
+                "planning": 11,
+                "indeterminate": 34,
+                "none": 8
+              },
+              "none": {
+                "implemented": 8,
+                "planning": 4,
+                "indeterminate": 4,
+                "none": 41
+              }
+            }
+          },
+          "ops": {
+            "p50_ms": 1133.104300010018,
+            "p95_ms": 2096.9061499927193,
+            "mean_ms": 1273.9014356510343,
+            "input_tokens": 130549,
+            "output_tokens": 4479,
+            "llm_calls": 331,
+            "graph_hops": 0
+          }
+        },
+        {
+          "action": {
+            "n": 274,
+            "accuracy": 0.7481751824817519,
+            "macro_f1": 0.7387379448063189,
+            "micro_f1": 0.7635009310986965,
+            "micro_precision": 0.779467680608365,
+            "micro_recall": 0.7481751824817519,
+            "per_label": {
+              "implemented": {
+                "precision": 0.8449612403100775,
+                "recall": 0.8014705882352942,
+                "f1": 0.8226415094339623,
+                "support": 136
+              },
+              "planning": {
+                "precision": 0.7108433734939759,
+                "recall": 0.8939393939393939,
+                "f1": 0.7919463087248322,
+                "support": 66
+              },
+              "indeterminate": {
+                "precision": 0.7254901960784313,
+                "recall": 0.5138888888888888,
+                "f1": 0.6016260162601625,
+                "support": 72
+              }
+            },
+            "confusion": {
+              "implemented": {
+                "implemented": 109,
+                "planning": 14,
+                "indeterminate": 10,
+                "none": 3
+              },
+              "planning": {
+                "implemented": 3,
+                "planning": 59,
+                "indeterminate": 4,
+                "none": 0
+              },
+              "indeterminate": {
+                "implemented": 17,
+                "planning": 10,
+                "indeterminate": 37,
+                "none": 8
+              },
+              "none": {
+                "implemented": 0,
+                "planning": 0,
+                "indeterminate": 0,
+                "none": 0
+              }
+            }
+          },
+          "pairdet": {
+            "n": 331,
+            "accuracy": 0.918429003021148,
+            "precision": 0.942652329749104,
+            "recall": 0.9598540145985401,
+            "f1": 0.9511754068716094,
+            "tp": 263,
+            "fp": 16,
+            "fn": 11,
+            "tn": 41
+          },
+          "all_labels": {
+            "n": 331,
+            "accuracy": 0.743202416918429,
+            "macro_f1": 0.7266143583262006,
+            "micro_f1": 0.743202416918429,
+            "micro_precision": 0.743202416918429,
+            "micro_recall": 0.743202416918429,
+            "per_label": {
+              "implemented": {
+                "precision": 0.7898550724637681,
+                "recall": 0.8014705882352942,
+                "f1": 0.7956204379562044,
+                "support": 136
+              },
+              "planning": {
+                "precision": 0.6781609195402298,
+                "recall": 0.8939393939393939,
+                "f1": 0.7712418300653594,
+                "support": 66
+              },
+              "indeterminate": {
+                "precision": 0.6851851851851852,
+                "recall": 0.5138888888888888,
+                "f1": 0.5873015873015873,
+                "support": 72
+              },
+              "none": {
+                "precision": 0.7884615384615384,
+                "recall": 0.7192982456140351,
+                "f1": 0.7522935779816514,
+                "support": 57
+              }
+            },
+            "confusion": {
+              "implemented": {
+                "implemented": 109,
+                "planning": 14,
+                "indeterminate": 10,
+                "none": 3
+              },
+              "planning": {
+                "implemented": 3,
+                "planning": 59,
+                "indeterminate": 4,
+                "none": 0
+              },
+              "indeterminate": {
+                "implemented": 17,
+                "planning": 10,
+                "indeterminate": 37,
+                "none": 8
+              },
+              "none": {
+                "implemented": 9,
+                "planning": 4,
+                "indeterminate": 3,
+                "none": 41
+              }
+            }
+          },
+          "ops": {
+            "p50_ms": 1199.2626000428572,
+            "p95_ms": 2260.712550021708,
+            "mean_ms": 1379.0098416877156,
+            "input_tokens": 130549,
+            "output_tokens": 5349,
+            "llm_calls": 331,
+            "graph_hops": 0
+          }
+        }
+      ],
+      "aggregate": {
+        "macro_f1": {
+          "mean": 0.7331401059956476,
+          "sd": 0.005565821727646641,
+          "values": [
+            0.7331,
+            0.7276,
+            0.7387
+          ]
+        },
+        "micro_f1": {
+          "mean": 0.7597696738465437,
+          "sd": 0.004252131611215677,
+          "values": [
+            0.7607,
+            0.7551,
+            0.7635
+          ]
+        },
+        "accuracy": {
+          "mean": 0.7445255474452556,
+          "sd": 0.006321353312295197,
+          "values": [
+            0.7482,
+            0.7372,
+            0.7482
+          ]
+        },
+        "pairdet_f1": {
+          "mean": 0.9517408427617506,
+          "sd": 0.004680824020341182,
+          "values": [
+            0.9567,
+            0.9474,
+            0.9512
+          ]
+        },
+        "unstable_items": 43,
+        "unstable_share": 0.1299093655589124
+      },
+      "majority": {
+        "action": {
+          "n": 274,
+          "accuracy": 0.7554744525547445,
+          "macro_f1": 0.741634907345472,
+          "micro_f1": 0.770949720670391,
+          "micro_precision": 0.7870722433460076,
+          "micro_recall": 0.7554744525547445,
+          "per_label": {
+            "implemented": {
+              "precision": 0.837037037037037,
+              "recall": 0.8308823529411765,
+              "f1": 0.8339483394833948,
+              "support": 136
+            },
+            "planning": {
+              "precision": 0.7283950617283951,
+              "recall": 0.8939393939393939,
+              "f1": 0.8027210884353742,
+              "support": 66
+            },
+            "indeterminate": {
+              "precision": 0.7446808510638298,
+              "recall": 0.4861111111111111,
+              "f1": 0.5882352941176471,
+              "support": 72
+            }
+          },
+          "confusion": {
+            "implemented": {
+              "implemented": 113,
+              "planning": 11,
+              "indeterminate": 9,
+              "none": 3
+            },
+            "planning": {
+              "implemented": 4,
+              "planning": 59,
+              "indeterminate": 3,
+              "none": 0
+            },
+            "indeterminate": {
+              "implemented": 18,
+              "planning": 11,
+              "indeterminate": 35,
+              "none": 8
+            },
+            "none": {
+              "implemented": 0,
+              "planning": 0,
+              "indeterminate": 0,
+              "none": 0
+            }
+          }
+        },
+        "pairdet": {
+          "n": 331,
+          "accuracy": 0.9214501510574018,
+          "precision": 0.9460431654676259,
+          "recall": 0.9598540145985401,
+          "f1": 0.9528985507246377,
+          "tp": 263,
+          "fp": 15,
+          "fn": 11,
+          "tn": 42
+        },
+        "all_labels": {
+          "n": 331,
+          "accuracy": 0.7522658610271903,
+          "macro_f1": 0.7322249128439834,
+          "micro_f1": 0.7522658610271903,
+          "micro_precision": 0.7522658610271903,
+          "micro_recall": 0.7522658610271903,
+          "per_label": {
+            "implemented": {
+              "precision": 0.7902097902097902,
+              "recall": 0.8308823529411765,
+              "f1": 0.8100358422939069,
+              "support": 136
+            },
+            "planning": {
+              "precision": 0.6941176470588235,
+              "recall": 0.8939393939393939,
+              "f1": 0.7814569536423842,
+              "support": 66
+            },
+            "indeterminate": {
+              "precision": 0.7,
+              "recall": 0.4861111111111111,
+              "f1": 0.5737704918032787,
+              "support": 72
+            },
+            "none": {
+              "precision": 0.7924528301886793,
+              "recall": 0.7368421052631579,
+              "f1": 0.7636363636363637,
+              "support": 57
+            }
+          },
+          "confusion": {
+            "implemented": {
+              "implemented": 113,
+              "planning": 11,
+              "indeterminate": 9,
+              "none": 3
+            },
+            "planning": {
+              "implemented": 4,
+              "planning": 59,
+              "indeterminate": 3,
+              "none": 0
+            },
+            "indeterminate": {
+              "implemented": 18,
+              "planning": 11,
+              "indeterminate": 35,
+              "none": 8
+            },
+            "none": {
+              "implemented": 8,
+              "planning": 4,
+              "indeterminate": 3,
+              "none": 42
+            }
+          }
+        }
+      },
+      "bootstrap": {
+        "metric": "macro_f1",
+        "mean": 0.7378795849511752,
+        "lo": 0.6835457176493143,
+        "hi": 0.7907776310943635,
+        "n_boot": 1000
+      },
+      "slices": {
+        "row_type": {
+          "aspect": {
+            "n": 266,
+            "n_action_rows": 264,
+            "macro_f1": 0.7440253831069912,
+            "micro_f1": 0.7784200385356455,
+            "accuracy": 0.7593984962406015
+          },
+          "no_aspect": {
+            "n": 65,
+            "n_action_rows": 10,
+            "macro_f1": 0.3717948717948718,
+            "micro_f1": 0.5555555555555556,
+            "accuracy": 0.7230769230769231
+          }
+        },
+        "aspect_source": {
+          "human_filled": {
+            "n": 10,
+            "n_action_rows": 10,
+            "macro_f1": 0.3717948717948718,
+            "micro_f1": 0.5555555555555556,
+            "accuracy": 0.5
+          },
+          "llm_proposed": {
+            "n": 266,
+            "n_action_rows": 264,
+            "macro_f1": 0.7440253831069912,
+            "micro_f1": 0.7784200385356455,
+            "accuracy": 0.7593984962406015
+          },
+          "none_proposed": {
+            "n": 55,
+            "n_action_rows": 0,
+            "macro_f1": 0.0,
+            "micro_f1": 0.0,
+            "accuracy": 0.7636363636363637
+          }
+        },
+        "category": {
+          "(no aspect)": {
+            "n": 54,
+            "n_action_rows": 0,
+            "macro_f1": 0.0,
+            "micro_f1": 0.0,
+            "accuracy": 0.7592592592592593
+          },
+          "business compliance": {
+            "n": 19,
+            "n_action_rows": 19,
+            "macro_f1": 0.7898550724637681,
+            "micro_f1": 0.8421052631578947,
+            "accuracy": 0.8421052631578947
+          },
+          "data and cybersecurity protection": {
+            "n": 10,
+            "n_action_rows": 10,
+            "macro_f1": 0.8030303030303031,
+            "micro_f1": 0.8421052631578948,
+            "accuracy": 0.8
+          },
+          "ecological conservation": {
+            "n": 20,
+            "n_action_rows": 20,
+            "macro_f1": 0.6342592592592592,
+            "micro_f1": 0.6486486486486486,
+            "accuracy": 0.6
+          },
+          "emissions control": {
+            "n": 41,
+            "n_action_rows": 41,
+            "macro_f1": 0.7187739463601533,
+            "micro_f1": 0.7160493827160495,
+            "accuracy": 0.7073170731707317
+          },
+          "management": {
+            "n": 55,
+            "n_action_rows": 53,
+            "macro_f1": 0.6442199775533108,
+            "micro_f1": 0.6796116504854369,
+            "accuracy": 0.6545454545454545
+          },
+          "outreach": {
+            "n": 17,
+            "n_action_rows": 16,
+            "macro_f1": 0.8677248677248676,
+            "micro_f1": 0.875,
+            "accuracy": 0.8235294117647058
+          },
+          "resource optimisation": {
+            "n": 33,
+            "n_action_rows": 33,
+            "macro_f1": 0.7612200435729849,
+            "micro_f1": 0.7692307692307692,
+            "accuracy": 0.7575757575757576
+          },
+          "waste management": {
+            "n": 24,
+            "n_action_rows": 24,
+            "macro_f1": 0.7666666666666666,
+            "micro_f1": 0.851063829787234,
+            "accuracy": 0.8333333333333334
+          },
+          "worker & consumer safety compliance": {
+            "n": 31,
+            "n_action_rows": 31,
+            "macro_f1": 0.7063492063492064,
+            "micro_f1": 0.8387096774193549,
+            "accuracy": 0.8387096774193549
+          },
+          "workplace": {
+            "n": 27,
+            "n_action_rows": 27,
+            "macro_f1": 0.7822021116138762,
+            "micro_f1": 0.830188679245283,
+            "accuracy": 0.8148148148148148
+          }
+        },
+        "agreement": {
+          "split": {
+            "n": 15,
+            "n_action_rows": 14,
+            "macro_f1": 0.41414141414141414,
+            "micro_f1": 0.42857142857142855,
+            "accuracy": 0.4666666666666667
+          },
+          "unanimous": {
+            "n": 316,
+            "n_action_rows": 260,
+            "macro_f1": 0.7597151590384282,
+            "micro_f1": 0.7897838899803536,
+            "accuracy": 0.7658227848101266
+          }
+        },
+        "gold": {
+          "implemented": {
+            "n": 136,
+            "n_action_rows": 136,
+            "macro_f1": 0.30254350736278446,
+            "micro_f1": 0.8401486988847584,
+            "accuracy": 0.8308823529411765
+          },
+          "indeterminate": {
+            "n": 72,
+            "n_action_rows": 72,
+            "macro_f1": 0.21806853582554517,
+            "micro_f1": 0.5147058823529411,
+            "accuracy": 0.4861111111111111
+          },
+          "none": {
+            "n": 57,
+            "n_action_rows": 0,
+            "macro_f1": 0.0,
+            "micro_f1": 0.0,
+            "accuracy": 0.7368421052631579
+          },
+          "planning": {
+            "n": 66,
+            "n_action_rows": 66,
+            "macro_f1": 0.31466666666666665,
+            "micro_f1": 0.8939393939393939,
+            "accuracy": 0.8939393939393939
+          }
+        }
+      }
+    },
+    "same_report_rrf": {
+      "status": "ok",
+      "repeats": 3,
+      "reps": [
+        {
+          "action": {
+            "n": 274,
+            "accuracy": 0.7846715328467153,
+            "macro_f1": 0.7574881597823064,
+            "micro_f1": 0.7904411764705882,
+            "micro_precision": 0.7962962962962963,
+            "micro_recall": 0.7846715328467153,
+            "per_label": {
+              "implemented": {
+                "precision": 0.8079470198675497,
+                "recall": 0.8970588235294118,
+                "f1": 0.8501742160278746,
+                "support": 136
+              },
+              "planning": {
+                "precision": 0.7763157894736842,
+                "recall": 0.8939393939393939,
+                "f1": 0.8309859154929577,
+                "support": 66
+              },
+              "indeterminate": {
+                "precision": 0.7906976744186046,
+                "recall": 0.4722222222222222,
+                "f1": 0.591304347826087,
+                "support": 72
+              }
+            },
+            "confusion": {
+              "implemented": {
+                "implemented": 122,
+                "planning": 8,
+                "indeterminate": 5,
+                "none": 1
+              },
+              "planning": {
+                "implemented": 3,
+                "planning": 59,
+                "indeterminate": 4,
+                "none": 0
+              },
+              "indeterminate": {
+                "implemented": 26,
+                "planning": 9,
+                "indeterminate": 34,
+                "none": 3
+              },
+              "none": {
+                "implemented": 0,
+                "planning": 0,
+                "indeterminate": 0,
+                "none": 0
+              }
+            }
+          },
+          "pairdet": {
+            "n": 331,
+            "accuracy": 0.9335347432024169,
+            "precision": 0.9375,
+            "recall": 0.9854014598540146,
+            "f1": 0.9608540925266904,
+            "tp": 270,
+            "fp": 18,
+            "fn": 4,
+            "tn": 39
+          },
+          "all_labels": {
+            "n": 331,
+            "accuracy": 0.7673716012084593,
+            "macro_f1": 0.7448025422682957,
+            "micro_f1": 0.7673716012084594,
+            "micro_precision": 0.7673716012084593,
+            "micro_recall": 0.7673716012084593,
+            "per_label": {
+              "implemented": {
+                "precision": 0.7625,
+                "recall": 0.8970588235294118,
+                "f1": 0.8243243243243242,
+                "support": 136
+              },
+              "planning": {
+                "precision": 0.7375,
+                "recall": 0.8939393939393939,
+                "f1": 0.8082191780821918,
+                "support": 66
+              },
+              "indeterminate": {
+                "precision": 0.7083333333333334,
+                "recall": 0.4722222222222222,
+                "f1": 0.5666666666666667,
+                "support": 72
+              },
+              "none": {
+                "precision": 0.9069767441860465,
+                "recall": 0.6842105263157895,
+                "f1": 0.78,
+                "support": 57
+              }
+            },
+            "confusion": {
+              "implemented": {
+                "implemented": 122,
+                "planning": 8,
+                "indeterminate": 5,
+                "none": 1
+              },
+              "planning": {
+                "implemented": 3,
+                "planning": 59,
+                "indeterminate": 4,
+                "none": 0
+              },
+              "indeterminate": {
+                "implemented": 26,
+                "planning": 9,
+                "indeterminate": 34,
+                "none": 3
+              },
+              "none": {
+                "implemented": 9,
+                "planning": 4,
+                "indeterminate": 5,
+                "none": 39
+              }
+            }
+          },
+          "ops": {
+            "p50_ms": 1319.118400104344,
+            "p95_ms": 2752.8664000565186,
+            "mean_ms": 1502.9866123885715,
+            "input_tokens": 166931,
+            "output_tokens": 8804,
+            "llm_calls": 331,
+            "graph_hops": 0
+          }
+        },
+        {
+          "action": {
+            "n": 274,
+            "accuracy": 0.7846715328467153,
+            "macro_f1": 0.7602683200798516,
+            "micro_f1": 0.7875457875457876,
+            "micro_precision": 0.7904411764705882,
+            "micro_recall": 0.7846715328467153,
+            "per_label": {
+              "implemented": {
+                "precision": 0.7770700636942676,
+                "recall": 0.8970588235294118,
+                "f1": 0.8327645051194539,
+                "support": 136
+              },
+              "planning": {
+                "precision": 0.7837837837837838,
+                "recall": 0.8787878787878788,
+                "f1": 0.8285714285714285,
+                "support": 66
+              },
+              "indeterminate": {
+                "precision": 0.8536585365853658,
+                "recall": 0.4861111111111111,
+                "f1": 0.6194690265486725,
+                "support": 72
+              }
+            },
+            "confusion": {
+              "implemented": {
+                "implemented": 122,
+                "planning": 10,
+                "indeterminate": 4,
+                "none": 0
+              },
+              "planning": {
+                "implemented": 6,
+                "planning": 58,
+                "indeterminate": 2,
+                "none": 0
+              },
+              "indeterminate": {
+                "implemented": 29,
+                "planning": 6,
+                "indeterminate": 35,
+                "none": 2
+              },
+              "none": {
+                "implemented": 0,
+                "planning": 0,
+                "indeterminate": 0,
+                "none": 0
+              }
+            }
+          },
+          "pairdet": {
+            "n": 331,
+            "accuracy": 0.9425981873111783,
+            "precision": 0.9411764705882353,
+            "recall": 0.9927007299270073,
+            "f1": 0.9662522202486679,
+            "tp": 272,
+            "fp": 17,
+            "fn": 2,
+            "tn": 40
+          },
+          "all_labels": {
+            "n": 331,
+            "accuracy": 0.770392749244713,
+            "macro_f1": 0.7563373685197642,
+            "micro_f1": 0.770392749244713,
+            "micro_precision": 0.770392749244713,
+            "micro_recall": 0.770392749244713,
+            "per_label": {
+              "implemented": {
+                "precision": 0.7261904761904762,
+                "recall": 0.8970588235294118,
+                "f1": 0.8026315789473685,
+                "support": 136
+              },
+              "planning": {
+                "precision": 0.7532467532467533,
+                "recall": 0.8787878787878788,
+                "f1": 0.8111888111888111,
+                "support": 66
+              },
+              "indeterminate": {
+                "precision": 0.7954545454545454,
+                "recall": 0.4861111111111111,
+                "f1": 0.603448275862069,
+                "support": 72
+              },
+              "none": {
+                "precision": 0.9523809523809523,
+                "recall": 0.7017543859649122,
+                "f1": 0.8080808080808081,
+                "support": 57
+              }
+            },
+            "confusion": {
+              "implemented": {
+                "implemented": 122,
+                "planning": 10,
+                "indeterminate": 4,
+                "none": 0
+              },
+              "planning": {
+                "implemented": 6,
+                "planning": 58,
+                "indeterminate": 2,
+                "none": 0
+              },
+              "indeterminate": {
+                "implemented": 29,
+                "planning": 6,
+                "indeterminate": 35,
+                "none": 2
+              },
+              "none": {
+                "implemented": 11,
+                "planning": 3,
+                "indeterminate": 3,
+                "none": 40
+              }
+            }
+          },
+          "ops": {
+            "p50_ms": 1286.8585000978783,
+            "p95_ms": 2676.252050034236,
+            "mean_ms": 1426.8816287025775,
+            "input_tokens": 166931,
+            "output_tokens": 9624,
+            "llm_calls": 331,
+            "graph_hops": 0
+          }
+        },
+        {
+          "action": {
+            "n": 274,
+            "accuracy": 0.781021897810219,
+            "macro_f1": 0.7575144154091523,
+            "micro_f1": 0.7853211009174311,
+            "micro_precision": 0.7896678966789668,
+            "micro_recall": 0.781021897810219,
+            "per_label": {
+              "implemented": {
+                "precision": 0.7894736842105263,
+                "recall": 0.8823529411764706,
+                "f1": 0.8333333333333333,
+                "support": 136
+              },
+              "planning": {
+                "precision": 0.7662337662337663,
+                "recall": 0.8939393939393939,
+                "f1": 0.8251748251748252,
+                "support": 66
+              },
+              "indeterminate": {
+                "precision": 0.8333333333333334,
+                "recall": 0.4861111111111111,
+                "f1": 0.6140350877192983,
+                "support": 72
+              }
+            },
+            "confusion": {
+              "implemented": {
+                "implemented": 120,
+                "planning": 10,
+                "indeterminate": 5,
+                "none": 1
+              },
+              "planning": {
+                "implemented": 5,
+                "planning": 59,
+                "indeterminate": 2,
+                "none": 0
+              },
+              "indeterminate": {
+                "implemented": 27,
+                "planning": 8,
+                "indeterminate": 35,
+                "none": 2
+              },
+              "none": {
+                "implemented": 0,
+                "planning": 0,
+                "indeterminate": 0,
+                "none": 0
+              }
+            }
+          },
+          "pairdet": {
+            "n": 331,
+            "accuracy": 0.9395770392749244,
+            "precision": 0.9409722222222222,
+            "recall": 0.9890510948905109,
+            "f1": 0.9644128113879004,
+            "tp": 271,
+            "fp": 17,
+            "fn": 3,
+            "tn": 40
+          },
+          "all_labels": {
+            "n": 331,
+            "accuracy": 0.7673716012084593,
+            "macro_f1": 0.750441798340958,
+            "micro_f1": 0.7673716012084594,
+            "micro_precision": 0.7673716012084593,
+            "micro_recall": 0.7673716012084593,
+            "per_label": {
+              "implemented": {
+                "precision": 0.75,
+                "recall": 0.8823529411764706,
+                "f1": 0.8108108108108107,
+                "support": 136
+              },
+              "planning": {
+                "precision": 0.7283950617283951,
+                "recall": 0.8939393939393939,
+                "f1": 0.8027210884353742,
+                "support": 66
+              },
+              "indeterminate": {
+                "precision": 0.7446808510638298,
+                "recall": 0.4861111111111111,
+                "f1": 0.5882352941176471,
+                "support": 72
+              },
+              "none": {
+                "precision": 0.9302325581395349,
+                "recall": 0.7017543859649122,
+                "f1": 0.8,
+                "support": 57
+              }
+            },
+            "confusion": {
+              "implemented": {
+                "implemented": 120,
+                "planning": 10,
+                "indeterminate": 5,
+                "none": 1
+              },
+              "planning": {
+                "implemented": 5,
+                "planning": 59,
+                "indeterminate": 2,
+                "none": 0
+              },
+              "indeterminate": {
+                "implemented": 27,
+                "planning": 8,
+                "indeterminate": 35,
+                "none": 2
+              },
+              "none": {
+                "implemented": 8,
+                "planning": 4,
+                "indeterminate": 5,
+                "none": 40
+              }
+            }
+          },
+          "ops": {
+            "p50_ms": 1237.8396999556571,
+            "p95_ms": 2420.1845999923535,
+            "mean_ms": 1380.2988356541352,
+            "input_tokens": 166931,
+            "output_tokens": 8095,
+            "llm_calls": 331,
+            "graph_hops": 0
+          }
+        }
+      ],
+      "aggregate": {
+        "macro_f1": {
+          "mean": 0.7584236317571035,
+          "sd": 0.0015976008874395817,
+          "values": [
+            0.7575,
+            0.7603,
+            0.7575
+          ]
+        },
+        "micro_f1": {
+          "mean": 0.7877693549779355,
+          "sd": 0.00256734886897888,
+          "values": [
+            0.7904,
+            0.7875,
+            0.7853
+          ]
+        },
+        "accuracy": {
+          "mean": 0.7834549878345499,
+          "sd": 0.002107117770765023,
+          "values": [
+            0.7847,
+            0.7847,
+            0.781
+          ]
+        },
+        "pairdet_f1": {
+          "mean": 0.9638397080544195,
+          "sd": 0.002744318002497249,
+          "values": [
+            0.9609,
+            0.9663,
+            0.9644
+          ]
+        },
+        "unstable_items": 42,
+        "unstable_share": 0.1268882175226586
+      },
+      "majority": {
+        "action": {
+          "n": 274,
+          "accuracy": 0.7883211678832117,
+          "macro_f1": 0.7648143714097433,
+          "micro_f1": 0.7912087912087912,
+          "micro_precision": 0.7941176470588235,
+          "micro_recall": 0.7883211678832117,
+          "per_label": {
+            "implemented": {
+              "precision": 0.7908496732026143,
+              "recall": 0.8897058823529411,
+              "f1": 0.8373702422145328,
+              "support": 136
+            },
+            "planning": {
+              "precision": 0.7763157894736842,
+              "recall": 0.8939393939393939,
+              "f1": 0.8309859154929577,
+              "support": 66
+            },
+            "indeterminate": {
+              "precision": 0.8372093023255814,
+              "recall": 0.5,
+              "f1": 0.6260869565217391,
+              "support": 72
+            }
+          },
+          "confusion": {
+            "implemented": {
+              "implemented": 121,
+              "planning": 9,
+              "indeterminate": 5,
+              "none": 1
+            },
+            "planning": {
+              "implemented": 5,
+              "planning": 59,
+              "indeterminate": 2,
+              "none": 0
+            },
+            "indeterminate": {
+              "implemented": 27,
+              "planning": 8,
+              "indeterminate": 36,
+              "none": 1
+            },
+            "none": {
+              "implemented": 0,
+              "planning": 0,
+              "indeterminate": 0,
+              "none": 0
+            }
+          }
+        },
+        "pairdet": {
+          "n": 331,
+          "accuracy": 0.945619335347432,
+          "precision": 0.9444444444444444,
+          "recall": 0.9927007299270073,
+          "f1": 0.9679715302491104,
+          "tp": 272,
+          "fp": 16,
+          "fn": 2,
+          "tn": 41
+        },
+        "all_labels": {
+          "n": 331,
+          "accuracy": 0.7764350453172205,
+          "macro_f1": 0.7626173016300919,
+          "micro_f1": 0.7764350453172205,
+          "micro_precision": 0.7764350453172205,
+          "micro_recall": 0.7764350453172205,
+          "per_label": {
+            "implemented": {
+              "precision": 0.7469135802469136,
+              "recall": 0.8897058823529411,
+              "f1": 0.8120805369127517,
+              "support": 136
+            },
+            "planning": {
+              "precision": 0.7375,
+              "recall": 0.8939393939393939,
+              "f1": 0.8082191780821918,
+              "support": 66
+            },
+            "indeterminate": {
+              "precision": 0.782608695652174,
+              "recall": 0.5,
+              "f1": 0.6101694915254238,
+              "support": 72
+            },
+            "none": {
+              "precision": 0.9534883720930233,
+              "recall": 0.7192982456140351,
+              "f1": 0.8200000000000001,
+              "support": 57
+            }
+          },
+          "confusion": {
+            "implemented": {
+              "implemented": 121,
+              "planning": 9,
+              "indeterminate": 5,
+              "none": 1
+            },
+            "planning": {
+              "implemented": 5,
+              "planning": 59,
+              "indeterminate": 2,
+              "none": 0
+            },
+            "indeterminate": {
+              "implemented": 27,
+              "planning": 8,
+              "indeterminate": 36,
+              "none": 1
+            },
+            "none": {
+              "implemented": 9,
+              "planning": 4,
+              "indeterminate": 3,
+              "none": 41
+            }
+          }
+        }
+      },
+      "bootstrap": {
+        "metric": "macro_f1",
+        "mean": 0.7634936427404456,
+        "lo": 0.7086050232796108,
+        "hi": 0.8171971612008804,
+        "n_boot": 1000
+      },
+      "slices": {
+        "row_type": {
+          "aspect": {
+            "n": 266,
+            "n_action_rows": 264,
+            "macro_f1": 0.7707956500395813,
+            "micro_f1": 0.8022813688212928,
+            "accuracy": 0.793233082706767
+          },
+          "no_aspect": {
+            "n": 65,
+            "n_action_rows": 10,
+            "macro_f1": 0.3162393162393163,
+            "micro_f1": 0.5,
+            "accuracy": 0.7076923076923077
+          }
+        },
+        "aspect_source": {
+          "human_filled": {
+            "n": 10,
+            "n_action_rows": 10,
+            "macro_f1": 0.3162393162393163,
+            "micro_f1": 0.5,
+            "accuracy": 0.5
+          },
+          "llm_proposed": {
+            "n": 266,
+            "n_action_rows": 264,
+            "macro_f1": 0.7707956500395813,
+            "micro_f1": 0.8022813688212928,
+            "accuracy": 0.793233082706767
+          },
+          "none_proposed": {
+            "n": 55,
+            "n_action_rows": 0,
+            "macro_f1": 0.0,
+            "micro_f1": 0.0,
+            "accuracy": 0.7454545454545455
+          }
+        },
+        "category": {
+          "(no aspect)": {
+            "n": 54,
+            "n_action_rows": 0,
+            "macro_f1": 0.0,
+            "micro_f1": 0.0,
+            "accuracy": 0.7407407407407407
+          },
+          "business compliance": {
+            "n": 19,
+            "n_action_rows": 19,
+            "macro_f1": 0.7898550724637681,
+            "micro_f1": 0.8421052631578947,
+            "accuracy": 0.8421052631578947
+          },
+          "data and cybersecurity protection": {
+            "n": 10,
+            "n_action_rows": 10,
+            "macro_f1": 0.903030303030303,
+            "micro_f1": 0.9,
+            "accuracy": 0.9
+          },
+          "ecological conservation": {
+            "n": 20,
+            "n_action_rows": 20,
+            "macro_f1": 0.8380952380952381,
+            "micro_f1": 0.8421052631578948,
+            "accuracy": 0.8
+          },
+          "emissions control": {
+            "n": 41,
+            "n_action_rows": 41,
+            "macro_f1": 0.7630485456572415,
+            "micro_f1": 0.7560975609756099,
+            "accuracy": 0.7560975609756098
+          },
+          "management": {
+            "n": 55,
+            "n_action_rows": 53,
+            "macro_f1": 0.6387178988747056,
+            "micro_f1": 0.6792452830188679,
+            "accuracy": 0.6727272727272727
+          },
+          "outreach": {
+            "n": 17,
+            "n_action_rows": 16,
+            "macro_f1": 0.8102240896358545,
+            "micro_f1": 0.8125,
+            "accuracy": 0.7647058823529411
+          },
+          "resource optimisation": {
+            "n": 33,
+            "n_action_rows": 33,
+            "macro_f1": 0.7656714200831848,
+            "micro_f1": 0.7878787878787878,
+            "accuracy": 0.7878787878787878
+          },
+          "waste management": {
+            "n": 24,
+            "n_action_rows": 24,
+            "macro_f1": 0.8943589743589744,
+            "micro_f1": 0.9166666666666666,
+            "accuracy": 0.9166666666666666
+          },
+          "worker & consumer safety compliance": {
+            "n": 31,
+            "n_action_rows": 31,
+            "macro_f1": 0.6679935131947516,
+            "micro_f1": 0.8064516129032258,
+            "accuracy": 0.8064516129032258
+          },
+          "workplace": {
+            "n": 27,
+            "n_action_rows": 27,
+            "macro_f1": 0.7708061002178649,
+            "micro_f1": 0.8148148148148148,
+            "accuracy": 0.8148148148148148
+          }
+        },
+        "agreement": {
+          "split": {
+            "n": 15,
+            "n_action_rows": 14,
+            "macro_f1": 0.3111111111111111,
+            "micro_f1": 0.35714285714285715,
+            "accuracy": 0.4
+          },
+          "unanimous": {
+            "n": 316,
+            "n_action_rows": 260,
+            "macro_f1": 0.78941369445791,
+            "micro_f1": 0.8146718146718147,
+            "accuracy": 0.7943037974683544
+          }
+        },
+        "gold": {
+          "implemented": {
+            "n": 136,
+            "n_action_rows": 136,
+            "macro_f1": 0.3138780804150454,
+            "micro_f1": 0.8929889298892988,
+            "accuracy": 0.8897058823529411
+          },
+          "indeterminate": {
+            "n": 72,
+            "n_action_rows": 72,
+            "macro_f1": 0.2222222222222222,
+            "micro_f1": 0.5034965034965035,
+            "accuracy": 0.5
+          },
+          "none": {
+            "n": 57,
+            "n_action_rows": 0,
+            "macro_f1": 0.0,
+            "micro_f1": 0.0,
+            "accuracy": 0.7192982456140351
+          },
+          "planning": {
+            "n": 66,
+            "n_action_rows": 66,
+            "macro_f1": 0.31466666666666665,
+            "micro_f1": 0.8939393939393939,
+            "accuracy": 0.8939393939393939
+          }
+        }
+      },
+      "evidence": {
+        "items_with_evidence": 331,
+        "coverage": 1.0,
+        "mean_spans": 2.13595166163142,
+        "by_source": {
+          "rrf+rerank": 707
+        },
+        "target_dropped": 286
+      },
+      "vs_baseline": {
+        "baseline": "sentence_only",
+        "delta_macro_f1_mean": 0.02528352576145587,
+        "delta_macro_f1_majority": 0.023179464064271293,
+        "flips_pooled": {
+          "changed": 162,
+          "wrong_to_right": 79,
+          "right_to_wrong": 52,
+          "net": 27
+        },
+        "mcnemar_majority": {
+          "b": 15,
+          "c": 23,
+          "p_value": 0.2558750795433298
+        },
+        "noise_floor": 43
+      }
+    },
+    "cross_year_rrf": {
+      "status": "ok",
+      "repeats": 3,
+      "reps": [
+        {
+          "action": {
+            "n": 274,
+            "accuracy": 0.7737226277372263,
+            "macro_f1": 0.7537346166378424,
+            "micro_f1": 0.7822878228782287,
+            "micro_precision": 0.7910447761194029,
+            "micro_recall": 0.7737226277372263,
+            "per_label": {
+              "implemented": {
+                "precision": 0.8181818181818182,
+                "recall": 0.8602941176470589,
+                "f1": 0.8387096774193549,
+                "support": 136
+              },
+              "planning": {
+                "precision": 0.7792207792207793,
+                "recall": 0.9090909090909091,
+                "f1": 0.8391608391608392,
+                "support": 66
+              },
+              "indeterminate": {
+                "precision": 0.7291666666666666,
+                "recall": 0.4861111111111111,
+                "f1": 0.5833333333333334,
+                "support": 72
+              }
+            },
+            "confusion": {
+              "implemented": {
+                "implemented": 117,
+                "planning": 9,
+                "indeterminate": 10,
+                "none": 0
+              },
+              "planning": {
+                "implemented": 3,
+                "planning": 60,
+                "indeterminate": 3,
+                "none": 0
+              },
+              "indeterminate": {
+                "implemented": 23,
+                "planning": 8,
+                "indeterminate": 35,
+                "none": 6
+              },
+              "none": {
+                "implemented": 0,
+                "planning": 0,
+                "indeterminate": 0,
+                "none": 0
+              }
+            }
+          },
+          "pairdet": {
+            "n": 331,
+            "accuracy": 0.9305135951661632,
+            "precision": 0.9403508771929825,
+            "recall": 0.9781021897810219,
+            "f1": 0.9588550983899821,
+            "tp": 268,
+            "fp": 17,
+            "fn": 6,
+            "tn": 40
+          },
+          "all_labels": {
+            "n": 331,
+            "accuracy": 0.7613293051359517,
+            "macro_f1": 0.7434231508164688,
+            "micro_f1": 0.7613293051359517,
+            "micro_precision": 0.7613293051359517,
+            "micro_recall": 0.7613293051359517,
+            "per_label": {
+              "implemented": {
+                "precision": 0.7597402597402597,
+                "recall": 0.8602941176470589,
+                "f1": 0.8068965517241379,
+                "support": 136
+              },
+              "planning": {
+                "precision": 0.7407407407407407,
+                "recall": 0.9090909090909091,
+                "f1": 0.8163265306122449,
+                "support": 66
+              },
+              "indeterminate": {
+                "precision": 0.7,
+                "recall": 0.4861111111111111,
+                "f1": 0.5737704918032787,
+                "support": 72
+              },
+              "none": {
+                "precision": 0.8695652173913043,
+                "recall": 0.7017543859649122,
+                "f1": 0.7766990291262136,
+                "support": 57
+              }
+            },
+            "confusion": {
+              "implemented": {
+                "implemented": 117,
+                "planning": 9,
+                "indeterminate": 10,
+                "none": 0
+              },
+              "planning": {
+                "implemented": 3,
+                "planning": 60,
+                "indeterminate": 3,
+                "none": 0
+              },
+              "indeterminate": {
+                "implemented": 23,
+                "planning": 8,
+                "indeterminate": 35,
+                "none": 6
+              },
+              "none": {
+                "implemented": 11,
+                "planning": 4,
+                "indeterminate": 2,
+                "none": 40
+              }
+            }
+          },
+          "ops": {
+            "p50_ms": 1190.754699986428,
+            "p95_ms": 2293.7375499750488,
+            "mean_ms": 1358.1981770377718,
+            "input_tokens": 173956,
+            "output_tokens": 8990,
+            "llm_calls": 331,
+            "graph_hops": 0
+          }
+        },
+        {
+          "action": {
+            "n": 274,
+            "accuracy": 0.7700729927007299,
+            "macro_f1": 0.7415934352554071,
+            "micro_f1": 0.7743119266055047,
+            "micro_precision": 0.7785977859778598,
+            "micro_recall": 0.7700729927007299,
+            "per_label": {
+              "implemented": {
+                "precision": 0.8040540540540541,
+                "recall": 0.875,
+                "f1": 0.8380281690140845,
+                "support": 136
+              },
+              "planning": {
+                "precision": 0.7435897435897436,
+                "recall": 0.8787878787878788,
+                "f1": 0.8055555555555556,
+                "support": 66
+              },
+              "indeterminate": {
+                "precision": 0.7555555555555555,
+                "recall": 0.4722222222222222,
+                "f1": 0.5811965811965811,
+                "support": 72
+              }
+            },
+            "confusion": {
+              "implemented": {
+                "implemented": 119,
+                "planning": 9,
+                "indeterminate": 7,
+                "none": 1
+              },
+              "planning": {
+                "implemented": 4,
+                "planning": 58,
+                "indeterminate": 4,
+                "none": 0
+              },
+              "indeterminate": {
+                "implemented": 25,
+                "planning": 11,
+                "indeterminate": 34,
+                "none": 2
+              },
+              "none": {
+                "implemented": 0,
+                "planning": 0,
+                "indeterminate": 0,
+                "none": 0
+              }
+            }
+          },
+          "pairdet": {
+            "n": 331,
+            "accuracy": 0.9395770392749244,
+            "precision": 0.9409722222222222,
+            "recall": 0.9890510948905109,
+            "f1": 0.9644128113879004,
+            "tp": 271,
+            "fp": 17,
+            "fn": 3,
+            "tn": 40
+          },
+          "all_labels": {
+            "n": 331,
+            "accuracy": 0.7583081570996979,
+            "macro_f1": 0.7390573315286991,
+            "micro_f1": 0.7583081570996979,
+            "micro_precision": 0.7583081570996979,
+            "micro_recall": 0.7583081570996979,
+            "per_label": {
+              "implemented": {
+                "precision": 0.7628205128205128,
+                "recall": 0.875,
+                "f1": 0.8150684931506849,
+                "support": 136
+              },
+              "planning": {
+                "precision": 0.7073170731707317,
+                "recall": 0.8787878787878788,
+                "f1": 0.7837837837837839,
+                "support": 66
+              },
+              "indeterminate": {
+                "precision": 0.68,
+                "recall": 0.4722222222222222,
+                "f1": 0.5573770491803278,
+                "support": 72
+              },
+              "none": {
+                "precision": 0.9302325581395349,
+                "recall": 0.7017543859649122,
+                "f1": 0.8,
+                "support": 57
+              }
+            },
+            "confusion": {
+              "implemented": {
+                "implemented": 119,
+                "planning": 9,
+                "indeterminate": 7,
+                "none": 1
+              },
+              "planning": {
+                "implemented": 4,
+                "planning": 58,
+                "indeterminate": 4,
+                "none": 0
+              },
+              "indeterminate": {
+                "implemented": 25,
+                "planning": 11,
+                "indeterminate": 34,
+                "none": 2
+              },
+              "none": {
+                "implemented": 8,
+                "planning": 4,
+                "indeterminate": 5,
+                "none": 40
+              }
+            }
+          },
+          "ops": {
+            "p50_ms": 1182.476899935864,
+            "p95_ms": 2489.9606000399217,
+            "mean_ms": 1346.1625652575551,
+            "input_tokens": 173956,
+            "output_tokens": 8146,
+            "llm_calls": 331,
+            "graph_hops": 0
+          }
+        },
+        {
+          "action": {
+            "n": 274,
+            "accuracy": 0.7627737226277372,
+            "macro_f1": 0.7319265211299371,
+            "micro_f1": 0.7712177121771219,
+            "micro_precision": 0.7798507462686567,
+            "micro_recall": 0.7627737226277372,
+            "per_label": {
+              "implemented": {
+                "precision": 0.7908496732026143,
+                "recall": 0.8897058823529411,
+                "f1": 0.8373702422145328,
+                "support": 136
+              },
+              "planning": {
+                "precision": 0.7733333333333333,
+                "recall": 0.8787878787878788,
+                "f1": 0.8226950354609929,
+                "support": 66
+              },
+              "indeterminate": {
+                "precision": 0.75,
+                "recall": 0.4166666666666667,
+                "f1": 0.5357142857142857,
+                "support": 72
+              }
+            },
+            "confusion": {
+              "implemented": {
+                "implemented": 121,
+                "planning": 8,
+                "indeterminate": 7,
+                "none": 0
+              },
+              "planning": {
+                "implemented": 4,
+                "planning": 58,
+                "indeterminate": 3,
+                "none": 1
+              },
+              "indeterminate": {
+                "implemented": 28,
+                "planning": 9,
+                "indeterminate": 30,
+                "none": 5
+              },
+              "none": {
+                "implemented": 0,
+                "planning": 0,
+                "indeterminate": 0,
+                "none": 0
+              }
+            }
+          },
+          "pairdet": {
+            "n": 331,
+            "accuracy": 0.9274924471299094,
+            "precision": 0.9370629370629371,
+            "recall": 0.9781021897810219,
+            "f1": 0.9571428571428573,
+            "tp": 268,
+            "fp": 18,
+            "fn": 6,
+            "tn": 39
+          },
+          "all_labels": {
+            "n": 331,
+            "accuracy": 0.7492447129909365,
+            "macro_f1": 0.7235466481472588,
+            "micro_f1": 0.7492447129909365,
+            "micro_precision": 0.7492447129909365,
+            "micro_recall": 0.7492447129909365,
+            "per_label": {
+              "implemented": {
+                "precision": 0.7333333333333333,
+                "recall": 0.8897058823529411,
+                "f1": 0.803986710963455,
+                "support": 136
+              },
+              "planning": {
+                "precision": 0.725,
+                "recall": 0.8787878787878788,
+                "f1": 0.7945205479452054,
+                "support": 66
+              },
+              "indeterminate": {
+                "precision": 0.7317073170731707,
+                "recall": 0.4166666666666667,
+                "f1": 0.5309734513274336,
+                "support": 72
+              },
+              "none": {
+                "precision": 0.8666666666666667,
+                "recall": 0.6842105263157895,
+                "f1": 0.7647058823529413,
+                "support": 57
+              }
+            },
+            "confusion": {
+              "implemented": {
+                "implemented": 121,
+                "planning": 8,
+                "indeterminate": 7,
+                "none": 0
+              },
+              "planning": {
+                "implemented": 4,
+                "planning": 58,
+                "indeterminate": 3,
+                "none": 1
+              },
+              "indeterminate": {
+                "implemented": 28,
+                "planning": 9,
+                "indeterminate": 30,
+                "none": 5
+              },
+              "none": {
+                "implemented": 12,
+                "planning": 5,
+                "indeterminate": 1,
+                "none": 39
+              }
+            }
+          },
+          "ops": {
+            "p50_ms": 1230.0038000103086,
+            "p95_ms": 2255.56580000557,
+            "mean_ms": 1362.5096039283103,
+            "input_tokens": 173956,
+            "output_tokens": 7898,
+            "llm_calls": 331,
+            "graph_hops": 0
+          }
+        }
+      ],
+      "aggregate": {
+        "macro_f1": {
+          "mean": 0.7424181910077289,
+          "sd": 0.010927416161138948,
+          "values": [
+            0.7537,
+            0.7416,
+            0.7319
+          ]
+        },
+        "micro_f1": {
+          "mean": 0.7759391538869518,
+          "sd": 0.005711631921159163,
+          "values": [
+            0.7823,
+            0.7743,
+            0.7712
+          ]
+        },
+        "accuracy": {
+          "mean": 0.7688564476885645,
+          "sd": 0.005574909604569166,
+          "values": [
+            0.7737,
+            0.7701,
+            0.7628
+          ]
+        },
+        "pairdet_f1": {
+          "mean": 0.9601369223069133,
+          "sd": 0.0038007056051169636,
+          "values": [
+            0.9589,
+            0.9644,
+            0.9571
+          ]
+        },
+        "unstable_items": 45,
+        "unstable_share": 0.13595166163141995
+      },
+      "majority": {
+        "action": {
+          "n": 274,
+          "accuracy": 0.7773722627737226,
+          "macro_f1": 0.7510118642455116,
+          "micro_f1": 0.781651376146789,
+          "micro_precision": 0.7859778597785978,
+          "micro_recall": 0.7773722627737226,
+          "per_label": {
+            "implemented": {
+              "precision": 0.8053691275167785,
+              "recall": 0.8823529411764706,
+              "f1": 0.8421052631578947,
+              "support": 136
+            },
+            "planning": {
+              "precision": 0.7733333333333333,
+              "recall": 0.8787878787878788,
+              "f1": 0.8226950354609929,
+              "support": 66
+            },
+            "indeterminate": {
+              "precision": 0.7446808510638298,
+              "recall": 0.4861111111111111,
+              "f1": 0.5882352941176471,
+              "support": 72
+            }
+          },
+          "confusion": {
+            "implemented": {
+              "implemented": 120,
+              "planning": 8,
+              "indeterminate": 8,
+              "none": 0
+            },
+            "planning": {
+              "implemented": 4,
+              "planning": 58,
+              "indeterminate": 4,
+              "none": 0
+            },
+            "indeterminate": {
+              "implemented": 25,
+              "planning": 9,
+              "indeterminate": 35,
+              "none": 3
+            },
+            "none": {
+              "implemented": 0,
+              "planning": 0,
+              "indeterminate": 0,
+              "none": 0
+            }
+          }
+        },
+        "pairdet": {
+          "n": 331,
+          "accuracy": 0.9365558912386707,
+          "precision": 0.9377162629757786,
+          "recall": 0.9890510948905109,
+          "f1": 0.9626998223801067,
+          "tp": 271,
+          "fp": 18,
+          "fn": 3,
+          "tn": 39
+        },
+        "all_labels": {
+          "n": 331,
+          "accuracy": 0.7613293051359517,
+          "macro_f1": 0.7436179981634526,
+          "micro_f1": 0.7613293051359517,
+          "micro_precision": 0.7613293051359517,
+          "micro_recall": 0.7613293051359517,
+          "per_label": {
+            "implemented": {
+              "precision": 0.7453416149068323,
+              "recall": 0.8823529411764706,
+              "f1": 0.808080808080808,
+              "support": 136
+            },
+            "planning": {
+              "precision": 0.7341772151898734,
+              "recall": 0.8787878787878788,
+              "f1": 0.8,
+              "support": 66
+            },
+            "indeterminate": {
+              "precision": 0.7142857142857143,
+              "recall": 0.4861111111111111,
+              "f1": 0.5785123966942148,
+              "support": 72
+            },
+            "none": {
+              "precision": 0.9285714285714286,
+              "recall": 0.6842105263157895,
+              "f1": 0.7878787878787878,
+              "support": 57
+            }
+          },
+          "confusion": {
+            "implemented": {
+              "implemented": 120,
+              "planning": 8,
+              "indeterminate": 8,
+              "none": 0
+            },
+            "planning": {
+              "implemented": 4,
+              "planning": 58,
+              "indeterminate": 4,
+              "none": 0
+            },
+            "indeterminate": {
+              "implemented": 25,
+              "planning": 9,
+              "indeterminate": 35,
+              "none": 3
+            },
+            "none": {
+              "implemented": 12,
+              "planning": 4,
+              "indeterminate": 2,
+              "none": 39
+            }
+          }
+        }
+      },
+      "bootstrap": {
+        "metric": "macro_f1",
+        "mean": 0.7488520798573008,
+        "lo": 0.6946138881142897,
+        "hi": 0.8001150639654693,
+        "n_boot": 1000
+      },
+      "slices": {
+        "row_type": {
+          "aspect": {
+            "n": 266,
+            "n_action_rows": 264,
+            "macro_f1": 0.754492362982929,
+            "micro_f1": 0.7908745247148289,
+            "accuracy": 0.7819548872180451
+          },
+          "no_aspect": {
+            "n": 65,
+            "n_action_rows": 10,
+            "macro_f1": 0.3384615384615384,
+            "micro_f1": 0.5263157894736842,
+            "accuracy": 0.676923076923077
+          }
+        },
+        "aspect_source": {
+          "human_filled": {
+            "n": 10,
+            "n_action_rows": 10,
+            "macro_f1": 0.3384615384615384,
+            "micro_f1": 0.5263157894736842,
+            "accuracy": 0.5
+          },
+          "llm_proposed": {
+            "n": 266,
+            "n_action_rows": 264,
+            "macro_f1": 0.754492362982929,
+            "micro_f1": 0.7908745247148289,
+            "accuracy": 0.7819548872180451
+          },
+          "none_proposed": {
+            "n": 55,
+            "n_action_rows": 0,
+            "macro_f1": 0.0,
+            "micro_f1": 0.0,
+            "accuracy": 0.7090909090909091
+          }
+        },
+        "category": {
+          "(no aspect)": {
+            "n": 54,
+            "n_action_rows": 0,
+            "macro_f1": 0.0,
+            "micro_f1": 0.0,
+            "accuracy": 0.7037037037037037
+          },
+          "business compliance": {
+            "n": 19,
+            "n_action_rows": 19,
+            "macro_f1": 0.7595520421607378,
+            "micro_f1": 0.8421052631578947,
+            "accuracy": 0.8421052631578947
+          },
+          "data and cybersecurity protection": {
+            "n": 10,
+            "n_action_rows": 10,
+            "macro_f1": 0.7333333333333334,
+            "micro_f1": 0.7368421052631577,
+            "accuracy": 0.7
+          },
+          "ecological conservation": {
+            "n": 20,
+            "n_action_rows": 20,
+            "macro_f1": 0.734920634920635,
+            "micro_f1": 0.7692307692307692,
+            "accuracy": 0.75
+          },
+          "emissions control": {
+            "n": 41,
+            "n_action_rows": 41,
+            "macro_f1": 0.7161796536796537,
+            "micro_f1": 0.7073170731707317,
+            "accuracy": 0.7073170731707317
+          },
+          "management": {
+            "n": 55,
+            "n_action_rows": 53,
+            "macro_f1": 0.6108971066598186,
+            "micro_f1": 0.6666666666666667,
+            "accuracy": 0.6545454545454545
+          },
+          "outreach": {
+            "n": 17,
+            "n_action_rows": 16,
+            "macro_f1": 0.8677248677248676,
+            "micro_f1": 0.875,
+            "accuracy": 0.8235294117647058
+          },
+          "resource optimisation": {
+            "n": 33,
+            "n_action_rows": 33,
+            "macro_f1": 0.8097890671420084,
+            "micro_f1": 0.8181818181818182,
+            "accuracy": 0.8181818181818182
+          },
+          "waste management": {
+            "n": 24,
+            "n_action_rows": 24,
+            "macro_f1": 0.8857142857142858,
+            "micro_f1": 0.9166666666666666,
+            "accuracy": 0.9166666666666666
+          },
+          "worker & consumer safety compliance": {
+            "n": 31,
+            "n_action_rows": 31,
+            "macro_f1": 0.6945970695970697,
+            "micro_f1": 0.8387096774193549,
+            "accuracy": 0.8387096774193549
+          },
+          "workplace": {
+            "n": 27,
+            "n_action_rows": 27,
+            "macro_f1": 0.7708061002178649,
+            "micro_f1": 0.8148148148148148,
+            "accuracy": 0.8148148148148148
+          }
+        },
+        "agreement": {
+          "split": {
+            "n": 15,
+            "n_action_rows": 14,
+            "macro_f1": 0.2333333333333333,
+            "micro_f1": 0.29629629629629634,
+            "accuracy": 0.3333333333333333
+          },
+          "unanimous": {
+            "n": 316,
+            "n_action_rows": 260,
+            "macro_f1": 0.7774009371561391,
+            "micro_f1": 0.8069498069498071,
+            "accuracy": 0.7816455696202531
+          }
+        },
+        "gold": {
+          "implemented": {
+            "n": 136,
+            "n_action_rows": 136,
+            "macro_f1": 0.3125,
+            "micro_f1": 0.8823529411764706,
+            "accuracy": 0.8823529411764706
+          },
+          "indeterminate": {
+            "n": 72,
+            "n_action_rows": 72,
+            "macro_f1": 0.21806853582554517,
+            "micro_f1": 0.49645390070921985,
+            "accuracy": 0.4861111111111111
+          },
+          "none": {
+            "n": 57,
+            "n_action_rows": 0,
+            "macro_f1": 0.0,
+            "micro_f1": 0.0,
+            "accuracy": 0.6842105263157895
+          },
+          "planning": {
+            "n": 66,
+            "n_action_rows": 66,
+            "macro_f1": 0.3118279569892473,
+            "micro_f1": 0.8787878787878788,
+            "accuracy": 0.8787878787878788
+          }
+        }
+      },
+      "evidence": {
+        "items_with_evidence": 293,
+        "coverage": 0.8851963746223565,
+        "mean_spans": 2.6555891238670695,
+        "by_source": {
+          "rrf+rerank": 879
+        },
+        "target_dropped": 0
+      },
+      "vs_baseline": {
+        "baseline": "sentence_only",
+        "delta_macro_f1_mean": 0.009278085012081272,
+        "delta_macro_f1_majority": 0.00937695690003959,
+        "flips_pooled": {
+          "changed": 142,
+          "wrong_to_right": 64,
+          "right_to_wrong": 49,
+          "net": 15
+        },
+        "mcnemar_majority": {
+          "b": 13,
+          "c": 16,
+          "p_value": 0.711071103811264
+        },
+        "noise_floor": 43
+      }
+    }
+  }
+}

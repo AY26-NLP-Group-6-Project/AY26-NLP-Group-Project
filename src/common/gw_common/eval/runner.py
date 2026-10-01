@@ -376,21 +376,3 @@ def run_task(
     )
     write_report(run_dir, manifest, results)
     return run_dir
-
-
-def compare(run_a: Path, run_b: Path) -> str:
-    ma = json.loads((run_a / "metrics.json").read_text(encoding="utf-8"))
-    mb = json.loads((run_b / "metrics.json").read_text(encoding="utf-8"))
-    lines = ["# Compare", "", f"A = {ma['run_id']} ({ma['system']})",
-             f"B = {mb['run_id']} ({mb['system']})", ""]
-    if ma["dataset_hash"] != mb["dataset_hash"]:
-        lines.append("> **WARNING** different dataset snapshots, the numbers are not comparable.\n")
-    lines += ["| condition | A macro-F1 | B macro-F1 | delta |", "|---|---|---|---|"]
-    for cond in sorted(set(ma["conditions"]) | set(mb["conditions"])):
-        fa = ma["conditions"].get(cond, {}).get("aggregate", {}).get("macro_f1", {}).get("mean")
-        fb = mb["conditions"].get(cond, {}).get("aggregate", {}).get("macro_f1", {}).get("mean")
-        delta = f"{fb - fa:+.4f}" if fa is not None and fb is not None else "n/a"
-        sa = "n/a" if fa is None else f"{fa:.4f}"
-        sb = "n/a" if fb is None else f"{fb:.4f}"
-        lines.append(f"| {cond} | {sa} | {sb} | {delta} |")
-    return "\n".join(lines)

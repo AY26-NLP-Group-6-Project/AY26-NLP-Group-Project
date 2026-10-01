@@ -1,0 +1,132 @@
+"""Comparing two runs the only way that survives the classifier's own noise: paired, on the same items.
+
+`gw-eval --compare A B` lines up the two runs' majority-vote labels item by item and reports, for every
+condition they share and for each run's best condition, the paired flips and McNemar p-value. A bare
+difference of means is printed too, but it is the p-value that may be quoted (README §5).
+
+Both runs must be on the same dataset snapshot and the same item selection; anything else is refused
+rather than silently compared.
+"""
+
+from __future__ import annotations
+
+import json
+from collections import Counter, defaultdict
+from pathlib import Path
+
+from gw_common import datasets
+from gw_common.eval import metrics as M
+from gw_common.schemas import Label
+
+
+def _votes(run_dir: Path) -> dict[str, dict[str, Label]]:
+    per: dict[str, dict[str, list[Label]]] = defaultdict(lambda: defaultdict(list))
+    for line in (run_dir / "predictions.jsonl").read_text(encoding="utf-8").splitlines():
+        if line:
+            p = json.loads(line)
+            per[p["condition"]][p["item_id"]].append(Label(p["label"]))
+    return {cond: {i: Counter(v).most_common(1)[0][0] for i, v in items.items()}
+            for cond, items in per.items()}
+
+
+def _best(metrics: dict) -> str | None:
+    ok = {c: b for c, b in metrics["conditions"].items() if b.get("status") == "ok"}
+    return max(ok, key=lambda c: ok[c]["majority"]["action"]["macro_f1"]) if ok else None
+
+
+def compare(run_a: Path, run_b: Path) -> str:
+    ma = json.loads((run_a / "metrics.json").read_text(encoding="utf-8"))
+    mb = json.loads((run_b / "metrics.json").read_text(encoding="utf-8"))
+    man_a = json.loads((run_a / "manifest.json").read_text(encoding="utf-8"))
+    man_b = json.loads((run_b / "manifest.json").read_text(encoding="utf-8"))
+    lines = ["# Compare", "", f"A = `{ma['run_id']}` ({ma['system']}, repeats {ma.get('repeats', 1)})",
+             f"B = `{mb['run_id']}` ({mb['system']}, repeats {mb.get('repeats', 1)})", ""]
+    if datasets.canonical_hash(ma["dataset_hash"]) != datasets.canonical_hash(mb["dataset_hash"]):
+        lines.append("> **Refused**: different dataset snapshots "
+                     f"(`{ma['dataset_hash']}` vs `{mb['dataset_hash']}`); the items are not the same.")
+        return "\n".join(lines)
+    if ma["dataset_hash"] != mb["dataset_hash"]:
+        lines.append(f"> Snapshots `{ma['dataset_hash']}` and `{mb['dataset_hash']}` are recorded as "
+                     "equivalent (same items, labels and split; metadata differs).")
+    for key in ("style",):
+        ca = (man_a.get("config", {}).get("classifier") or {}).get(key)
+        cb = (man_b.get("config", {}).get("classifier") or {}).get(key)
+        if ca != cb:
+            lines.append(f"> Note: classifier {key} differs (`{ca}` vs `{cb}`); "
+                         "the comparison includes that change.")
+
+    va, vb = _votes(run_a), _votes(run_b)
+    items, _ = datasets.load(ma.get("dataset_id", man_a["dataset_id"]), ma["label_source"])
+    gold_by_id = {it.item_id: it.gold_label for it in items}
+
+    def paired(ca: str, cb: str) -> tuple[str, str, str, str, str] | None:
+        shared = sorted(set(va[ca]) & set(vb[cb]), key=lambda i: int(i) if i.isdigit() else i)
+        if not shared:
+            return None
+        gold = [gold_by_id[i] for i in shared]
+        la, lb = [va[ca][i] for i in shared], [vb[cb][i] for i in shared]
+        fa, fb = M.action_metrics(gold, la)["macro_f1"], M.action_metrics(gold, lb)["macro_f1"]
+        flips = M.flip_analysis(gold, la, lb)
+        p = M.mcnemar(gold, la, lb)["p_value"]
+        return (f"{len(shared)}", f"{fa:.4f}", f"{fb:.4f}",
+                f"+{flips['wrong_to_right']} / -{flips['right_to_wrong']}", f"{p:.3f}")
+
+    lines += ["Majority-vote labels, paired on the items both runs scored.", "",
+              "| A condition | B condition | items | A macro-F1 | B macro-F1 "
+              "| flips A→B (right / wrong) | p (McNemar) |",
+              "|---|---|---|---|---|---|---|"]
+    rows = [(c, c) for c in sorted(set(va) & set(vb))]
+    best_a, best_b = _best(ma), _best(mb)
+    if best_a and best_b and (best_a, best_b) not in rows:
+        rows.append((best_a, best_b))
+    for ca, cb in rows:
+        result = paired(ca, cb)
+        if result is None:
+            lines.append(f"| {ca} | {cb} | 0 | — | — | — | no shared items |")
+            continue
+        tag = " (best vs best)" if (ca, cb) == (best_a, best_b) and ca != cb else ""
+        lines.append(f"| {ca}{tag} | {cb} | " + " | ".join(result) + " |")
+    lines += ["", "Read the p-value, not the difference of means: identical configurations re-run differ by "
+                  "a few points on their own."]
+    return "\n".join(lines)
+
+
+def publish(run_dir: Path, results_root: Path, note: str = "") -> Path:
+    """Copy the small, shareable parts of a run into the versioned results folder.
+
+    manifest, metrics, report and the RAG-metric summaries travel; predictions and evidence stay local
+    (they are large and reproducible from the manifest). A one-line note says what the run was for.
+    """
+    run_id = run_dir.name
+    out = results_root / run_id
+    out.mkdir(parents=True, exist_ok=True)
+    for name in ("manifest.json", "metrics.json", "report.md", "ragas.json", "ragas.md",
+                 "ragas_check_result.json"):
+        src = run_dir / name
+        if src.exists():
+            out.joinpath(name).write_bytes(src.read_bytes())
+    if note:
+        out.joinpath("NOTE.md").write_text(note.strip() + "\n", encoding="utf-8")
+    index = results_root / "README.md"
+    rows = []
+    for d in sorted(p for p in results_root.iterdir() if p.is_dir()):
+        man_path = d / "manifest.json"
+        if not man_path.exists():
+            continue
+        man = json.loads(man_path.read_text(encoding="utf-8"))
+        met = json.loads((d / "metrics.json").read_text(encoding="utf-8"))
+        best = _best(met)
+        score = met["conditions"][best]["majority"]["action"]["macro_f1"] if best else None
+        note_text = (d / "NOTE.md").read_text(encoding="utf-8").strip() if (d / "NOTE.md").exists() else ""
+        rows.append(f"| [{d.name}]({d.name}/report.md) | {man['system']} | {man['config'].get('split')} "
+                    f"| {man['n_items']} | {man.get('repeats', 1)} | {man['dataset_hash']} "
+                    f"| {best or '—'} | {'—' if score is None else f'{score:.4f}'} | {note_text} |")
+    index.write_text(
+        "# Published runs\n\nSmall, shareable copies of evaluation runs (manifest, metrics, report). "
+        "Add one with `gw-eval --publish artifacts/runs/<run_id> --note \"...\"`; compare two with "
+        "`gw-eval --compare`.\n\n"
+        "| run | system | split | items | repeats | snapshot | best condition | vote macro-F1 | note |\n"
+        "|---|---|---|---|---|---|---|---|---|\n" + "\n".join(rows) + "\n",
+        encoding="utf-8",
+    )
+    return out

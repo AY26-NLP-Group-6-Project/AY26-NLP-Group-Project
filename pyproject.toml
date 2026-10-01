@@ -7,15 +7,17 @@ dependencies = [
     "gw-common",
     "baseline-rag",
     "graph-rag",
+    "example-rag",
 ]
 
 [tool.uv.workspace]
-members = ["src/common", "src/baseline-rag", "src/graph-rag"]
+members = ["src/common", "src/baseline-rag", "src/graph-rag", "src/example-rag"]
 
 [tool.uv.sources]
 gw-common = { workspace = true }
 baseline-rag = { workspace = true }
 graph-rag = { workspace = true }
+example-rag = { workspace = true }
 
 [dependency-groups]
 dev = [

@@ -13,10 +13,13 @@ from pathlib import Path
 
 from gw_common import datasets, registry
 from gw_common.eval import retrieval as retrieval_eval
+from gw_common.eval.compare import compare, publish
 from gw_common.eval.exchange import export_queries
-from gw_common.eval.runner import compare, run_task
+from gw_common.eval.runner import REPO_ROOT, run_task
 from gw_common.eval.select import SLICERS, describe, parse_slices, select
 from gw_common.schemas import EvidenceCondition
+
+RESULTS_DIR = REPO_ROOT / "results"
 
 
 def eval_main(argv: list[str] | None = None) -> int:
@@ -55,7 +58,11 @@ def eval_main(argv: list[str] | None = None) -> int:
                     help="with --ragas: judge-vs-human agreement on a returned sheet")
     ap.add_argument("--ragas-n", type=int, default=50, help="answers sampled into the spot-check sheet")
     ap.add_argument("--list", action="store_true", help="list registered systems and exit")
-    ap.add_argument("--compare", nargs=2, metavar=("RUN_A", "RUN_B"))
+    ap.add_argument("--compare", nargs=2, metavar=("RUN_A", "RUN_B"),
+                    help="paired comparison of two runs' majority votes on the same items")
+    ap.add_argument("--publish", type=Path, metavar="RUN_DIR",
+                    help="copy manifest, metrics and reports of a run into results/ (versioned)")
+    ap.add_argument("--note", default="", help="with --publish: one line on what the run was for")
     args = ap.parse_args(argv)
 
     if args.list:
@@ -64,6 +71,10 @@ def eval_main(argv: list[str] | None = None) -> int:
         return 0
     if args.compare:
         print(compare(Path(args.compare[0]), Path(args.compare[1])))
+        return 0
+    if args.publish:
+        out = publish(args.publish, RESULTS_DIR, args.note)
+        print(f"published -> {out}")
         return 0
     if args.ragas:
         return _ragas(args)
