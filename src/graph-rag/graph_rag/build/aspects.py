@@ -18,7 +18,6 @@ from __future__ import annotations
 
 import json
 from collections import defaultdict
-
 from pathlib import Path
 
 from graph_rag.build.parse import eval_snapshot
