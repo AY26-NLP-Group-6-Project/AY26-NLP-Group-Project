@@ -42,6 +42,13 @@ def _tokens(text: str) -> list[str]:
 class GraphRetriever:
     def __init__(self, cfg: GraphConfig | None = None) -> None:
         self.cfg = cfg or GraphConfig.load("configs/graph.dev.yaml")
+        if not self.cfg.db_path.exists():
+            raise FileNotFoundError(
+                f"graph store not found at {self.cfg.db_path}. graph-rag needs the parsed corpus and claim "
+                "graph: build it with `gw-graph build` (requires the reports under kb/raw/) or copy "
+                "artifacts/graph/<build>/graph.duckdb from a teammate. baseline-rag and example-rag "
+                "need only the passage store."
+            )
         self.store = DuckDBGraphStore(self.cfg.db_path, read_only=True)
 
     # --------------------------------------------------------------- graph

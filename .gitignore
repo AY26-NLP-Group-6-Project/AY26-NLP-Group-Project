@@ -9,6 +9,8 @@ __pycache__/
 # Distribution / packaging
 .Python
 build/
+# ... but a package named `build` inside our sources is code, not a build artefact
+!src/**/build/
 develop-eggs/
 dist/
 downloads/

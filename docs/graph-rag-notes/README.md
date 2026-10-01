@@ -342,6 +342,108 @@ Consequences for the plan: the headline RQ1 result becomes "sentence-level evide
 own reports raises action F1 and fixes no-aspect detection; passage-level RAG does not"; the graph's
 case rests on RQ2 and the product surface, which is where M3/M5 effort should go.
 
+## 4l. Evaluation file de-identified (2026-09-30)
+
+The annotators' workbook was replaced by `kb/annotation/eval.xlsx` (and `eval.xls`, the name the course
+brief asks for): one row per record, `text` / `aspect` / `label` first, annotators as A1–A6, the 34
+human-filled aspects and the dev/test split as columns, names in free-text notes replaced. Verified
+against the previous snapshot: all 1,000 rows identical on id, text, aspect, category, provenance,
+context, label and split; κ recomputes to the same 0.809 / 0.789 / 0.492. Only annotator notes (dropped
+from the snapshot) and the rounding of `agreement` differ, which changes the content hash:
+`gw1000.human_majority.23dc51f1d9de` (runs in 4i–4k) ≡ `gw1000.human_majority.3e18cc14e648` (from here
+on). Results recorded against the old hash remain valid for the new one.
+
+## 4m. Cited classifier output: accuracy, speed, grounding (2026-09-30)
+
+The shared classifier now returns a label, a rationale and the sources it cites (`cited` style, prompt
+`action_classifier_cited.md` @ `f79137d448e4`; label definitions and rules unchanged from v1). Dev,
+3 uncached repeats, `baseline-rag` over the sentence-unit store `dev-sent`. Run
+`20260930T083207Z-baseline-rag-rq1`, snapshot `3e18cc14e648`.
+
+| condition | macro-F1 (mean ± sd) | vote | Δ vs sentence_only | p (McNemar) | indet. F1 | none F1 | evidence used | classify p50 / p95 ms | end-to-end p50 ms | items/s | tokens in / out |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| sentence_only | 0.7553 ± 0.009 | 0.7647 | — | — | 0.613 | 0.800 | — | 1703 / 2906 | 1703 | 4.26 | 540 / 63 |
+| local | 0.7449 ± 0.006 | 0.7519 | -0.010 | 1.000 | 0.598 | 0.825 | — | 1844 / 3259 | 1844 | 3.95 | 656 / 79 |
+| same_report_rrf | 0.7492 ± 0.013 | 0.7550 | -0.006 | 1.000 | 0.610 | 0.825 | 0.074 | 2000 / 3299 | 2347 | 3.77 | 653 / 92 |
+| cross_year_rrf | 0.7657 ± 0.005 | 0.7804 | +0.010 | 0.281 | 0.677 | 0.837 | 0.020 | 1942 / 3119 | 2048 | 3.85 | 675 / 84 |
+
+- **Asking for a rationale does not cost accuracy.** Cited `sentence_only` (vote 0.7647) against the
+  three label-style `sentence_only` runs on the same items (0.7416 / 0.7591 / 0.7343): paired p = 0.60,
+  1.00, 0.27. It costs about 145 more input tokens (the longer instructions) and ~60 output tokens.
+- **Format holds.** 100 % of replies parse, all carry a rationale of ~22 words and cite the target;
+  zero invalid references in 3,972 calls (one reply in the cross-year arm was not JSON).
+- **The classifier rarely relies on retrieved evidence.** Only 7.4 % (same report) and 2.0 %
+  (cross-year) of items that received evidence cite any of it; 4.0 % and 0.7 % of the spans shown are
+  cited. The prompt tells it to label the target and to cite only what changed or confirmed the
+  reading, so this is the rule working, and it is also a direct measure of how seldom evidence decides.
+- **Evidence gains are small and not stable across prompt styles.** Under the cited prompt no evidence
+  condition differs significantly from `sentence_only`; the largest is cross-year at +0.010 (p = 0.28),
+  with `indeterminate` F1 0.613 -> 0.677 as before. Section 4i's +0.052 (p = 0.001) was measured
+  against a label-style baseline that happened to sit at the low end of its own noise range (0.72).
+  The honest reading of 4i-4m together: sentence-level evidence does not hurt, helps `indeterminate`
+  consistently, and its effect on overall macro-F1 on dev is within about two points.
+- **Speed and cost.** About 1.7-2.0 s per classification call at low effort, 3.8-4.3 items/s with 8
+  concurrent calls, retrieval 117-326 ms p50 (one embedding call plus rerank), ~0.6k input and ~80
+  output tokens per item. Dollar figures need prices in `.env`; none were set for this run.
+
+## 4n. Answer-level RAG metrics on dev (2026-09-30)
+
+RAGAS-style metrics (`gw_common/eval/rag_metrics.py`, prompts `rag_judge.md`), scored post hoc on run
+`20260930T083207Z-baseline-rag-rq1` (section 4m), repeat 0, all 331 dev items per condition, 1,324 answers.
+Judge: `gpt-5.6-luna`, effort low, i.e. **the model that wrote the answers**; embeddings
+`text-embedding-3-small`. LLM-judged and not yet calibrated against people.
+
+| condition | faithfulness | answer relevance | context precision | context relevance | statements / answer |
+|---|---|---|---|---|---|
+| sentence_only | 0.952 | 0.618 | n/a | n/a | 2.39 |
+| local | 0.949 | 0.618 | n/a | n/a | 2.47 |
+| same_report_rrf | 0.951 | 0.621 | 0.571 | 0.459 | 2.49 |
+| cross_year_rrf | 0.943 | 0.624 | 0.439 (n = 293) | 0.375 | 2.47 |
+
+- **Faithfulness is high and flat across conditions** (0.94-0.95): 169 of 3,247 rationale statements
+  were judged unsupported. With sentence-only input, wrong labels come with less faithful rationales
+  (0.910 vs 0.965 when right); with evidence the gap closes.
+- **Answer relevance does not discriminate** (0.62 everywhere). Its level is set by the embedding
+  cosine between a generated question and the long original question; report it because the brief asks
+  for it, do not read it as "62 % relevant".
+- **About half of what is retrieved is judged relevant**, more from the same report (0.46) than from
+  other years (0.38); 207 and 181 of 331 items have at least one relevant passage. Yet the classifier
+  cites evidence on only 7 % and 2 % of items (4m). Relevant passages are often there and still not
+  needed to label the sentence, which is the clearest statement so far of why retrieval moves macro-F1
+  so little on this task.
+- **Judge reliability.** 5.6 % of answer-relevance replies were malformed JSON (a missing bracket);
+  those calls are re-asked in JSON mode, all other verdicts unchanged. A blind sheet for human
+  calibration was exported (`ragas_check.csv`: 48 answers, 127 statement rows, 59 passage rows); until
+  it is filled and scored (`--ragas-score-check`) these numbers must be quoted as LLM-judged.
+
+**Human calibration (2026-10-01).** One teammate filled the blind sheet (186 rows; sheet, key result and
+summary versioned under `kb/annotation/spotchecks/`).
+
+| judgement | n | agreement | Cohen's κ | judge says yes | human says yes | judge Y / human N | judge N / human Y |
+|---|---|---|---|---|---|---|---|
+| statement supported (faithfulness) | 127 | 0.976 | 0.56 | 0.961 | 0.984 | 0 | 3 |
+| passage relevant (context) | 59 | 0.831 | 0.56 | 0.322 | 0.186 | 9 | 1 |
+
+- **Faithfulness: the judge is not lenient; if anything it is stricter than the person.** All three
+  disagreements are statements the judge rejected and the human accepted: twice "no sustainability
+  aspect is proposed in the sentence" (a label-scheme judgement the human treats as supported) and once a
+  phrase the judge missed in the target. The LLM-judged 0.94-0.95 can be quoted as a lower bound; κ is
+  low only because 97 % of statements are supported, which leaves little room for chance-corrected
+  agreement.
+- **Context relevance: the judge is lenient by about 1.7x.** Nine passages it called relevant the human
+  did not; the pattern is topical or organisational proximity (same company's subsidiaries, the same
+  programme described in general terms, broad sustainability framing) that does not bear on the target
+  sentence's label. Applying the sample ratio (0.186 / 0.322 = 0.58) as a correction: context relevance
+  about **0.27** for same-report and **0.22** for cross-year retrieval, rather than 0.46 / 0.38. With
+  n = 59 the correction is rough; its direction is not in doubt.
+- Consequence: the honest summary is that roughly a quarter of retrieved sentences bear on the target
+  sentence's label, the rationales almost never need them, and the rationales themselves are faithful.
+  A stricter relevance prompt could be written from these nine cases, but it would then have to be
+  re-checked on a fresh sample before its numbers are used.
+- **Decision (2026-10-01): keep the judge prompt as it is.** The report quotes the LLM-judged scores
+  together with this calibration (agreement, κ, the direction of the bias and the 0.58 correction for
+  context relevance), rather than tuning the judge on the only human sample we have.
+
 ## 5. Risks
 
 1. **Aspect canonicalisation is the whole ball game.** If "Scope 1 emissions", "direct emissions"

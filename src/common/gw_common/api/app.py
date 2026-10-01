@@ -12,7 +12,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
 from gw_common import registry
-from gw_common.schemas import EvalItem, EvidenceCondition, EvidenceSpan, Label, Query
+from gw_common.schemas import Citation, EvalItem, EvidenceCondition, EvidenceSpan, Label, Query
 
 REPO_ROOT = Path(__file__).resolve().parents[4]
 RUNS_DIR = REPO_ROOT / "artifacts" / "runs"
@@ -31,7 +31,9 @@ class ClassifyRequest(BaseModel):
 class ClassifyResponse(BaseModel):
     label: Label
     scores: dict[str, float] | None = None
-    evidence: list[EvidenceSpan] = []
+    rationale: str = ""
+    citations: list[Citation] = []       # the sources the rationale cites, resolved to company/year/page
+    evidence: list[EvidenceSpan] = []    # everything that was shown to the classifier
     latency_ms: float
 
 
@@ -110,6 +112,8 @@ def create_app(system_names: list[str] | None = None) -> FastAPI:
         return ClassifyResponse(
             label=pred.label,
             scores=pred.scores,
+            rationale=pred.rationale,
+            citations=pred.citations,
             evidence=evidence.get("adhoc", []),
             latency_ms=(time.perf_counter() - t0) * 1000,
         )

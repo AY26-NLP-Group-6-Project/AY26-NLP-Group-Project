@@ -33,11 +33,29 @@ Data and where it comes from (the evaluation set is versioned; the corpus-derive
 | what | where it must sit | how you get it |
 |---|---|---|
 | passage store (18,839 passages + vectors + manifest) | `artifacts/baseline/dev/` | the `gw-kb-dev-<hash>.zip` package, or `gw-baseline build` if you hold the parsed corpus |
-| frozen evaluation snapshot | `data/eval/gw1000.*.jsonl` | **in git** (built from `kb/annotation/annotation.xlsx` + `aspect_overrides.csv`, also versioned); rebuild with `gw-data build gw1000` only after an annotation change |
+| frozen evaluation snapshot | `data/eval/gw1000.*.jsonl` | **in git** (built from `kb/annotation/eval.xlsx`, also versioned); rebuild with `gw-data build gw1000` only after an annotation change |
 | parsed corpus and claim graph (`graph-rag` only) | `artifacts/graph/dev/graph.duckdb` | `gw-graph build`, needs the raw PDFs under `kb/raw/` |
 | raw reports | `kb/raw/` | never redistributed; see `kb/README.md` |
 
 ## 2. Setup
+
+### 2.0 Ten-minute start for a teammate building a system
+
+1. Clone, `uv sync`, copy `.env.example` to `.env` and fill the two API keys (model, embedding model,
+   effort and prices are already set).
+2. Unzip the KB package into `artifacts/baseline/` (gives `artifacts/baseline/dev/`); `uv run gw-baseline
+   stats` must print hash `c80d0ab23191`. The evaluation set is already in git (`uv run gw-data list`).
+3. `uv run pytest -q` (65 tests, no network) and a smoke run:
+   `uv run gw-eval --system example-rag --split dev --sample 20 --repeats 1`.
+4. Copy `src/example-rag` to `src/<you>-rag`, rename, add it to the workspace members, `uv sync`
+   (§6.1). Replace the retriever; keep the shared classifier unless the classifier is your contribution.
+5. Develop on `--split dev`; when a configuration is worth keeping, run it with `--repeats 3` and
+   `uv run gw-eval --publish artifacts/runs/<run_id> --note "what this run is"`, then commit `results/`.
+6. Compare against anyone else's published run with `uv run gw-eval --compare <run_A> <run_B>`
+   (paired on items; it refuses different snapshots).
+
+Only `graph-rag` needs more: the parsed corpus and claim graph (`artifacts/graph/dev/graph.duckdb`,
+124 MB), built from the raw reports or copied from a teammate.
 
 ```bash
 uv sync                                   # workspace: src/common, src/baseline-rag, src/graph-rag
@@ -64,6 +82,9 @@ LLM_API_KEY / LLM_BASE_URL / LLM_MODEL          chat model
 EMB_API_KEY / EMB_BASE_URL / EMB_MODEL          embeddings
 LLM_REASONING_EFFORT=low                        fixed for experiments
 GW_LLM_CACHE=1                                  SQLite response cache; bypassed automatically when --repeats > 1
+GW_CLASSIFIER_STYLE=cited                       cited (label + rationale + cited sources) | label (v1, one word)
+LLM_PRICE_IN_PER_MTOK / LLM_PRICE_OUT_PER_MTOK  USD per million tokens; unset = tokens reported, no dollars
+EMB_PRICE_PER_MTOK                              same, for query embeddings
 GW_BASELINE_BUILD=dev                           which passage store; dev-sent is the sentence-unit ablation store
 GW_BASELINE_MODE=rrf+rerank                     bm25 | dense | rrf | rrf+rerank
 GW_BASELINE_BACKEND=files                       files | postgres
@@ -77,7 +98,8 @@ src/common/gw_common/        shared contract and harness (schemas, Protocols, re
                              eval runner/metrics/report, shared LLM client and classifier, FastAPI)
 src/baseline-rag/            hybrid BM25 + dense + RRF + rerank over the passage store; Postgres backend
 src/graph-rag/               temporal claim graph (DuckDB + networkx), graph/fused retrieval, agentic stub
-configs/prompts/             every prompt, versioned; action_classifier.md is the shared classifier prompt
+configs/prompts/             every prompt, versioned; action_classifier_cited.md is the shared classifier
+                             prompt (action_classifier.md is its label-only v1)
 configs/graph.dev.yaml       graph build config
 data/eval/                   frozen gw1000 snapshots (versioned), one file per (dataset, label source, hash);
                              A3CG-derived snapshots are local only
@@ -103,7 +125,7 @@ annotator each), one tie adjudicated.
 | aspect rows with an action label | 796 | **the primary-metric population** |
 | aspect rows labelled `none` | 7 | the proposed aspect was rejected |
 | no-aspect rows labelled `none` | 163 | |
-| no-aspect rows with an action label | 34 | annotators saw an aspect the proposer missed; spans filled in by review (`kb/annotation/aspect_overrides.csv`), flagged `aspect_source=human_filled`. Reported separately, never inside the headline |
+| no-aspect rows with an action label | 34 | annotators saw an aspect the proposer missed; spans filled in by review (already in `eval.xlsx`; trail in `kb/annotation/aspect_overrides.csv`), flagged `aspect_source=human_filled`. Reported separately, never inside the headline |
 
 Frozen split, stratified by row type × label × category: **dev 331 / test 669**. Pilot rows are pinned
 to dev. Tune on dev; open test once, for the report.
@@ -113,14 +135,15 @@ label-noise analysis only), `a3cg_gold` (A3CG's released test splits, reference 
 given, their statements carry no provenance, and the release may be in the LLM's training data).
 
 ```bash
-uv run gw-data build gw1000                         # annotation.xlsx (+ overrides) -> snapshots + build report (κ, splits)
+uv run gw-data build gw1000                         # kb/annotation/eval.xlsx -> snapshots + build report (κ, counts)
+uv run gw-data export-xls                           # kb/annotation/eval.xls, the file name the course brief asks for
 uv run gw-data describe gw1000 --split dev          # counts per slice
 uv run gw-data build a3cg                           # A3CG test splits as action-classification snapshots
 ```
 
 ### 4.2 Evidence conditions
 
-One classifier, one prompt (`configs/prompts/action_classifier.md`); systems differ only in the evidence
+One classifier, one prompt (`configs/prompts/action_classifier_cited.md`); systems differ only in the evidence
 they hand it, at most `k = 3` spans of ≤ 800 characters each.
 
 | condition | evidence the classifier sees | who provides it |
@@ -147,8 +170,11 @@ uv run gw-eval --system graph-rag    --split dev --repeats 3 \
                --conditions sentence_only,local,cross_year_graph,cross_year_fused
 uv run gw-eval --system graph-rag --split dev --slice row_type=aspect,category=workplace|management
 uv run gw-eval --system graph-rag --split dev --sample 60 --repeats 1      # quick smoke test
-uv run gw-eval --compare artifacts/runs/<A> artifacts/runs/<B>
+uv run gw-eval --compare artifacts/runs/<A> artifacts/runs/<B>     # paired McNemar on the shared items
+uv run gw-eval --publish artifacts/runs/<A> --note "..."            # small copy into results/ (versioned)
 ```
+
+`results/README.md` indexes every published run with its system, split, snapshot and best condition.
 
 Flags: `--split dev|test|all`, `--slice key=v1|v2,…` (keys: split, row_type, aspect_source, category,
 company, year, pilot, has_aspect, gold, agreement, aspect_weak), `--sample N` (seeded), `--limit N`,
@@ -162,13 +188,42 @@ company, year, pilot, has_aspect, gold, agreement, aspect_weak), `--sample N` (s
 | file | content |
 |---|---|
 | `manifest.json` | dataset id + hash, label source, split, slices, repeats, git sha (and dirty flag), chat model / effort / temperature / cache |
-| `predictions.jsonl` | every prediction, per condition and repeat, with tokens and latency |
+| `predictions.jsonl` | every prediction, per condition and repeat: label, rationale, resolved citations, tokens, latency |
 | `evidence.jsonl` | every span handed to the classifier, per condition and item |
 | `metrics.json` | everything in §5, machine-readable |
 | `report.md` | the same as tables |
 
 Quote nothing that cannot be traced to a run id, and record the run id next to the number in
 `docs/graph-rag-notes/README.md`.
+
+### 4.5 Answer-level RAG metrics
+
+Faithfulness, answer relevance and context precision follow the RAGAS definitions and are implemented
+in `gw_common/eval/rag_metrics.py` (not through the `ragas` package), so every intermediate judgement
+is stored. They are scored **after** a run, from its directory:
+
+```bash
+uv run gw-eval --ragas artifacts/runs/<run_id>                       # all conditions, repeat 0
+uv run gw-eval --ragas artifacts/runs/<run_id> --conditions cross_year_rrf --sample 100
+uv run gw-eval --ragas artifacts/runs/<run_id> --ragas-export-check check.csv --ragas-n 50
+uv run gw-eval --ragas artifacts/runs/<run_id> --ragas-score-check check.csv
+```
+
+| metric | how it is computed |
+|---|---|
+| faithfulness | the rationale is split into atomic statements; each is judged against the sources the classifier saw (`T`, `C`, `E1`…). Score = supported / total |
+| answer relevance | three questions are generated back from the answer and compared, by embedding cosine, with the question actually asked; 0 if the answer is noncommittal. Absolute values depend on the embedding model; compare conditions, not against 1.0 |
+| context precision | each retrieved passage is judged relevant or not to reaching the reference label; mean of precision@i over the relevant ranks. Undefined where nothing was retrieved (`sentence_only`, `local`) |
+| context relevance | plain share of retrieved passages judged relevant |
+
+Outputs land next to the run: `ragas.jsonl` (per answer: statements and verdicts, generated questions,
+per-passage verdicts), `ragas.json`, `ragas.md`.
+
+**The judge is an LLM, by default the same model that wrote the answers**, so it may be lenient.
+`--ragas-export-check` writes a blind sheet (one row per statement and per passage, no judge verdict
+shown) for a human to fill with Y/N; `--ragas-score-check` then reports agreement and Cohen's κ between
+judge and human, including how often the judge said yes where the human said no. Quote the LLM-judged
+numbers together with that agreement.
 
 ## 5. Metrics
 
@@ -185,8 +240,11 @@ Micro-F1 (pooled) is reported next to it because A3CG pools over pairs.
 | comparison vs baseline condition | Δ macro-F1 (mean and vote), pooled flips wrong→right / right→wrong, McNemar on majority votes, bootstrap 95 % CI | is the delta bigger than the noise |
 | slices | macro-F1 per row_type, aspect_source, agreement (unanimous vs split), category, gold | where the gain lands |
 | evidence | coverage, mean spans, by source, `target_dropped` | did retrieval deliver anything |
-| cost | p50/p95 latency, input/output tokens, LLM calls | the course asks for it |
+| grounding | share of replies in the asked format, with a rationale, citing the target; `evidence_use_rate` (items with retrieved evidence that cite at least one span of it), share of shown spans cited, invalid refs | is the answer tied to sources, and does the classifier actually use what was retrieved |
+| speed | per-call latency p50/p95, retrieval p50/p95, end-to-end per item, items/s (wall-clock throughput) | the course asks for latency and records per second |
+| cost | input/output tokens per item, embedding tokens, USD per 1k items and per run (when prices are set), cached calls | the course asks for cost; cached calls are flagged because they are neither slow nor billed |
 | retrieval (`--task retrieval`) | P@5, R@10, MRR, nDCG@10, wrong-company@10, by query type | needs pooled human judgements (§6.3) |
+| answer-level RAG (`--ragas`) | faithfulness, answer relevance, context precision, context relevance (§4.5) | is the rationale supported by what was shown, and was what was retrieved relevant |
 
 Re-running an identical configuration does not reproduce its macro-F1 exactly: the classifier
 re-samples, and independent runs differ by a few points. **Do not compare systems by a difference of
@@ -248,10 +306,14 @@ The contract, in one table:
 | `Query` (in) | `text`, `company`, `aspect`, `year_from`, `year_to`, `anchor_year`, `target_text`, `condition` |
 | `EvidenceSpan` (out) | `statement_id` (your own id space), `text`, `company`, `year`, `page`, `file`, `score`, `why` (a short source tag, e.g. `bm25`, `rrf+rerank`, `graph:follows_up`) |
 | `EvalItem` (in, classifier) | `item_id`, `text`, `aspect`, `category`, `company`, `year`, `page`, `context_prev`, `context_next` — **never the gold label** |
-| `Prediction` (out, classifier) | `item_id`, `label`, optional `scores`, `evidence_ids`, `latency_ms`, `input_tokens`, `output_tokens`, `llm_calls` |
+| `Prediction` (out, classifier) | `item_id`, `label`, **`rationale`** (why, in a sentence or two), **`citations`** (list of `Citation`), `evidence_ids`, optional `scores`, `parse_ok`, `invalid_citations`, `latency_ms`, `input_tokens`, `output_tokens`, `llm_calls` |
+| `Citation` | `ref` (`T` target sentence, `C` neighbouring context, `E1`…`Ek` the k-th span shown), `statement_id`, `company`, `year`, `page`, `file`, `quote` — enough to open the page the claim rests on |
 
 If you write your own classifier, read evidence from the `evidence` mapping (item_id → spans) and
-respect the same budget (k = 3, 800 characters per span) or say in the notes that you did not.
+respect the same budget (k = 3, 800 characters per span) or say in the notes that you did not. It must
+return a `rationale` and the `citations` it rests on: a label without sources cannot be shown in the UI
+or scored for faithfulness. `gw_common.classifiers.llm_action.resolve_citations` turns the tags a model
+cites into `Citation` objects; the harness then reports the grounding block for you.
 
 ### 6.2 File exchange (no Python integration)
 

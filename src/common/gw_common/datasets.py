@@ -18,6 +18,15 @@ EVAL_DIR = REPO_ROOT / "data" / "eval"
 MASTER_CSV = REPO_ROOT / "kb" / "annotation" / "GW_master_1000.csv"
 A3CG_DIR = REPO_ROOT / "tmp" / "data" / "a3cg"  # keanepotato/a3cg_greenwash release, git-ignored
 
+# Snapshots whose items, labels and split are identical and differ only in metadata (see the experiment
+# log, section 4l): runs recorded against either hash may be compared item by item.
+EQUIVALENT_SNAPSHOTS = {"23dc51f1d9de": "3e18cc14e648"}
+
+
+def canonical_hash(digest: str) -> str:
+    return EQUIVALENT_SNAPSHOTS.get(digest, digest)
+
+
 LABEL_SOURCES = ("human_majority", "llm_pre", "llm_pre_claude", "llm_pre_deepseek", "llm_pre_gpt",
                  "a3cg_gold")
 # A3CG test files -> dataset ids. Seen/unseen follow the paper's three category folds.

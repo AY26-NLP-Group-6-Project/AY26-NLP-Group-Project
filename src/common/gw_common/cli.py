@@ -13,10 +13,13 @@ from pathlib import Path
 
 from gw_common import datasets, registry
 from gw_common.eval import retrieval as retrieval_eval
+from gw_common.eval.compare import compare, publish
 from gw_common.eval.exchange import export_queries
-from gw_common.eval.runner import compare, run_task
+from gw_common.eval.runner import REPO_ROOT, run_task
 from gw_common.eval.select import SLICERS, describe, parse_slices, select
 from gw_common.schemas import EvidenceCondition
+
+RESULTS_DIR = REPO_ROOT / "results"
 
 
 def eval_main(argv: list[str] | None = None) -> int:
@@ -46,8 +49,20 @@ def eval_main(argv: list[str] | None = None) -> int:
                     help="retrieval task: write a pooled judging sheet over --modes and exit")
     ap.add_argument("--modes", default="bm25,dense,rrf,rrf+rerank",
                     help="retrieval task: retriever configurations to compare")
+    ap.add_argument("--ragas", type=Path, metavar="RUN_DIR",
+                    help="score a finished run for faithfulness, answer relevance and context precision")
+    ap.add_argument("--ragas-rep", type=int, default=0, help="which repeat's answers to score")
+    ap.add_argument("--ragas-export-check", type=Path, metavar="CSV",
+                    help="with --ragas: write a blind human spot-check sheet from the scored run")
+    ap.add_argument("--ragas-score-check", type=Path, metavar="CSV",
+                    help="with --ragas: judge-vs-human agreement on a returned sheet")
+    ap.add_argument("--ragas-n", type=int, default=50, help="answers sampled into the spot-check sheet")
     ap.add_argument("--list", action="store_true", help="list registered systems and exit")
-    ap.add_argument("--compare", nargs=2, metavar=("RUN_A", "RUN_B"))
+    ap.add_argument("--compare", nargs=2, metavar=("RUN_A", "RUN_B"),
+                    help="paired comparison of two runs' majority votes on the same items")
+    ap.add_argument("--publish", type=Path, metavar="RUN_DIR",
+                    help="copy manifest, metrics and reports of a run into results/ (versioned)")
+    ap.add_argument("--note", default="", help="with --publish: one line on what the run was for")
     args = ap.parse_args(argv)
 
     if args.list:
@@ -57,6 +72,12 @@ def eval_main(argv: list[str] | None = None) -> int:
     if args.compare:
         print(compare(Path(args.compare[0]), Path(args.compare[1])))
         return 0
+    if args.publish:
+        out = publish(args.publish, RESULTS_DIR, args.note)
+        print(f"published -> {out}")
+        return 0
+    if args.ragas:
+        return _ragas(args)
 
     conditions = (
         [EvidenceCondition(c.strip()) for c in args.conditions.split(",")] if args.conditions else None
@@ -108,6 +129,25 @@ def eval_main(argv: list[str] | None = None) -> int:
     return 0
 
 
+def _ragas(args) -> int:
+    """Post-hoc answer-level metrics for a run directory, and the human spot-check around them."""
+    from gw_common.eval import rag_metrics
+
+    if args.ragas_score_check:
+        print(json.dumps(rag_metrics.score_check(args.ragas, args.ragas_score_check), indent=2))
+        return 0
+    if args.ragas_export_check:
+        print(json.dumps(rag_metrics.export_check(args.ragas, args.ragas_export_check, args.ragas_n),
+                         indent=2))
+        return 0
+    conditions = [c.strip() for c in args.conditions.split(",")] if args.conditions else None
+    summary = rag_metrics.score_run(args.ragas, conditions=conditions, rep=args.ragas_rep,
+                                    sample=args.sample)
+    print((args.ragas / "ragas.md").read_text(encoding="utf-8"))
+    print(f"scored {summary['n_scored']} answers -> {args.ragas / 'ragas.json'}")
+    return 0
+
+
 def _retrieval(ap: argparse.ArgumentParser, args) -> int:
     """Rank-aware retrieval evaluation, run over one or more retriever configurations."""
     if not args.queries:
@@ -137,11 +177,13 @@ def _retrieval(ap: argparse.ArgumentParser, args) -> int:
 
 def data_main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser("gw-data", description="Freeze and inspect evaluation snapshots")
-    ap.add_argument("action", choices=["build", "list", "describe"])
+    ap.add_argument("action", choices=["build", "list", "describe", "export-xls"])
     ap.add_argument("dataset", nargs="?", default="gw1000")
     ap.add_argument("--labels", default="human_majority")
-    ap.add_argument("--from", dest="source", type=Path, help="annotation workbook (default kb/annotation)")
-    ap.add_argument("--dev-fraction", type=float, default=0.30)
+    ap.add_argument(
+        "--from", dest="source", type=Path, help="eval workbook (default: kb/annotation/eval.xlsx)"
+    )
+    ap.add_argument("--out", type=Path, help="export-xls: output path (default kb/annotation/eval.xls)")
     ap.add_argument("--slice", dest="slices")
     ap.add_argument("--split", default="all", choices=["dev", "test", "all"])
     args = ap.parse_args(argv)
@@ -149,6 +191,12 @@ def data_main(argv: list[str] | None = None) -> int:
     if args.action == "list":
         for p in sorted(datasets.EVAL_DIR.glob("*.jsonl")):
             print(p.name)
+        return 0
+    if args.action == "export-xls":
+        from gw_common import annotation
+
+        out = args.out or annotation.EVAL_XLSX.with_suffix(".xls")
+        print(json.dumps(annotation.export_xls(out, args.source), indent=2))
         return 0
     if args.action == "describe":
         items, digest = datasets.load(args.dataset, args.labels)
@@ -165,7 +213,7 @@ def data_main(argv: list[str] | None = None) -> int:
         raise SystemExit(f"no builder for dataset {args.dataset!r} yet")
     from gw_common import annotation
 
-    print(json.dumps(annotation.build(xlsx=args.source, dev_fraction=args.dev_fraction), indent=2))
+    print(json.dumps(annotation.build(xlsx=args.source), indent=2))
     return 0
 
 

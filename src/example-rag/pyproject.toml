@@ -1,0 +1,20 @@
+[project]
+name = "example-rag"
+version = "0.1.0"
+description = "Copy-me template for a teammate's own RAG system: BM25 over the shared store, shared classifier"
+requires-python = ">=3.12"
+dependencies = ["gw-common", "baseline-rag"]
+
+[project.entry-points."gw.systems"]
+example-rag = "example_rag:build_system"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["example_rag"]
+
+[tool.uv.sources]
+gw-common = { workspace = true }
+baseline-rag = { workspace = true }

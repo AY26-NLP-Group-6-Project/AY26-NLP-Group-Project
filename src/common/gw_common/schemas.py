@@ -87,11 +87,31 @@ class Query(BaseModel):
     condition: EvidenceCondition = EvidenceCondition.CROSS_YEAR_RRF
 
 
+class Citation(BaseModel):
+    """One source a prediction's rationale rests on, resolved far enough to open the page.
+
+    `ref` is how the classifier named it: `T` the target sentence, `C` its neighbouring context,
+    `E1`..`Ek` the retrieved evidence spans in the order they were shown.
+    """
+
+    ref: str
+    statement_id: str | None = None
+    company: str = ""
+    year: int = 0
+    page: int | None = None
+    file: str | None = None
+    quote: str = ""
+
+
 class Prediction(BaseModel):
     item_id: str
     label: Label
     scores: dict[str, float] | None = None
-    evidence_ids: list[str] = Field(default_factory=list)
+    evidence_ids: list[str] = Field(default_factory=list)   # spans shown to the classifier
+    rationale: str = ""                                     # why this label, in the classifier's words
+    citations: list[Citation] = Field(default_factory=list)  # sources the rationale cites, resolved
+    invalid_citations: int = 0                              # refs that named no shown source
+    parse_ok: bool = True                                   # False = the reply was not the asked format
     latency_ms: float = 0.0
     input_tokens: int = 0
     output_tokens: int = 0

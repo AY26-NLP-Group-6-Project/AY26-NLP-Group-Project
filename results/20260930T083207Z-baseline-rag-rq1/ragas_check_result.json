@@ -1,0 +1,21 @@
+{
+  "skipped_rows": 0,
+  "passage_relevant": {
+    "n": 59,
+    "agreement": 0.8305084745762712,
+    "cohen_kappa": 0.5636094674556213,
+    "judge_yes_rate": 0.3220338983050847,
+    "human_yes_rate": 0.1864406779661017,
+    "judge_yes_human_no": 9,
+    "judge_no_human_yes": 1
+  },
+  "statement_supported": {
+    "n": 127,
+    "agreement": 0.9763779527559056,
+    "cohen_kappa": 0.5615650172612203,
+    "judge_yes_rate": 0.9606299212598425,
+    "human_yes_rate": 0.984251968503937,
+    "judge_yes_human_no": 0,
+    "judge_no_human_yes": 3
+  }
+}

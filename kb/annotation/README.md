@@ -1,25 +1,38 @@
 # kb/annotation — the gw1000 evaluation set
 
-Versioned here so every teammate scores the same 1,000 items with the same labels and split. The
-raw reports the sentences come from stay in `kb/raw/` and are never committed.
+Versioned so every teammate scores the same 1,000 records with the same labels and split. The raw
+reports the sentences come from stay in `kb/raw/` and are never committed.
 
 | file | what |
 |---|---|
-| `annotation.xlsx` | the annotators' workbook. Sheet `Master` is the source of truth: one row per sentence with one candidate aspect (or none), provenance, six annotator columns, the three LLM pre-annotations, majority, adjudication and `Final`. Other sheets (`IAA`, `LLM_Calc`, `LLM_Notes`, `Guide`) are the annotators' own working sheets and are not read by the pipeline. **Never edit `Master` by hand after this point**; changes go through the overrides file so they are auditable |
-| `aspect_overrides.csv` | 34 rows that were shown as *no aspect* but received an action label: the annotators saw an aspect the proposer missed. Spans were reviewed on 2026-09-29 (`Proposed_Aspect`, `Category`, `Source`, `Weak`). Fill `Corrected_Aspect` / `Corrected_Category` to change one; the builder prefers those columns |
+| `eval.xlsx` | **the evaluation set.** Sheet `eval`: one row per record — `id, text, aspect, label`, then category, split, provenance, context, the six annotators' labels (pseudonymised as `A1`–`A6`), agreement, adjudication flag, three LLM pre-annotations and annotator notes. Sheet `README` describes every column; sheet `guide` is the annotation guideline (A3CG-aligned). No duplicate sentences |
+| `eval.xls` | the same `eval` sheet in the legacy format and under the file name the course brief requires for submission. Generated, do not edit: `uv run gw-data export-xls` |
+| `aspect_overrides.csv` | review trail for the 34 rows shown as *no aspect* that annotators still gave an action label: the span chosen, its source and a `Weak` flag. Already applied in `eval.xlsx` (`aspect_source = human_filled`) |
+| `llm_notes.csv` | the three LLM pre-annotators' per-row label, aspect and rationale (3,000 rows). For label-noise analysis; never a system input |
 
-Rebuild the frozen snapshots after any change:
+Labels: `implemented`, `planning`, `indeterminate` (A3CG's three actions) and `none` (no valid
+aspect–action). 417 / 191 / 222 / 170 rows. Split: dev 331 / test 669, stratified by row type × label ×
+category; the 50 pilot rows, labelled by all six annotators, are in dev.
+
+Agreement: 50 rows carry six labels (observed agreement 0.861, Fleiss' κ 0.809); the other 950 carry one.
+`uv run gw-data build gw1000` recomputes these figures from the `A1`–`A6` columns.
+
+## Changing it
+
+Edit `eval.xlsx` (sheet `eval`) and rebuild; never edit the snapshots by hand.
 
 ```bash
 uv run gw-data build gw1000          # -> data/eval/gw1000.<label_source>.<hash>.jsonl + gw1000.build_report.json
+uv run gw-data export-xls            # refresh eval.xls
 uv run gw-data describe gw1000 --split dev
 ```
 
-The builder (`gw_common/annotation.py`) recomputes Fleiss' κ from the annotator columns, assigns the
-stratified dev/test split (pilot rows pinned to dev, seed 20260929) and writes one snapshot per label
-source (`human_majority`, `llm_pre_claude`, `llm_pre_deepseek`, `llm_pre_gpt`). A snapshot's hash is
-part of its filename and of every run manifest; if the hash in your `data/eval/` differs from the one in
-git, you are not scoring the same data.
+A snapshot's hash is part of its filename and of every run manifest. Any edit changes the hash, so say
+in the experiment log which runs used which hash. Adding a second annotator to more rows goes into the
+next free `A` column of those rows; update `label`, `n_annotators` and `agreement` accordingly.
 
-Annotator columns carry teammates' names; this repository is private to the group and the workbook is
-not for redistribution.
+## De-identification
+
+The annotators' original workbook is not kept in the repository. Annotators appear only as `A1`–`A6`
+(the mapping is not stored), and names inside free-text notes were replaced by the same tags. Companies
+are public issuers and are named.
