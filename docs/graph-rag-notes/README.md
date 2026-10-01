@@ -440,6 +440,9 @@ summary versioned under `kb/annotation/spotchecks/`).
   sentence's label, the rationales almost never need them, and the rationales themselves are faithful.
   A stricter relevance prompt could be written from these nine cases, but it would then have to be
   re-checked on a fresh sample before its numbers are used.
+- **Decision (2026-10-01): keep the judge prompt as it is.** The report quotes the LLM-judged scores
+  together with this calibration (agreement, κ, the direction of the bias and the 0.58 correction for
+  context relevance), rather than tuning the judge on the only human sample we have.
 
 ## 5. Risks
 
