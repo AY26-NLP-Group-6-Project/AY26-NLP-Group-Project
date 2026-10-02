@@ -444,6 +444,34 @@ summary versioned under `kb/annotation/spotchecks/`).
   together with this calibration (agreement, κ, the direction of the bias and the 0.58 correction for
   context relevance), rather than tuning the judge on the only human sample we have.
 
+## 4o. Graph arms under the current harness (2026-10-02)
+
+The graph line re-measured on equal terms with 4m: cited classifier (`action_classifier_cited.md` @
+`f79137d448e4`), snapshot `3e18cc14e648`, dev, 3 uncached repeats, prices set. Run
+`20261002T053125Z-graph-rag-rq1` (published under `results/`).
+
+| condition | macro-F1 (mean ± sd) | vote | Δ vs sentence_only | flips (pooled) | p | indet. F1 | none F1 | coverage | evidence used | retrieval p50 | USD / 1k items |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| sentence_only | 0.7556 ± 0.012 | 0.7633 | — | — | — | 0.640 | 0.792 | — | — | — | 0.183 |
+| cross_year_graph | 0.7731 ± 0.007 | 0.7728 | +0.018 | +37 / −25 | 0.549 | 0.646 | 0.800 | 0.40 | 0.013 | 9 ms | 0.203 |
+| cross_year_fused | 0.7759 ± 0.015 | 0.7799 | +0.020 | +64 / −31 | 0.078 | 0.661 | 0.849 | 0.89 | 0.020 | 11 ms | 0.233 |
+
+Paired against 4m's sentence-unit hybrid baseline (`gw-eval --compare`, same 331 items):
+`sentence_only` vs `sentence_only` 0.7647 / 0.7633, flips +5 / −6, p = 1.000; best vs best
+(`cross_year_rrf` 0.7804 vs `cross_year_fused` 0.7799), flips +13 / −12, p = 1.000.
+
+- **The harness reproduces itself.** Two independent `sentence_only` runs from two systems now land
+  within 0.002 of each other on the vote; the cited prompt is steadier than the label-only one was.
+- **Same accuracy as plain hybrid retrieval, as 4k said.** Graph fused and the sentence-unit hybrid are
+  indistinguishable; graph fused vs its own `sentence_only` is +0.020 with p = 0.078, the same
+  borderline picture as before. No RQ1 claim for the graph beyond "no worse".
+- **Where the graph is measurably different: cost of retrieval.** Graph lookups take about 10 ms
+  against 117–326 ms for the hybrid path (one embedding call plus a cross-encoder), and need no
+  query embedding. At equal accuracy that is the graph's one operational advantage so far.
+- **The classifier still rarely uses what it is given** (1–2 % of items cite evidence), so further
+  retrieval work on RQ1 has little room. The graph's case moves to RQ2: structured targets and
+  trajectories, where a join on (company, aspect, year) is the operation needed and similarity is not.
+
 ## 5. Risks
 
 1. **Aspect canonicalisation is the whole ball game.** If "Scope 1 emissions", "direct emissions"
