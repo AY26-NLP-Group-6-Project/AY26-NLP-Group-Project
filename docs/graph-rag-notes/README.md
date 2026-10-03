@@ -472,6 +472,16 @@ Paired against 4m's sentence-unit hybrid baseline (`gw-eval --compare`, same 331
   retrieval work on RQ1 has little room. The graph's case moves to RQ2: structured targets and
   trajectories, where a join on (company, aspect, year) is the operation needed and similarity is not.
 
+## 4p. RQ2 started: targets, promises, proposed outcomes (2026-10-03)
+
+Full account in `10-promise-trajectories.md`. In short: 3,164 candidate statements → 1,273 validated
+targets (Claude sub-agents; the in-repo `gpt-5.6-luna` extractor gives 1,462 on the same candidates,
+statement-level κ 0.79, and is kept as the comparison) → 880 promises → **374 checkable inside the
+corpus** (32 companies, deadlines 2021–2025). System-proposed outcomes over those 374: achieved 153,
+unclear 134, failed 33, revised 29, disappeared 25. Unverified: a blind sheet of 75 promises
+(`kb/annotation/spotchecks/promise_check_20261003.xlsx`) is out for human judgement, and no RQ2 number
+is quoted before it is scored.
+
 ## 5. Risks
 
 1. **Aspect canonicalisation is the whole ball game.** If "Scope 1 emissions", "direct emissions"

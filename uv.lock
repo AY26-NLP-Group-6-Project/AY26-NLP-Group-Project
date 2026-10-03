@@ -347,10 +347,12 @@ name = "graph-rag"
 version = "0.1.0"
 source = { editable = "src/graph-rag" }
 dependencies = [
+    { name = "baseline-rag" },
     { name = "duckdb" },
     { name = "fastembed" },
     { name = "gw-common" },
     { name = "networkx" },
+    { name = "openpyxl" },
     { name = "pymupdf" },
     { name = "pyyaml" },
     { name = "scipy" },
@@ -358,10 +360,12 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
+    { name = "baseline-rag", editable = "src/baseline-rag" },
     { name = "duckdb", specifier = ">=1.1" },
     { name = "fastembed", specifier = ">=0.4" },
     { name = "gw-common", editable = "src/common" },
     { name = "networkx", specifier = ">=3.3" },
+    { name = "openpyxl", specifier = ">=3.1" },
     { name = "pymupdf", specifier = ">=1.24" },
     { name = "pyyaml", specifier = ">=6" },
     { name = "scipy", specifier = ">=1.13" },

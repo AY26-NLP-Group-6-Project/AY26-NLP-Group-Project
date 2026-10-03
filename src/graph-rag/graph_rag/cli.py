@@ -83,13 +83,39 @@ def stats(cfg: GraphConfig, top: int = 15) -> None:
         print(f"  {c.company:28.28s} {c.canonical:38.38s} {c.years}")
 
 
+def _promises(args, cfg: GraphConfig) -> int:
+    """RQ2 stages: targets -> promises -> proposed outcomes -> human sheet -> scoring."""
+    from graph_rag.promises import build as promise_build
+    from graph_rag.promises import extract as target_extract
+    from graph_rag.promises import outcome as promise_outcome
+    from graph_rag.promises import sheet as promise_sheet
+
+    if args.stage == "targets":
+        result = target_extract.extract(cfg, limit=args.limit)
+    elif args.stage == "targets-export":
+        result = target_extract.export_shards(cfg, shards=args.k)
+    elif args.stage == "targets-ingest":
+        result = target_extract.ingest(cfg, source=args.source or "external")
+    elif args.stage == "promises":
+        result = promise_build.build(cfg, source=args.source)
+    elif args.stage == "promise-outcomes":
+        result = promise_outcome.run(cfg, limit=args.limit)
+    elif args.stage == "promise-sheet":
+        result = promise_sheet.export(cfg, Path(args.out) if args.out else None, n=args.limit or 75)
+    else:
+        result = promise_sheet.score(cfg, Path(args.sheet) if args.sheet else None)
+    print(json.dumps(result, indent=2))
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser("gw-graph")
     ap.add_argument(
         "stage",
         choices=[*STAGES, "build", "stats", "export-extract", "export-gold", "score-extraction",
                  "canon-pools", "canon-tune", "canon-verify", "canon-spotcheck", "canon-spotcheck-score",
-                 "export-a3cg"],
+                 "export-a3cg", "targets", "targets-export", "targets-ingest", "promises",
+                 "promise-outcomes", "promise-sheet", "promise-score"],
     )
     ap.add_argument("--config", default="configs/graph.dev.yaml")
     ap.add_argument("--build-id")
@@ -115,6 +141,8 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--prefix", default="pool")
     ap.add_argument("--seed", type=int)
     ap.add_argument("--sheet", help="returned spot-check CSV for canon-spotcheck-score")
+    ap.add_argument("--source", help="targets-ingest: tag of the outside extractor; promises: which "
+                                     "targets file to build from (targets.<source>.jsonl)")
     args = ap.parse_args(argv)
 
     cfg = GraphConfig.load(args.config, build_id=args.build_id)
@@ -125,6 +153,8 @@ def main(argv: list[str] | None = None) -> int:
         out = Path(args.out or cfg.out_dir / "extract_input.jsonl")
         print(json.dumps(extraction.export_input(cfg, out, args.limit, args.per_report), indent=2))
         return 0
+    if args.stage.startswith("targets") or args.stage.startswith("promise"):
+        return _promises(args, cfg)
     if args.stage == "export-a3cg":
         from graph_rag import a3cg_match
 
