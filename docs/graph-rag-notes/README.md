@@ -538,6 +538,30 @@ across columns gives a wrong `achieved`.
 All of this is system output. The held-out check is `kb/annotation/spotchecks/promise_check_r3_20261003.xlsx`
 (60 promises, none from the round-1 sheet), to be filled.
 
+## 4t. RQ2 held-out check of the final system (2026-10-03)
+
+`10-promise-trajectories.md` §8.6. Round-3 sheet filled (60 held-out promises, one annotator with a
+Codex-drafted first pass, 17 points settled personally). `promise-score` now weights a stratified sheet
+back to the pool it was drawn from; rates below are those estimates with 95 % bootstrap intervals, and
+round 1 is re-read the same way.
+
+| | v1, first evidence (round 1, 374) | v2, trajectory evidence (round 3, held out, 299) |
+|---|---|---|
+| accuracy | 0.82 (0.72 – 0.90) | 0.80 (0.68 – 0.90) |
+| accuracy, failed and revised as one | 0.82 | 0.83 (0.71 – 0.93) |
+| over-commitment | 31 % (20 – 42) | 8 % (3 – 15) |
+| under-commitment | 0 % | 15 % (4 – 24) |
+| verdicts that are right | 75 % (63 – 86) | 84 % (71 – 93) |
+
+Human-verified outcome shares on complete evidence: achieved 50 % (41 – 59), unclear 31 % (22 – 39), not
+met (failed or revised) 13 % (8 – 21), disappeared 6 % (1 – 14); on the first evidence they were 36 / 49
+/ 8 / 5. So the over-commitment fix holds on rows nothing was tuned on, overall accuracy is unchanged,
+and the gain is in what can be said: the annotator could not tell the outcome for 31 % of commitments
+instead of 49 %. By proposed class the check agrees with `achieved` 13/14, `unclear` 11/15, `revised`
+8/13, `failed` 5/14, `disappeared` 3/4. `failed` against `revised` is 8 of the 20 disagreements and is
+partly a guide ambiguity of ours (a missed annual target set again: renewal, or re-dating?); as one
+class "not met" is right 21/27. Report "not met", not the split.
+
 ## 5. Risks
 
 1. **Aspect canonicalisation is the whole ball game.** If "Scope 1 emissions", "direct emissions"
@@ -600,6 +624,8 @@ row may reach the report without becoming one of the other two first.
 | Declining to answer is a recognised way to cut unsupported output | [cited] | Wen et al., "Know Your Limits: A Survey of Abstention in Large Language Models", TACL (arXiv 2407.18418): abstention is "increasingly recognized for its potential to mitigate hallucinations and enhance safety in LLM systems" |
 | Deriving the promise outcome by rule from evidence-level labels cuts over-commitment on our data | [measured] | `10-promise-trajectories.md` §7 |
 | Fusing a complete ranking with one that covers part of the corpus buries what the partial one cannot see | [measured] | `10-promise-trajectories.md` §8.1: dense over the prose store (65 % of statements) + BM25 over all, RRF k = 60; 1.6 % of the evidence shown came from outside the store, and answer statements ranked 1st to 3rd on BM25 were cut. Follows from the RRF score itself: 1/61 for a first place in one list is less than 2/90 for thirtieth place in two |
+| On held-out promises the rule-based judge on complete evidence gives a verdict on 8 % of the commitments a human calls unclear (v1 on the first evidence: 31 %), at unchanged accuracy | [measured] | `10-promise-trajectories.md` §8.6: 60 held-out promises weighted to 299; 0.80 (0.68 – 0.90) accuracy against 0.82 |
+| With complete evidence a reader cannot tell the outcome of about 31 % of dated commitments, not 49 % | [measured] | same section, human labels: unclear 30.9 % (21.9 – 39.0) on trajectory evidence against 48.7 % (39.8 – 57.7) on the first evidence; different samples, each weighted to its pool |
 | A prose filter built for sentence classification removes the sentences that report results | [measured] | same section: `looks_like_sentence` (letter ratio ≥ 0.75, a listed verb) rejects "For FY2021, our electricity consumption was 61 kwh per square foot (FY2020: 68 …)" and "In 2023, ThaiBev installed solar rooftops at two distribution centers …". Relevant to RQ1 too: the `dev-sent` baseline and the graph arms retrieve over the same filtered set |
 
 ### 7.2 Still unsupported, must be settled before or during implementation

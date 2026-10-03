@@ -51,6 +51,21 @@
         "support": 11
       }
     },
+    "over_commitment": {
+      "k": 21,
+      "n": 35,
+      "rate": 0.6
+    },
+    "under_commitment": {
+      "k": 0,
+      "n": 39,
+      "rate": 0.0
+    },
+    "verdict_precision": {
+      "k": 38,
+      "n": 60,
+      "rate": 0.6333333333333333
+    },
     "confusion_human_rows_system_cols": {
       "achieved": {
         "achieved": 13,
@@ -94,6 +109,115 @@
         "failed": 6,
         "disappeared": 2
       }
+    }
+  },
+  "population": {
+    "pool": 374,
+    "strata": {
+      "revised": {
+        "pool": 29,
+        "sampled": 16
+      },
+      "achieved": {
+        "pool": 153,
+        "sampled": 15
+      },
+      "unclear": {
+        "pool": 134,
+        "sampled": 15
+      },
+      "failed": {
+        "pool": 33,
+        "sampled": 15
+      },
+      "disappeared": {
+        "pool": 25,
+        "sampled": 14
+      }
+    },
+    "accuracy": {
+      "estimate": 0.8176056786350904,
+      "ci95": [
+        0.7214508530685001,
+        0.8971447669977082
+      ]
+    },
+    "accuracy_failed_revised_as_one": {
+      "estimate": 0.8176056786350904,
+      "ci95": [
+        0.7214508530685001,
+        0.8971447669977082
+      ]
+    },
+    "over_commitment": {
+      "estimate": 0.31338191562367246,
+      "ci95": [
+        0.19826490165283076,
+        0.42004791714970247
+      ]
+    },
+    "under_commitment": {
+      "estimate": 0.0,
+      "ci95": [
+        0.0,
+        0.0
+      ]
+    },
+    "verdict_precision": {
+      "estimate": 0.7529910714285715,
+      "ci95": [
+        0.625610119047619,
+        0.8588095238095238
+      ]
+    },
+    "human_share.achieved": {
+      "estimate": 0.360427807486631,
+      "ci95": [
+        0.27860962566844916,
+        0.42085561497326207
+      ]
+    },
+    "human_share.disappeared": {
+      "estimate": 0.052521008403361345,
+      "ci95": [
+        0.03819709702062644,
+        0.06684491978609626
+      ]
+    },
+    "human_share.failed": {
+      "estimate": 0.04705882352941177,
+      "ci95": [
+        0.023529411764705885,
+        0.07058823529411765
+      ]
+    },
+    "human_share.not_a_promise": {
+      "estimate": 0.02388591800356506,
+      "ci95": [
+        0.0,
+        0.07165775401069517
+      ]
+    },
+    "human_share.revised": {
+      "estimate": 0.029077540106951873,
+      "ci95": [
+        0.009692513368983958,
+        0.048462566844919786
+      ]
+    },
+    "human_share.unclear": {
+      "estimate": 0.4870289024700789,
+      "ci95": [
+        0.39794053985230454,
+        0.5774318818436465
+      ]
+    },
+    "human_share.not_met": {
+      "estimate": 0.07613636363636364,
+      "ci95": [
+        0.04672459893048128,
+        0.10451203208556151
+      ]
     }
   }
 }

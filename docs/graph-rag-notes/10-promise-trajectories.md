@@ -131,9 +131,10 @@ reader tell whether the commitment was met; where it can be told, roughly three 
 in ten missed, one in ten no longer mentioned, and one in twenty moved. This is on the evidence the
 pipeline retrieved (6 statements from the deadline-year reports): an `unclear` or `disappeared` can also
 mean retrieval missed the passage, so both are upper bounds on what the reports themselves leave open.
-(How loose: §8. The first retrieval hardly ever showed the sentences that carry results, and on complete
-retrieval the system's `unclear` share is 36 %, not 49 %. The figures of this section describe the first
-evidence.)
+(How loose: §8. The first retrieval hardly ever showed the sentences that carry results; on complete
+evidence the human-verified `unclear` share is 31 %, not 49 % (§8.6). The figures of this section
+describe the first evidence. Weighted to the 374, v1 was right 82 % of the time and gave a verdict on
+31 % of the promises the check calls unclear; the raw rates above are those of the stratified sheet.)
 
 Limits: one annotator, working from an AI-drafted first pass whose model family is the system's own;
 14–16 rows per proposed class, so class-level precision carries wide intervals; table-only targets are
@@ -415,3 +416,94 @@ gw-graph promise-score --sheet kb/annotation/spotchecks/promise_check_r3_2026100
 
 The sheet is stratified on the system's outcome: per-class precision reads off directly; accuracy, the
 over-commitment rate and the outcome shares of the 299 need the strata weighted by their sizes above.
+`promise-score` now does that weighting itself (`population` in its output; the strata sizes are kept in
+the sheet's key).
+
+### 8.6 Result of the held-out check (2026-10-03)
+
+Sheet returned the same day, all 60 rows judged. **Provenance:** as in round 1, one team member, working
+through a Codex-drafted first pass; 17 notes record a point the annotator settled personally ("user
+confirmed"). The dump the drafting tool worked from holds the sheet's own columns only; the system's
+outcomes are in a separate key file and were not on the sheet.
+
+Raw rates on a sheet that over-samples rare outcomes describe no population, so the comparison is on
+the weighted estimates (95 % bootstrap intervals). Round 1 is re-read the same way; §6 gave its raw
+rates only.
+
+| | round 1: judge v1, first evidence | **round 3: judge v2, trajectory evidence, held out** |
+|---|---|---|
+| sheet, pool | 75 of 374 | 60 of 299 |
+| raw accuracy, κ | 0.703, 0.63 | 0.667, 0.57 |
+| accuracy, weighted | 0.82 (0.72 – 0.90) | 0.80 (0.68 – 0.90) |
+| … with failed and revised as one class | 0.82 (0.72 – 0.90) | 0.83 (0.71 – 0.93) |
+| **over-commitment**: a verdict where the check says unclear | 31 % (20 – 42) | **8 % (3 – 15)** |
+| under-commitment: unclear where the check has a verdict | 0 % | 15 % (4 – 24) |
+| verdicts that are right | 75 % (63 – 86) | 84 % (71 – 93) |
+| genuine commitment / fields right | 0.987 / 0.905 | 1.000 / 0.817 |
+
+- **The over-commitment fix holds on rows no prompt was tuned on**: 8 % against 31 %, intervals apart.
+- **Overall accuracy did not move.** v1 was right 82 % of the time because it said `unclear` often and
+  was right when it did (14 of the 15 sampled); v2 on complete evidence says `unclear` less and is right
+  80 % of the time. What changed is what the system is willing and able to say, below.
+- The price of the stricter judge is real on held-out rows: 15 % of the promises the check settles are
+  left `unclear`.
+
+**What became of the promises, human-verified.** Estimated shares of dated commitments, each sheet
+weighted to its pool:
+
+| outcome | first evidence (round 1) | **complete evidence (round 3)** |
+|---|---|---|
+| achieved | 36.0 % (27.9 – 42.1) | **50.1 % (40.7 – 58.7)** |
+| unclear | 48.7 % (39.8 – 57.7) | **30.9 % (21.9 – 39.0)** |
+| not met: failed or revised | 7.6 % (4.7 – 10.5) | **12.8 % (7.9 – 20.5)** |
+| … failed | 4.7 % | 2.9 % |
+| … revised | 2.9 % | 9.9 % |
+| disappeared | 5.3 % (3.8 – 6.7) | 6.2 % (0.7 – 13.9) |
+| not a promise | 2.4 % | 0 % |
+
+The annotator, shown the complete evidence, could not tell the outcome for 31 % of commitments, not 49 %.
+That is consistent with §8.4: about a third of the earlier `unclear` was the retrieval. Where the
+outcome can be told, four in five commitments were met (50.1 of 62.9) and one in five was missed or
+re-dated. `disappeared` did not fall as the system's own count suggested (§8.4: 2.7 %): the
+annotator calls `disappeared` some rows the system leaves `unclear`, and the interval is wide.
+
+**By the outcome the system proposed** (what a reader of the system's output can rely on):
+
+| system says | pool | sampled | check agrees | otherwise |
+|---|---|---|---|---|
+| achieved | 143 | 14 | 13 | 1 revised |
+| unclear | 116 | 15 | 11 | 2 achieved, 2 disappeared |
+| revised | 21 | 13 | 8 | 2 unclear, 2 failed, 1 achieved |
+| failed | 15 | 14 | 5 | 6 revised, 3 unclear |
+| disappeared | 4 | 4 | 3 | 1 unclear |
+
+`achieved` can be relied on. `failed` and `revised`, read as one class, are right 21 times in 27, and
+miss one of 22; told apart they are not reliable, which is the largest block of the 20 disagreements:
+
+| kind of disagreement | rows | |
+|---|---|---|
+| failed against revised | 8 | 6 the check calls revised, the system failed; 2 the other way |
+| a verdict where the check says unclear | 6 | 3 failed (a scope or column the text does not settle: Riverstone's target table twice, "graduates and current students" against 300 graduates), 2 revised, 1 disappeared |
+| unclear where the check has a verdict | 4 | 2 achieved the annotator inferred (a director under 50 on the board; "no significant fines"), 2 disappeared |
+| achieved against revised | 2 | a changed metric; a later restatement after a reported achievement |
+
+**The failed/revised boundary is not the system's error alone.** Both sides agree in all 8 rows that the
+target was not met; they differ on the label. The round-3 guide carries two rules that collide for an
+annual target that was missed and then set again: "renewal is not revision" (from round 1) and "missed
+and moved: choose revised" (added for this round, §8.2). The system follows the first, the annotator
+followed the second in six rows ("re-dated to FY2025 … revision rather than routine annual renewal"),
+and round 1 had only the first. The guide line was ours and was ambiguous. Re-deriving the outcome with
+the second rule (post hoc, from the stored labels) moves raw accuracy from 0.667 to 0.700 only: it
+fixes three rows and breaks one, because the annotator also left some missed annual targets `failed`.
+The split between `failed` and `revised` should not be reported from these labels; "not met" should.
+
+**Fields.** 49 of 60 right (0.82; round 1: 0.90). This round the annotator judged the extracted fields
+against what the later evidence shows the commitment to be, a stricter test: 8 of the 11 notes say the
+extraction lacks a scope or a baseline, and 5 of those that only the later evidence supplies it; the
+other 3 are misreadings ("up to 20 %" as 20 %; "explore setting targets" as setting them; a qualifying
+age dropped).
+
+Limits: one annotator with an AI-drafted first pass, as before; 4 to 15 rows per stratum; the two
+rounds differ in evidence, judge and guide, so the comparison of their rates is between two systems as
+wholes; the 299 are the promises left after round 1 took a sample that favoured rare outcomes, so they
+are not a random subset of the 374.
