@@ -1,10 +1,12 @@
-"""RQ2 plumbing: target validation, merging restatements into promises, checkability, sheet scoring."""
+"""RQ2 plumbing: target validation, merging restatements into promises, checkability, the outcome
+rule, sheet scoring."""
 
 import json
 
 import pytest
 from graph_rag.promises import build as B
 from graph_rag.promises import extract as E
+from graph_rag.promises import outcome as O
 from graph_rag.promises import sheet as S
 
 STATEMENT = "We aim to reduce Scope 1 emissions by 15% by 2025 from a 2019 baseline."
@@ -121,3 +123,81 @@ def test_score_reads_a_filled_sheet(tmp_path, monkeypatch):
     assert result["outcome"]["human_distribution"] == {"achieved": 1, "failed": 2}
     assert result["outcome"]["per_class"]["failed"] == {"precision": 1.0, "recall": 0.5, "support": 2}
     assert S.cohen_kappa(["a", "a", "b", "b"], ["a", "b", "b", "b"]) == pytest.approx(0.5)
+
+    # the same sheet scored against another judge's output over the same promises
+    judged = [{"promise_id": "P1", "outcome": "achieved"}, {"promise_id": "P2", "outcome": "unclear"},
+              {"promise_id": "P3", "outcome": "failed"}, {"promise_id": "P4", "outcome": "unclear"}]
+    other = tmp_path / "outcomes.v2.jsonl"
+    other.write_text("\n".join(json.dumps(o) for o in judged), encoding="utf-8")
+    again = S.score(None, path, outcomes=other)
+    assert again["outcome"]["accuracy"] == pytest.approx(2 / 3)
+    assert again["outcome"]["under_commitment"] == {"k": 1, "n": 3, "rate": pytest.approx(1 / 3)}
+    assert again["outcome"]["over_commitment"] == {"k": 0, "n": 0, "rate": None}
+    assert again["outcome"]["verdict_precision"] == {"k": 2, "n": 2, "rate": 1.0}
+    assert (tmp_path / "promise_check_result.outcomes.v2.json").exists()
+    assert S.sheet_ids(path) == {"P1", "P2", "P3", "P4"}
+
+
+def label(ref, relation="other", result="none", change="none"):
+    return {"ref": ref, "relation": relation, "deadline_result": result, "change": change}
+
+
+def test_decide_needs_a_statement_about_this_target_that_states_the_outcome():
+    this = "this_target"
+    assert O.decide([label("E1", this, "met")], annual=False) == ("achieved", ["E1"])
+    assert O.decide([label("E1", this, "missed")], annual=False) == ("failed", ["E1"])
+    assert O.decide([label("E1", this, change="later")], annual=False) == ("revised", ["E1"])
+    # an annual target set again for a later year is renewal, not a moved goalpost
+    assert O.decide([label("E1", this, change="later")], annual=True) == ("unclear", ["E1"])
+    # a moved goalpost explains a miss; a reported result beats a restatement
+    both = [label("E1", this, "missed"), label("E2", this, change="later")]
+    assert O.decide(both, annual=False) == ("revised", ["E2"])
+    assert O.decide(both, annual=True) == ("failed", ["E1"])
+    kept = [label("E1", this, "met"), label("E2", this, change="later")]
+    assert O.decide(kept, annual=False) == ("achieved", ["E1"])
+    # contradictory results, or statements about the metric only, settle nothing
+    assert O.decide([label("E1", this, "met"), label("E2", this, "missed")], annual=False)[0] == "unclear"
+    assert O.decide([label("E1", "same_metric"), label("E2")], annual=False) == ("unclear", ["E1"])
+    assert O.decide([label("E1"), label("E2")], annual=False) == ("disappeared", [])
+
+
+def test_parse_labels_keeps_verdict_fields_only_on_this_target_and_flags_gaps():
+    evidence = [{"ref": "E1"}, {"ref": "E2"}]
+    given = [{"ref": "E1", "relation": "same_metric", "deadline_result": "missed", "change": "later"},
+             {"ref": "[e2]", "relation": "This_Target", "deadline_result": "met", "change": "none"}]
+    labels, complete = O.parse_labels({"annual": False, "evidence": given}, evidence)
+    assert complete
+    assert labels[0] == label("E1", "same_metric") and labels[1] == label("E2", "this_target", "met")
+    assert not O.parse_labels({"annual": False, "evidence": given[:1]}, evidence)[1]   # a statement left out
+    assert not O.parse_labels({"evidence": given}, evidence)[1]                        # no annual flag
+    assert O.vote(["failed", "failed", "unclear"]) == "failed"
+    assert O.vote(["failed", "revised", "unclear"]) == "unclear"
+
+
+class FakeClient:
+    def __init__(self, replies):
+        self.replies, self.calls = list(replies), 0
+
+    def chat(self, messages, **kwargs):
+        self.calls += 1
+        return type("Reply", (), {"text": self.replies.pop(0)})()
+
+
+def test_propose_v2_retries_a_garbled_reply_and_reads_renewal_as_no_verdict():
+    prompt = O._sections(O.PROMPTS["v2"])
+    promise = {**target("a", "Acme", 2022, "incidents", 2023),
+               "origin": {"year": 2022, "page": 3, "text": STATEMENT}}
+    evidence = [{"ref": "E1", "year": 2024, "page": 3, "text": "We aim for zero incidents in FY2024."}]
+    good = json.dumps({"annual": False, "rationale": "restated for a later year", "outcome": "revised",
+                       "evidence": [label("E1", "this_target", change="later")]})
+    client = FakeClient(["", good])
+    out = O.propose_v2(promise, evidence, client, prompt)
+    assert client.calls == 2 and out["parse_ok"]
+    assert out["outcome"] == "revised" and out["evidence_refs"] == ["E1"]
+    assert out["model_outcome"] == "revised"
+    # the extraction already marked it as an annual target: the same reply is a renewal
+    out = O.propose_v2({**promise, "recurring": True}, evidence, FakeClient([good]), prompt)
+    assert out["outcome"] == "unclear" and out["annual"]
+    out = O.propose_v2(promise, evidence, FakeClient(["", "not json"]), prompt)
+    assert out["outcome"] == "unclear" and not out["parse_ok"]
+    assert O.propose_v2(promise, [], FakeClient([]), prompt)["outcome"] == "disappeared"

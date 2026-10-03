@@ -90,14 +90,30 @@ def sample(promises: list[dict], outcomes: dict[str, dict], n: int, seed: int) -
     return chosen
 
 
-def export(cfg: GraphConfig, out: Path | None = None, n: int = 75, seed: int = 20261003) -> dict:
+def sheet_ids(sheet: Path) -> set[str]:
+    from openpyxl import load_workbook
+
+    ws = load_workbook(sheet, data_only=True)[SHEET_NAME]
+    return {str(r[0]) for r in ws.iter_rows(min_row=2, values_only=True) if r[0]}
+
+
+def export(cfg: GraphConfig, out: Path | None = None, n: int = 75, seed: int = 20261003,
+           outcomes: Path | None = None, exclude: tuple[Path, ...] = ()) -> dict:
+    """`outcomes` is the judge output to stratify on and take the evidence from; `exclude` lists earlier
+    sheets whose promises must not be drawn again, so a later round is held out from the rows a judge was
+    tuned on."""
     from openpyxl import Workbook
+    from openpyxl.cell.cell import ILLEGAL_CHARACTERS_RE
     from openpyxl.styles import Alignment, Font, PatternFill
     from openpyxl.worksheet.datavalidation import DataValidation
 
+    def clean(value):                      # parsed PDF text can carry control characters Excel refuses
+        return ILLEGAL_CHARACTERS_RE.sub(" ", value) if isinstance(value, str) else value
+
     base = out_dir(cfg)
-    promises = [p for p in _load(base / "promises.jsonl") if p["checkable"]]
-    outcomes = {o["promise_id"]: o for o in _load(base / "outcomes.jsonl")}
+    seen = set().union(*(sheet_ids(Path(s)) for s in exclude)) if exclude else set()
+    promises = [p for p in _load(base / "promises.jsonl") if p["checkable"] and p["promise_id"] not in seen]
+    outcomes = {o["promise_id"]: o for o in _load(Path(outcomes) if outcomes else base / "outcomes.jsonl")}
     chosen = sample(promises, outcomes, n, seed)
 
     wb = Workbook()
@@ -117,11 +133,11 @@ def export(cfg: GraphConfig, out: Path | None = None, n: int = 75, seed: int = 2
             + f" (first stated {r['first_stated']})" for r in p["related"]
         )
         restated = ", ".join(str(y) for y in p["stated_in_years"][1:])
-        ws.append([
+        ws.append([clean(v) for v in (
             p["promise_id"], p["company"], f"{p['origin']['year']} report, p.{p['origin']['page']}",
             p["origin"]["text"], describe_target(p), restated, others, evidence,
             None, None, None, None, None,
-        ])
+        )])
         key[p["promise_id"]] = {"outcome": o["outcome"], "rationale": o["rationale"],
                                 "evidence_refs": o["evidence_refs"]}
     widths = {"A": 9, "B": 16, "C": 16, "D": 60, "E": 30, "F": 12, "G": 26, "H": 95,
@@ -153,13 +169,15 @@ def export(cfg: GraphConfig, out: Path | None = None, n: int = 75, seed: int = 2
         for cell in row:
             cell.alignment = Alignment(wrap_text=True, vertical="top")
 
+    key_path = out.with_suffix(".key.json") if out else base / "promise_sheet_key.json"
     out = out or (base / "promise_check.xlsx")
     wb.save(out)
-    (base / "promise_sheet_key.json").write_text(json.dumps(key, indent=1), encoding="utf-8")
+    key_path.write_text(json.dumps(key, indent=1), encoding="utf-8")
     return {"rows": len(chosen), "companies": len({p["company"] for p in chosen}),
             "by_kind": dict(Counter(p["kind"] for p in chosen)),
             "by_target_year": dict(sorted(Counter(p["target_year"] for p in chosen).items())),
-            "checkable_pool": len(promises), "out": str(out)}
+            "by_proposed_outcome": dict(Counter(key[p["promise_id"]]["outcome"] for p in chosen)),
+            "checkable_pool": len(promises), "excluded": len(seen), "out": str(out), "key": str(key_path)}
 
 
 GUIDE = [
@@ -215,12 +233,26 @@ def cohen_kappa(a: list[str], b: list[str]) -> float | None:
     return (observed - expected) / (1 - expected) if expected < 1 else None
 
 
-def score(cfg: GraphConfig, sheet: Path | None = None) -> dict:
+VERDICTS = tuple(o for o in OUTCOMES if o != "unclear")
+
+
+def score(cfg: GraphConfig, sheet: Path | None = None, outcomes: Path | None = None) -> dict:
+    """Score the system's outcomes against a filled sheet.
+
+    The system side is the key written when the sheet was drawn (next to the sheet, else in the build
+    directory), or, with `outcomes`, any judge's output over the same promises. The latter is only
+    meaningful when that judge saw the evidence the annotator saw.
+    """
     from openpyxl import load_workbook
 
     base = out_dir(cfg)
     sheet = sheet or (base / "promise_check.xlsx")
-    key = json.loads((base / "promise_sheet_key.json").read_text(encoding="utf-8"))
+    if outcomes:
+        key = {o["promise_id"]: o for o in _load(Path(outcomes))}
+    else:
+        beside = sheet.with_suffix(".key.json")
+        key_path = beside if beside.exists() else base / "promise_sheet_key.json"
+        key = json.loads(key_path.read_text(encoding="utf-8"))
     promises = {p["promise_id"]: p for p in _load(base / "promises.jsonl")}
     ws = load_workbook(sheet, data_only=True)[SHEET_NAME]
     it = ws.iter_rows(values_only=True)
@@ -263,6 +295,13 @@ def score(cfg: GraphConfig, sheet: Path | None = None) -> dict:
             "accuracy": sum(h == s for h, s in pairs) / len(scored) if scored else None,
             "cohen_kappa": cohen_kappa(human, system),
             "per_class": per_class,
+            # the two ways of being wrong about how much the evidence settles
+            "over_commitment": _rate(sum(h == "unclear" and s in VERDICTS for h, s in pairs),
+                                     human.count("unclear")),
+            "under_commitment": _rate(sum(h in VERDICTS and s == "unclear" for h, s in pairs),
+                                      sum(h in VERDICTS for h in human)),
+            "verdict_precision": _rate(sum(h == s and s in VERDICTS for h, s in pairs),
+                                       sum(s in VERDICTS for s in system)),
             "confusion_human_rows_system_cols": confusion,
             "human_by_kind": {
                 kind: dict(Counter(h for r, h in zip(scored, human, strict=True)
@@ -271,5 +310,10 @@ def score(cfg: GraphConfig, sheet: Path | None = None) -> dict:
             },
         },
     }
-    (base / "promise_check_result.json").write_text(json.dumps(result, indent=2), encoding="utf-8")
+    name = f"promise_check_result.{Path(outcomes).stem}.json" if outcomes else "promise_check_result.json"
+    (base / name).write_text(json.dumps(result, indent=2), encoding="utf-8")
     return result
+
+
+def _rate(k: int, n: int) -> dict:
+    return {"k": k, "n": n, "rate": k / n if n else None}

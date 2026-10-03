@@ -99,11 +99,16 @@ def _promises(args, cfg: GraphConfig) -> int:
     elif args.stage == "promises":
         result = promise_build.build(cfg, source=args.source)
     elif args.stage == "promise-outcomes":
-        result = promise_outcome.run(cfg, limit=args.limit)
+        result = promise_outcome.run(cfg, limit=args.limit, judge=args.judge, repeats=args.repeats,
+                                     evidence_from=Path(args.evidence_from) if args.evidence_from else None)
     elif args.stage == "promise-sheet":
-        result = promise_sheet.export(cfg, Path(args.out) if args.out else None, n=args.limit or 75)
+        result = promise_sheet.export(
+            cfg, Path(args.out) if args.out else None, n=args.limit or 75, seed=args.seed or 20261003,
+            outcomes=Path(args.outcomes) if args.outcomes else promise_outcome.outcomes_path(cfg, args.judge),
+            exclude=tuple(Path(s) for s in args.exclude_sheets))
     else:
-        result = promise_sheet.score(cfg, Path(args.sheet) if args.sheet else None)
+        result = promise_sheet.score(cfg, Path(args.sheet) if args.sheet else None,
+                                     Path(args.outcomes) if args.outcomes else None)
     print(json.dumps(result, indent=2))
     return 0
 
@@ -143,6 +148,17 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--sheet", help="returned spot-check CSV for canon-spotcheck-score")
     ap.add_argument("--source", help="targets-ingest: tag of the outside extractor; promises: which "
                                      "targets file to build from (targets.<source>.jsonl)")
+    ap.add_argument("--judge", choices=["v1", "v2"], default="v2",
+                    help="promise-outcomes / promise-sheet: v1 lets the model name the outcome, v2 labels "
+                         "the evidence and decides by rule")
+    ap.add_argument("--evidence-from",
+                    help="promise-outcomes: reuse the evidence of an earlier outcomes file")
+    ap.add_argument("--repeats", type=int, default=1,
+                    help="promise-outcomes: judge each promise N times without cache and take the majority")
+    ap.add_argument("--outcomes", help="promise-sheet: outcomes file to draw from (default: the judge's); "
+                                       "promise-score: score this judge output instead of the sheet's key")
+    ap.add_argument("--exclude-sheets", nargs="*", default=[],
+                    help="promise-sheet: earlier sheets whose promises must not be drawn again")
     args = ap.parse_args(argv)
 
     cfg = GraphConfig.load(args.config, build_id=args.build_id)
