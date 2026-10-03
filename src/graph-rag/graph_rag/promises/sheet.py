@@ -185,11 +185,15 @@ def export(cfg: GraphConfig, out: Path | None = None, n: int = 75, seed: int = 2
     key_path = out.with_suffix(".key.json") if out else base / "promise_sheet_key.json"
     out = out or (base / "promise_check.xlsx")
     wb.save(out)
+    drawn = dict(Counter(key[p["promise_id"]]["outcome"] for p in chosen))
+    # the strata the rows were drawn from, so scoring can weight the sheet back to its pool
+    key[POOL] = dict(Counter(outcomes[p["promise_id"]]["outcome"]
+                             for p in promises if p["promise_id"] in outcomes))
     key_path.write_text(json.dumps(key, indent=1), encoding="utf-8")
     return {"rows": len(chosen), "companies": len({p["company"] for p in chosen}),
             "by_kind": dict(Counter(p["kind"] for p in chosen)),
             "by_target_year": dict(sorted(Counter(p["target_year"] for p in chosen).items())),
-            "by_proposed_outcome": dict(Counter(key[p["promise_id"]]["outcome"] for p in chosen)),
+            "by_proposed_outcome": drawn, "pool_by_proposed_outcome": key[POOL],
             "checkable_pool": len(promises), "excluded": len(seen), "out": str(out), "key": str(key_path)}
 
 
@@ -261,6 +265,52 @@ def cohen_kappa(a: list[str], b: list[str]) -> float | None:
 
 
 VERDICTS = tuple(o for o in OUTCOMES if o != "unclear")
+POOL = "_pool"                      # in a sheet's key: how many promises each stratum was drawn from
+
+
+def _not_met(label: str) -> str:
+    """failed and revised as one class: the deadline passed without the target being met."""
+    return "not_met" if label in ("failed", "revised") else label
+
+
+def population(strata: dict[str, list[tuple[str, str]]], pool: dict[str, int],
+               draws: int = 4000, seed: int = 20261003) -> dict:
+    """Estimates for the promises a sheet was drawn from, not for the sheet.
+
+    A sheet is stratified on the outcome proposed when it was drawn, with rare outcomes over-sampled, so
+    its raw rates describe no population. Here each stratum's (human, system) pairs are weighted by the
+    stratum's size in the pool. Intervals are 95 % bootstrap, resampling within strata.
+    """
+    strata = {s: pairs for s, pairs in strata.items() if pairs and pool.get(s)}
+    total = sum(pool[s] for s in strata)
+
+    def mean(sample: dict, hit) -> float:
+        return sum(pool[s] / total * sum(hit(h, y) for h, y in pairs) / len(pairs)
+                   for s, pairs in sample.items())
+
+    def ratio(sample: dict, hit, among) -> float | None:
+        base = mean(sample, among)
+        return mean(sample, lambda h, y: among(h, y) and hit(h, y)) / base if base else None
+
+    labels = sorted({h for pairs in strata.values() for h, _ in pairs})
+    measures = {
+        "accuracy": lambda s: mean(s, lambda h, y: h == y),
+        "accuracy_failed_revised_as_one": lambda s: mean(s, lambda h, y: _not_met(h) == _not_met(y)),
+        "over_commitment": lambda s: ratio(s, lambda h, y: y in VERDICTS, lambda h, y: h == "unclear"),
+        "under_commitment": lambda s: ratio(s, lambda h, y: y == "unclear", lambda h, y: h in VERDICTS),
+        "verdict_precision": lambda s: ratio(s, lambda h, y: h == y, lambda h, y: y in VERDICTS),
+        **{f"human_share.{c}": (lambda s, c=c: mean(s, lambda h, y: h == c)) for c in labels},
+        "human_share.not_met": lambda s: mean(s, lambda h, y: _not_met(h) == "not_met"),
+    }
+    rng = random.Random(seed)
+    resampled = [{s: [rng.choice(pairs) for _ in pairs] for s, pairs in strata.items()} for _ in range(draws)]
+    out = {"pool": total, "strata": {s: {"pool": pool[s], "sampled": len(p)} for s, p in strata.items()}}
+    for name, measure in measures.items():
+        values = sorted(v for v in (measure(b) for b in resampled) if v is not None)
+        cut = int(0.025 * len(values))
+        low, high = (values[cut], values[-cut - 1]) if values else (None, None)
+        out[name] = {"estimate": measure(strata), "ci95": [low, high]}
+    return out
 
 
 def score(cfg: GraphConfig, sheet: Path | None = None, outcomes: Path | None = None) -> dict:
@@ -269,17 +319,18 @@ def score(cfg: GraphConfig, sheet: Path | None = None, outcomes: Path | None = N
     The system side is the key written when the sheet was drawn (next to the sheet, else in the build
     directory), or, with `outcomes`, any judge's output over the same promises. The latter is only
     meaningful when that judge saw the evidence the annotator saw.
+
+    When the key records the strata the sheet was drawn from, the result carries `population`: the
+    same measures weighted back to the pool, which is what may be compared across sheets.
     """
     from openpyxl import load_workbook
 
     base = out_dir(cfg)
     sheet = sheet or (base / "promise_check.xlsx")
-    if outcomes:
-        key = {o["promise_id"]: o for o in _load(Path(outcomes))}
-    else:
-        beside = sheet.with_suffix(".key.json")
-        key_path = beside if beside.exists() else base / "promise_sheet_key.json"
-        key = json.loads(key_path.read_text(encoding="utf-8"))
+    beside = sheet.with_suffix(".key.json")
+    key_path = beside if beside.exists() else base / "promise_sheet_key.json"
+    design = json.loads(key_path.read_text(encoding="utf-8")) if key_path.exists() else {}
+    key = {o["promise_id"]: o for o in _load(Path(outcomes))} if outcomes else design
     promises = {p["promise_id"]: p for p in _load(base / "promises.jsonl")}
     ws = load_workbook(sheet, data_only=True)[SHEET_NAME]
     it = ws.iter_rows(values_only=True)
@@ -337,6 +388,14 @@ def score(cfg: GraphConfig, sheet: Path | None = None, outcomes: Path | None = N
             },
         },
     }
+    if design.get(POOL):
+        strata: dict[str, list[tuple[str, str]]] = {}
+        for r in judged:                           # a row that is no promise is a miss for any system
+            label = str(r["outcome"] or "").strip().lower() if yn(r["promise_ok"]) else "not_a_promise"
+            if label in OUTCOMES or label == "not_a_promise":
+                drawn_as = design[r["promise_id"]]["outcome"]
+                strata.setdefault(drawn_as, []).append((label, key[r["promise_id"]]["outcome"]))
+        result["population"] = population(strata, design[POOL])
     name = f"promise_check_result.{Path(outcomes).stem}.json" if outcomes else "promise_check_result.json"
     (base / name).write_text(json.dumps(result, indent=2), encoding="utf-8")
     return result

@@ -143,6 +143,25 @@ def test_score_reads_a_filled_sheet(tmp_path, monkeypatch):
     assert S.sheet_ids(path) == {"P1", "P2", "P3", "P4"}
 
 
+def test_population_weights_each_stratum_by_the_pool_it_was_drawn_from():
+    # 100 promises proposed achieved, 10 proposed failed; the sheet took 4 and 4
+    strata = {"achieved": [("achieved", "achieved")] * 3 + [("unclear", "achieved")],
+              "failed": [(h, "failed") for h in ("failed", "revised", "unclear", "failed")]}
+    flat = [pair for pairs in strata.values() for pair in pairs]
+    assert sum(h == s for h, s in flat) / len(flat) == pytest.approx(0.625)     # the sheet's raw rate
+    est = S.population(strata, {"achieved": 100, "failed": 10, "unclear": 50}, draws=200)
+    assert est["pool"] == 110                                                   # no row drawn from "unclear"
+    assert est["accuracy"]["estimate"] == pytest.approx((100 * 0.75 + 10 * 0.5) / 110)
+    merged = est["accuracy_failed_revised_as_one"]["estimate"]
+    assert merged == pytest.approx((100 * 0.75 + 10 * 0.75) / 110)
+    # every promise the annotator called unclear got a verdict from the system
+    assert est["over_commitment"]["estimate"] == pytest.approx(1.0)
+    assert est["human_share.unclear"]["estimate"] == pytest.approx((100 * 0.25 + 10 * 0.25) / 110)
+    assert est["human_share.not_met"]["estimate"] == pytest.approx(10 * 0.75 / 110)
+    low, high = est["accuracy"]["ci95"]
+    assert low <= est["accuracy"]["estimate"] <= high
+
+
 def label(ref, relation="other", result="none", change="none", year=None):
     return {"ref": ref, "year": year, "relation": relation, "deadline_result": result, "change": change}
 
