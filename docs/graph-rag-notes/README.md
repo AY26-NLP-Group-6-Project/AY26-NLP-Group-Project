@@ -500,6 +500,21 @@ retrieval in long reports, flattened target tables, evidence limited to the dead
 `disappeared` share above is loose by about half. Consequence for the system: outcome evidence should be
 the metric's statements across all report years, a join, not a top-k search in one year.
 
+## 4r. RQ2 outcome judge v2: over-commitment fixed on the development sheet (2026-10-03)
+
+Full account in `10-promise-trajectories.md` §7. The model now labels each evidence statement (about
+this very target or only its metric; states the deadline year's result or not; moves the commitment or
+not) and a fixed rule derives the outcome, defaulting to `unclear`. Same model, same evidence. On the
+round-1 sheet (n = 74, used as the development set, three prompt versions tried on it): accuracy 0.703 →
+0.878, κ 0.63 → 0.83, verdicts where the check says unclear 21/35 → 4/35, verdicts that are right 0.63 →
+0.87; the price is 4 of 39 checked verdicts now left `unclear` (0 before). The model's own outcome under
+the same prompt reaches 0.811 and 8/35, so the rule adds to the questions, mostly on `revised`.
+
+The judge is noisy: 15 % of the 374 promises do not get the same outcome in three uncached runs, so the
+reported configuration is the majority of three (USD 0.96). Over the 374: achieved 125, unclear 192,
+revised 22, failed 16, disappeared 19. Unverified beyond the development sheet: a held-out sheet of 50
+promises (`kb/annotation/spotchecks/promise_check_r2_20261003.xlsx`) is ready and not yet filled.
+
 ## 5. Risks
 
 1. **Aspect canonicalisation is the whole ball game.** If "Scope 1 emissions", "direct emissions"
@@ -557,6 +572,10 @@ row may reach the report without becoming one of the other two first.
 | Agentic RAG is not universally better, and it is measurably more expensive | [cited] | Ferrazzi et al., arXiv 2601.07711: "neither Enhanced nor Agentic RAG is universally superior"; agentic used 3.3x more input tokens, 1.9x more output tokens and 1.5x more time on average, up to 3.6x more expensive; "a well-optimized Enhanced RAG can match or exceed Agentic performance while remaining more efficient" |
 | Where agentic actually helps: intent routing and query rewriting; where it hurts: document selection | [cited] | Same paper: agentic wins on user-intent handling and dynamic query rewriting, but "is not as good as the re-ranking done by Enhanced RAG at selecting just the most meaningful docs"; latency is dominated by LLM calls (45-50 % answer generation, similar share for rewriting, 0-5 % retrieval). Consequence for M7: the agent plans and rewrites, the reranker still picks |
 | Missing context and unattributed statements are the dominant error modes | [cited] | A3CG Tables 12 and 13 (ellipsis, ambiguous syntax, modality, negation, unattributed, future dependency) |
+| Verification against evidence needs an explicit "the evidence does not settle it" class, and that class is hard | [cited] | FEVER (Thorne et al., NAACL 2018, arXiv 1803.05355): claims are "Supported, Refuted or NotEnoughInfo", Fleiss κ 0.6841 among annotators; best system accuracy 31.87 % when the evidence must be right, 50.91 % when it is ignored. Our `unclear` is that class, and the outcome rule defaults to it |
+| A verdict can be derived from answers to simpler sub-questions | [cited] | ClaimDecomp (Chen, Sriram, Choi & Durrett, EMNLP 2022, arXiv 2205.06938): decomposes a claim into "yes-no subquestions whose answers influence the veracity of the claim"; the subquestions "can help identify relevant evidence ... and derive the veracity through their answers". Our judge v2 asks per-evidence questions and derives the outcome by rule |
+| Declining to answer is a recognised way to cut unsupported output | [cited] | Wen et al., "Know Your Limits: A Survey of Abstention in Large Language Models", TACL (arXiv 2407.18418): abstention is "increasingly recognized for its potential to mitigate hallucinations and enhance safety in LLM systems" |
+| Deriving the promise outcome by rule from evidence-level labels cuts over-commitment on our data | [measured] | `10-promise-trajectories.md` §7 |
 
 ### 7.2 Still unsupported, must be settled before or during implementation
 

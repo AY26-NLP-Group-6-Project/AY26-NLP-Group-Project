@@ -1,0 +1,117 @@
+{
+  "rows": 75,
+  "judged": 75,
+  "extraction": {
+    "promise_ok": 74,
+    "promise_precision": 0.9866666666666667,
+    "fields_ok_rate": 0.9054054054054054
+  },
+  "outcome": {
+    "n": 74,
+    "human_distribution": {
+      "revised": 6,
+      "achieved": 14,
+      "unclear": 35,
+      "failed": 8,
+      "disappeared": 11
+    },
+    "system_distribution": {
+      "revised": 7,
+      "unclear": 35,
+      "failed": 8,
+      "disappeared": 11,
+      "achieved": 13
+    },
+    "accuracy": 0.8783783783783784,
+    "cohen_kappa": 0.8266527850078084,
+    "per_class": {
+      "achieved": {
+        "precision": 0.9230769230769231,
+        "recall": 0.8571428571428571,
+        "support": 14
+      },
+      "failed": {
+        "precision": 0.875,
+        "recall": 0.875,
+        "support": 8
+      },
+      "revised": {
+        "precision": 0.7142857142857143,
+        "recall": 0.8333333333333334,
+        "support": 6
+      },
+      "unclear": {
+        "precision": 0.8857142857142857,
+        "recall": 0.8857142857142857,
+        "support": 35
+      },
+      "disappeared": {
+        "precision": 0.9090909090909091,
+        "recall": 0.9090909090909091,
+        "support": 11
+      }
+    },
+    "over_commitment": {
+      "k": 4,
+      "n": 35,
+      "rate": 0.11428571428571428
+    },
+    "under_commitment": {
+      "k": 4,
+      "n": 39,
+      "rate": 0.10256410256410256
+    },
+    "verdict_precision": {
+      "k": 34,
+      "n": 39,
+      "rate": 0.8717948717948718
+    },
+    "confusion_human_rows_system_cols": {
+      "achieved": {
+        "unclear": 2,
+        "achieved": 12
+      },
+      "failed": {
+        "failed": 7,
+        "revised": 1
+      },
+      "revised": {
+        "revised": 5,
+        "unclear": 1
+      },
+      "unclear": {
+        "unclear": 31,
+        "revised": 1,
+        "disappeared": 1,
+        "achieved": 1,
+        "failed": 1
+      },
+      "disappeared": {
+        "disappeared": 10,
+        "unclear": 1
+      }
+    },
+    "human_by_kind": {
+      "milestone": {
+        "disappeared": 7,
+        "achieved": 5,
+        "failed": 1,
+        "revised": 3,
+        "unclear": 6
+      },
+      "qualitative": {
+        "unclear": 7,
+        "achieved": 1,
+        "disappeared": 2,
+        "failed": 1
+      },
+      "quantitative": {
+        "revised": 3,
+        "achieved": 8,
+        "unclear": 22,
+        "failed": 6,
+        "disappeared": 2
+      }
+    }
+  }
+}

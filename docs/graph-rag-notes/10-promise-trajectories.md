@@ -14,8 +14,8 @@ so the graph line's case rests here: following a commitment across a company's r
 | promises | restatements of one commitment across years merged; same-metric commitments with another deadline or quantity linked as `related` (a moved goalpost looks like this) | rule, deterministic | `gw-graph promises --source <tag>` |
 | checkable | stated before its deadline; deadline ≤ 2025 and a report exists for the deadline year or the year after; metric names something | rule | (same) |
 | evidence | statements of the deadline-year reports, tables included | BM25 over all statements + dense over prose sentences (`dev-sent`), RRF, top 6 | `gw-graph promise-outcomes` |
-| proposed outcome | achieved / failed / revised / unclear / disappeared | LLM under `configs/prompts/promise_outcome.md`, the fixed system model | (same) |
-| human check | blind sheet, 75 promises | `promise_ok`, `fields_ok`, `outcome` | `gw-graph promise-sheet`, then `gw-graph promise-score --sheet …` |
+| proposed outcome | achieved / failed / revised / unclear / disappeared | the fixed system model. Judge `v1`: the model names the outcome (`configs/prompts/promise_outcome.md`). Judge `v2` (default since §7): the model labels each evidence statement, a rule names the outcome (`promise_outcome_v2.md`) | `gw-graph promise-outcomes --judge v2 --repeats 3` |
+| human check | blind sheet, 75 promises (round 1), 50 held-out promises (round 2) | `promise_ok`, `fields_ok`, `outcome` | `gw-graph promise-sheet`, then `gw-graph promise-score --sheet … [--outcomes …]` |
 
 Grounding. A *promise with verifiable timing* is ML-Promise's notion (Seki et al., EMNLP 2025), narrowed
 to commitments that name a deadline year. Outcome classes extend Jiang, Kim & Lu (Nature Climate Change
@@ -139,3 +139,131 @@ missing from the pool (section 2).
 How loose the upper bound is was measured afterwards on the 11 rows the check labelled `disappeared`: a
 keyword search over every statement of the company finds 5 of them in the reports
 (`11-promise-case-studies.md` §3). The cases themselves are in that note.
+
+## 7. Judge v2: the outcome is derived by rule from evidence-level labels (2026-10-03)
+
+The problem, from §6: judge v1 gave a verdict on 21 of the 35 promises the check called `unclear`, and
+its `failed` and `revised` verdicts held 53 % and 38 % of the time. The 22 disagreements fall into six
+kinds: a result for another year read as the deadline year's (3); a different metric, level or scope
+taken for this target, e.g. absolute withdrawal against an intensity target (7); an annual target set
+again for the next year read as a moved deadline (4); a verdict inferred rather than stated (4); a
+result for part of the commitment (1); a mention of the subject read as nothing at all (3).
+
+### 7.1 Design
+
+The model no longer names the outcome. For each evidence statement it answers three questions, and one
+about the promise:
+
+| label | values | question |
+|---|---|---|
+| `relation` | this_target / same_metric / other | is the statement about this very commitment (same metric, same scope, same level and baseline), about its metric only, or about something else? In doubt, same_metric |
+| `deadline_result` | met / missed / none | does it state the result for the deadline year? Results of other years, progress, partial results and anything that needs inferring are none |
+| `change` | later / none | is it itself a commitment or notice that gives this target a later or no date, or says it was postponed, extended, delayed or dropped? |
+| `annual` (per promise) | true / false | is the promise a per-year performance level of the kind set again every year? |
+
+`outcome.decide` then applies a fixed rule. A result or a change only counts on a `this_target`
+statement.
+
+1. a `met` and no `missed` → **achieved**
+2. no `met`, a `later`, and the promise is not annual → **revised** (a moved goalpost explains a miss,
+   so it precedes rule 3; for an annual target a later year is routine renewal and settles nothing)
+3. no `met`, a `missed` → **failed**
+4. otherwise, any `this_target` or `same_metric` statement → **unclear** (contradictory results end here)
+5. otherwise → **disappeared**
+
+A reply that does not label every statement is `unclear`. `annual` is true if either the model or the
+extraction's `recurring` flag says so.
+
+Grounding. `unclear` is the "not enough information" class of claim verification, which FEVER (Thorne et
+al., NAACL 2018) keeps as a third label next to supported and refuted; making it the default is
+abstention, which the survey of Wen et al. (TACL) describes as a means of reducing unsupported output.
+Asking simple questions per piece of evidence and deriving the verdict from the answers is claim
+decomposition (Chen et al., EMNLP 2022). The rule's order and the annual-target exception are ours
+[project] and follow the human guide of §5 ("revised … without reporting the original as met"; renewal
+is not revision).
+
+### 7.2 Result on the round-1 sheet, used here as a development set
+
+Same model (`gpt-5.6-luna`, low effort), same six evidence statements per promise as v1 and as the
+annotator saw (`--evidence-from outcomes.jsonl`), n = 74.
+
+| | v1 | v2 prompt, the model's own outcome (one run) | **v2, rule** (majority of 3 runs) |
+|---|---|---|---|
+| accuracy | 0.703 | 0.811 | **0.878** |
+| Cohen's κ | 0.63 | 0.74 | **0.83** |
+| over-commitment: a verdict where the check says unclear | 21 / 35 | 8 / 35 | **4 / 35** |
+| under-commitment: unclear where the check has a verdict | 0 / 39 | 5 / 39 | 4 / 39 |
+| verdicts that are right | 38 / 60 = 0.63 | 33 / 42 = 0.79 | **34 / 39 = 0.87** |
+
+| precision, recall | v1 | v2, rule |
+|---|---|---|
+| achieved | 13/15, 13/14 | 12/13, 12/14 |
+| failed | 8/15, 8/8 | 7/8, 7/8 |
+| revised | 6/16, 6/6 | 5/7, 5/6 |
+| unclear | 14/14, 14/35 | 31/35, 31/35 |
+| disappeared | 11/14, 11/11 | 10/11, 10/11 |
+
+- **Both parts contribute.** The middle column is the outcome the model states itself in the same reply,
+  after labelling the evidence: the questions alone remove 13 of the 21 over-commitments, the rule
+  removes 4 more. The rule's effect is on `revised`: over all 374 promises it turns 16 of the model's
+  own `revised` into `unclear`, annual targets set again for the next year.
+- **The price is 4 verdicts lost** (v1 lost none): two `achieved` the annotator inferred and the rule
+  does not (a 5-star rating as proof of participation; "no significant fines" for "zero fines"), one
+  `revised` that is an annual target renewed in a different form, which the rule cannot see by design,
+  and one `disappeared`.
+- **These are tuned-on numbers.** Three versions of the v2 prompt were tried against these 74 rows (one
+  cached run each): (1) a `topic` relation and a per-statement moved/renewed choice: accuracy 0.703,
+  over-commitment 9/35, but `disappeared` collapsed (10 of 11 became `unclear`); (2) three relations,
+  `annual` asked once per promise: 0.865, 3/35; (3) one contradiction in the wording removed: 0.878,
+  4/35. Iteration stopped there. A clean figure needs the held-out sheet of §7.4.
+
+### 7.3 Stability, cost, and the distribution over all 374
+
+The judge is not deterministic. Three uncached runs over the 374 promises agree pairwise on 89–91 % of
+them; **56 promises (15 %) do not get the same outcome three times**, almost always a verdict against
+`unclear` (achieved/unclear 25, disappeared/unclear 16, revised/unclear 8, failed/unclear 3). On the
+development rows the three runs score 0.878, 0.878 and 0.919. The reported configuration is therefore
+`--repeats 3`: strict majority, and no majority (2 promises) is `unclear`.
+
+Cost: 1,122 calls, 1.55 M input and 0.55 M output tokens, USD 0.96 for the three runs (0.32 for one).
+
+| outcome | v1 | v2 (majority of 3) | population estimate from the check (§6) |
+|---|---|---|---|
+| achieved | 153 (40.9 %) | 125 (33.4 %) | 36.0 % (27.9 – 42.1) |
+| unclear | 134 (35.8 %) | 192 (51.3 %) | 48.7 % (40.0 – 58.0) |
+| revised | 29 (7.8 %) | 22 (5.9 %) | 2.9 % (1.0 – 4.8) |
+| failed | 33 (8.8 %) | 16 (4.3 %) | 4.7 % (2.4 – 7.1) |
+| disappeared | 25 (6.7 %) | 19 (5.1 %) | 5.3 % (3.8 – 6.7) |
+
+v2's raw shares now sit inside the check's intervals for four classes; `revised` is still above its
+interval. This is a sanity check, not validation: the estimate comes from the same 74 labels. 204 of
+the 374 promises are treated as annual (161 by the extraction's flag, 43 more by the model).
+
+### 7.4 Held-out check (round 2, not yet filled)
+
+`kb/annotation/spotchecks/promise_check_r2_20261003.xlsx`: 50 promises, 21 companies, none of them on
+the round-1 sheet, drawn from the 299 remaining checkable promises by v2's outcome (all 8 `failed`, all
+8 `disappeared`, 9 of 15 `revised`, 13 `achieved`, 12 `unclear`; seed 20261004). Same columns, same
+guide and same evidence as round 1; the system's outcome is in the `.key.json` beside it, not on the
+sheet. v1 and v2 disagree on 14 of the 50 rows.
+
+```
+gw-graph promise-sheet --judge v2 --limit 50 --seed 20261004 \
+    --exclude-sheets kb/annotation/spotchecks/promise_check_20261003.xlsx \
+    --out kb/annotation/spotchecks/promise_check_r2_20261003.xlsx
+gw-graph promise-score --sheet kb/annotation/spotchecks/promise_check_r2_20261003.xlsx          # v2
+gw-graph promise-score --sheet … --outcomes artifacts/graph/dev/promises/outcomes.jsonl          # v1
+```
+
+Because the sheet is stratified on v2's outcome, per-class precision can be read off directly; accuracy
+and the over-commitment rate must be weighted by stratum size (achieved 112, unclear 156, revised 15,
+failed 8, disappeared 8) before they are compared with v1.
+
+### 7.5 What v2 does not fix
+
+- **Evidence.** v2 judges the same six statements. The misses of `11-promise-case-studies.md` §3 (the
+  right sentence not retrieved, target tables, a delay disclosed before the deadline year) are
+  untouched: `unclear` and `disappeared` remain upper bounds.
+- **Annual targets renewed at a weaker level** are read as renewal.
+- **Scope the text does not settle.** "EMG Taiping" against "EMG Plant 2": the model took them for the
+  same site and called the target missed; the annotator could not tell.
