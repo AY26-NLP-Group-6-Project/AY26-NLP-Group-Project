@@ -1,0 +1,99 @@
+{
+  "rows": 75,
+  "judged": 75,
+  "extraction": {
+    "promise_ok": 74,
+    "promise_precision": 0.9866666666666667,
+    "fields_ok_rate": 0.9054054054054054
+  },
+  "outcome": {
+    "n": 74,
+    "human_distribution": {
+      "revised": 6,
+      "achieved": 14,
+      "unclear": 35,
+      "failed": 8,
+      "disappeared": 11
+    },
+    "system_distribution": {
+      "revised": 16,
+      "achieved": 15,
+      "unclear": 14,
+      "failed": 15,
+      "disappeared": 14
+    },
+    "accuracy": 0.7027027027027027,
+    "cohen_kappa": 0.6305038583749432,
+    "per_class": {
+      "achieved": {
+        "precision": 0.8666666666666667,
+        "recall": 0.9285714285714286,
+        "support": 14
+      },
+      "failed": {
+        "precision": 0.5333333333333333,
+        "recall": 1.0,
+        "support": 8
+      },
+      "revised": {
+        "precision": 0.375,
+        "recall": 1.0,
+        "support": 6
+      },
+      "unclear": {
+        "precision": 1.0,
+        "recall": 0.4,
+        "support": 35
+      },
+      "disappeared": {
+        "precision": 0.7857142857142857,
+        "recall": 1.0,
+        "support": 11
+      }
+    },
+    "confusion_human_rows_system_cols": {
+      "achieved": {
+        "achieved": 13,
+        "failed": 1
+      },
+      "failed": {
+        "failed": 8
+      },
+      "revised": {
+        "revised": 6
+      },
+      "unclear": {
+        "unclear": 14,
+        "revised": 10,
+        "failed": 6,
+        "disappeared": 3,
+        "achieved": 2
+      },
+      "disappeared": {
+        "disappeared": 11
+      }
+    },
+    "human_by_kind": {
+      "milestone": {
+        "disappeared": 7,
+        "achieved": 5,
+        "failed": 1,
+        "revised": 3,
+        "unclear": 6
+      },
+      "qualitative": {
+        "unclear": 7,
+        "achieved": 1,
+        "disappeared": 2,
+        "failed": 1
+      },
+      "quantitative": {
+        "revised": 3,
+        "achieved": 8,
+        "unclear": 22,
+        "failed": 6,
+        "disappeared": 2
+      }
+    }
+  }
+}

@@ -482,6 +482,12 @@ unclear 134, failed 33, revised 29, disappeared 25. Unverified: a blind sheet of
 (`kb/annotation/spotchecks/promise_check_20261003.xlsx`) is out for human judgement, and no RQ2 number
 is quoted before it is scored.
 
+Check returned 2026-10-03 (LLM-assisted, adjudicated by a team member; `10` §6): extraction precision
+0.987, fields right 0.905, system-vs-check outcome agreement 0.703 (κ 0.63). The system over-commits:
+its `failed` and `revised` verdicts hold only 53 % and 38 % of the time, while `achieved` holds 87 %.
+Weighted to the 374 checkable promises: achieved 36 %, unclear 49 %, disappeared 5 %, failed 5 %,
+revised 3 %.
+
 ## 5. Risks
 
 1. **Aspect canonicalisation is the whole ball game.** If "Scope 1 emissions", "direct emissions"

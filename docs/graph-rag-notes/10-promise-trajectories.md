@@ -80,3 +80,56 @@ Scoring gives extraction precision, field accuracy, outcome agreement (accuracy,
 and recall, confusion) and the human outcome distribution, which is the RQ2 descriptive result. Because
 the sample is stratified by proposed outcome, the human distribution on the sheet is not the population
 distribution; population estimates need the per-class agreement applied to the 374 proposals.
+
+## 6. Result of the check (2026-10-03)
+
+Sheet returned the same day, all 75 rows filled, every row with a written reason. **Provenance to state
+in the report:** the folder holds a filling script and an annotation file, and several notes read "per
+the user's ruling", so the judgements were drafted with an AI assistant and adjudicated by a team member
+on the ambiguous rows. That makes this an LLM-assisted, human-adjudicated check, not six independent
+annotators; it is described as such wherever the numbers are used.
+
+| | |
+|---|---|
+| genuine dated commitment (`promise_ok`) | 74 / 75 = **0.987** |
+| fields right (`fields_ok`) | 67 / 74 = **0.905** (errors: a dropped scope or condition, a quantity the statement does not give, a missing "zero") |
+| outcome agreement, system vs check | accuracy **0.703**, Cohen's κ **0.63** (n = 74) |
+
+| outcome | check | system precision | system recall |
+|---|---|---|---|
+| achieved | 14 | 0.87 | 0.93 |
+| failed | 8 | 0.53 | 1.00 |
+| revised | 6 | 0.38 | 1.00 |
+| unclear | 35 | 1.00 | 0.40 |
+| disappeared | 11 | 0.79 | 1.00 |
+
+- **The system over-commits.** Every disagreement but one is a case the check calls `unclear` and the
+  system gave a verdict on (10 as revised, 6 as failed, 3 as disappeared, 2 as achieved). It never says
+  `unclear` where the check found a verdict. Typical causes, from the notes: a result from a later year
+  read as the deadline year's result (13 training hours reported for 2025 scored against an FY2024
+  target); "reduce to 15 %" read as "reduce by 15 %"; a related commitment with another deadline taken as
+  proof of revision; evidence about a neighbouring topic (discrimination complaints for a privacy target).
+- **When the system says `achieved` or `disappeared` it is usually right; `failed` and `revised` need a
+  person.** Those two are the classes a reader cares most about, so the system's role is to shortlist,
+  not to rule.
+
+Because the sheet was sampled by proposed outcome, its raw mix is not the population mix. Weighting each
+proposed class by its share of the 374 checkable promises (bootstrap 95 % CI over the sheet):
+
+| outcome | estimated share of the 374 | 95 % CI |
+|---|---|---|
+| achieved | 36.0 % | 27.9 – 42.1 |
+| unclear (mentioned, no verdict possible) | 48.7 % | 40.0 – 58.0 |
+| disappeared | 5.3 % | 3.8 – 6.7 |
+| failed | 4.7 % | 2.4 – 7.1 |
+| revised | 2.9 % | 1.0 – 4.8 |
+| not a promise after all | 2.4 % | 0.0 – 7.2 |
+
+Reading: for about half of the dated commitments the company's own deadline-year report does not let a
+reader tell whether the commitment was met; where it can be told, roughly three quarters were met, one
+in ten missed, one in ten no longer mentioned, and one in twenty moved. This is on the evidence the
+pipeline retrieved (6 statements from the deadline-year reports): an `unclear` or `disappeared` can also
+mean retrieval missed the passage, so both are upper bounds on what the reports themselves leave open.
+
+Limits: one checker and an LLM-assisted one; 14–16 rows per proposed class, so class-level precision
+carries wide intervals; table-only targets are missing from the pool (section 2).
