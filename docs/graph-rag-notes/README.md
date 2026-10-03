@@ -489,6 +489,17 @@ its `failed` and `revised` verdicts hold only 53 % and 38 % of the time, while `
 Weighted to the 374 checkable promises: achieved 36 %, unclear 49 %, disappeared 5 %, failed 5 %,
 revised 3 %.
 
+## 4q. RQ2 case studies (2026-10-03)
+
+`11-promise-case-studies.md`: ten commitments from eight companies, each as a page-cited timeline of the
+company's own sentences (delivered, delivered late, deadline moved, dated commitment dissolving, missed
+and admitted, partial, not mentioned again). Each thread was re-read against all statements of the
+company instead of the six the check sheet showed; that changed the reading of 5 of the 10. The same
+full search over the 11 rows the check labelled `disappeared` finds 5 of them in the reports (top-6
+retrieval in long reports, flattened target tables, evidence limited to the deadline year), so the
+`disappeared` share above is loose by about half. Consequence for the system: outcome evidence should be
+the metric's statements across all report years, a join, not a top-k search in one year.
+
 ## 5. Risks
 
 1. **Aspect canonicalisation is the whole ball game.** If "Scope 1 emissions", "direct emissions"

@@ -135,3 +135,7 @@ mean retrieval missed the passage, so both are upper bounds on what the reports 
 Limits: one annotator, working from an AI-drafted first pass whose model family is the system's own;
 14–16 rows per proposed class, so class-level precision carries wide intervals; table-only targets are
 missing from the pool (section 2).
+
+How loose the upper bound is was measured afterwards on the 11 rows the check labelled `disappeared`: a
+keyword search over every statement of the company finds 5 of them in the reports
+(`11-promise-case-studies.md` §3). The cases themselves are in that note.
