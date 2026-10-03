@@ -13,7 +13,7 @@ so the graph line's case rests here: following a commitment across a company's r
 | extraction | target span, metric, quantity, unit, baseline year, deadline year, kind, recurring | LLM under `configs/prompts/target_extraction.md`, then mechanical validation: the span must occur verbatim in the statement, the deadline must not precede the report year | `gw-graph targets` (in-repo, `gpt-5.6-luna`) or `gw-graph targets-export` → outside extractor → `gw-graph targets-ingest --source <tag>` |
 | promises | restatements of one commitment across years merged; same-metric commitments with another deadline or quantity linked as `related` (a moved goalpost looks like this) | rule, deterministic | `gw-graph promises --source <tag>` |
 | checkable | stated before its deadline; deadline ≤ 2025 and a report exists for the deadline year or the year after; metric names something | rule | (same) |
-| evidence | statements of the deadline-year reports, tables included | BM25 over all statements + dense over prose sentences (`dev-sent`), RRF, top 6 | `gw-graph promise-outcomes` |
+| evidence | mode `deadline` (first version, §4–7): statements of the deadline-year reports, BM25 over all statements + dense over prose sentences (`dev-sent`), RRF, top 6. Mode `trajectory` (default since §8): every report after the promise up to the year after the deadline, both rankings over all statements, a budget per report year, neighbours of the best hits, linked targets | `gw-graph promise-evidence --evidence trajectory` |
 | proposed outcome | achieved / failed / revised / unclear / disappeared | the fixed system model. Judge `v1`: the model names the outcome (`configs/prompts/promise_outcome.md`). Judge `v2` (default since §7): the model labels each evidence statement, a rule names the outcome (`promise_outcome_v2.md`) | `gw-graph promise-outcomes --judge v2 --repeats 3` |
 | human check | blind sheet, 75 promises (round 1), 50 held-out promises (round 2) | `promise_ok`, `fields_ok`, `outcome` | `gw-graph promise-sheet`, then `gw-graph promise-score --sheet … [--outcomes …]` |
 
@@ -131,6 +131,9 @@ reader tell whether the commitment was met; where it can be told, roughly three 
 in ten missed, one in ten no longer mentioned, and one in twenty moved. This is on the evidence the
 pipeline retrieved (6 statements from the deadline-year reports): an `unclear` or `disappeared` can also
 mean retrieval missed the passage, so both are upper bounds on what the reports themselves leave open.
+(How loose: §8. The first retrieval hardly ever showed the sentences that carry results, and on complete
+retrieval the system's `unclear` share is 36 %, not 49 %. The figures of this section describe the first
+evidence.)
 
 Limits: one annotator, working from an AI-drafted first pass whose model family is the system's own;
 14–16 rows per proposed class, so class-level precision carries wide intervals; table-only targets are
@@ -239,25 +242,12 @@ v2's raw shares now sit inside the check's intervals for four classes; `revised`
 interval. This is a sanity check, not validation: the estimate comes from the same 74 labels. 204 of
 the 374 promises are treated as annual (161 by the extraction's flag, 43 more by the model).
 
-### 7.4 Held-out check (round 2, not yet filled)
+### 7.4 Held-out check: drawn, then withdrawn
 
-`kb/annotation/spotchecks/promise_check_r2_20261003.xlsx`: 50 promises, 21 companies, none of them on
-the round-1 sheet, drawn from the 299 remaining checkable promises by v2's outcome (all 8 `failed`, all
-8 `disappeared`, 9 of 15 `revised`, 13 `achieved`, 12 `unclear`; seed 20261004). Same columns, same
-guide and same evidence as round 1; the system's outcome is in the `.key.json` beside it, not on the
-sheet. v1 and v2 disagree on 14 of the 50 rows.
-
-```
-gw-graph promise-sheet --judge v2 --limit 50 --seed 20261004 \
-    --exclude-sheets kb/annotation/spotchecks/promise_check_20261003.xlsx \
-    --out kb/annotation/spotchecks/promise_check_r2_20261003.xlsx
-gw-graph promise-score --sheet kb/annotation/spotchecks/promise_check_r2_20261003.xlsx          # v2
-gw-graph promise-score --sheet … --outcomes artifacts/graph/dev/promises/outcomes.jsonl          # v1
-```
-
-Because the sheet is stratified on v2's outcome, per-class precision can be read off directly; accuracy
-and the over-commitment rate must be weighted by stratum size (achieved 112, unclear 156, revised 15,
-failed 8, disappeared 8) before they are compared with v1.
+A round-2 sheet of 50 held-out promises was drawn on this judge and this evidence (commit `a5e2bf9`).
+It was never filled: the evidence changed before anyone judged it (§8), and labels given "from the
+evidence shown" would not have carried over. It is removed; the held-out check is the round-3 sheet of
+§8.5, drawn on the final system.
 
 ### 7.5 What v2 does not fix
 
@@ -267,3 +257,161 @@ failed 8, disappeared 8) before they are compared with v1.
 - **Annual targets renewed at a weaker level** are read as renewal.
 - **Scope the text does not settle.** "EMG Taiping" against "EMG Plant 2": the model took them for the
   same site and called the target missed; the annotator could not tell.
+
+## 8. Trajectory evidence: the promise followed through every later report (2026-10-03)
+
+### 8.1 Why the first evidence missed the answers
+
+`11-promise-case-studies.md` §3 found by hand that 5 of 11 `disappeared` promises were in the reports
+after all, and named three causes. Ranking the hand-found answer statements under the first retrieval
+shows one mechanism behind most of them:
+
+| promise | answer statement | BM25 rank | dense rank | fused rank (cut at 6) |
+|---|---|---|---|---|
+| P00761 ThaiBev solar rooftops | "installed solar rooftops at two distribution centers" | 1 | no vector | 7 |
+| P00347 Jumbo complaints | FY2022 performance table | 1 | no vector | 9 |
+| P00268 Gallant GHG | "achieved a 15.4% reduction in GHG emissions" | 3 | no vector | 16 |
+| P00461 Old Chang Kee electricity | "was 61 kwh per square foot (FY2020: 68 …)" | 3 | no vector | 18 |
+| P00323 Indofood ISPO | "by 2024 has been postponed" | 5 | 11 | 7 |
+| P00472 Old Chang Kee accidents | "Requires improvement as we recorded two cases" | none | 10 | 19 |
+| P00811 Tiong Woon ERP | "In FY2022, we began integrating …" | none | 58 | not ranked |
+| P00329 Indofood pouch | "has been delayed" (2023 report, deadline 2025) | 1 | 1 | outside the window |
+
+Dense retrieval ran over the shared sentence store (`dev-sent`), which holds the statements that pass
+the prose filter of RQ1: 71,342 of 110,314. The 35 % it leaves out are not only tables: a sentence with
+figures fails the filter's letter ratio, a sentence without one of its listed verbs fails its verb test.
+Result sentences are exactly these. A statement outside the store could score in one of the two fused
+rankings only, and RRF (k = 60) then puts a statement ranked first in one list (1/61 = 0.0164) below one
+ranked thirtieth in both (2/90 = 0.0222). The effect on what the judge saw: **of the 2,244 statements
+shown under the first evidence, 37 (1.6 %) came from outside the sentence store.** The half of the
+commitments that §6 found "unclear" were judged almost entirely without the sentences that carry
+results.
+
+### 8.2 Design (`promises/evidence.py`, mode `trajectory`)
+
+1. **Two complete rankings.** Every statement of a report is ranked by BM25 and by dense similarity;
+   vectors the sentence store lacks are embedded on demand and cached (23,089 statements, once). RRF
+   then fuses rankings over the same documents.
+2. **A budget per report year**, over every report after the one that made the promise up to the year
+   after the deadline: 6 statements from the first report at or after the deadline, 3 from the next,
+   2 from each earlier one.
+3. **Neighbours.** The statements directly before and after the two best hits of the deadline report
+   are added, whatever their length or rank. A target table is parsed into one statement per cell; the
+   result sits beside the target and shares no words with it.
+4. **Linked targets.** Targets the extractor attached to the promise as `related` (same company, same
+   metric key, another deadline or level), first stated inside the window, are added whatever their
+   rank: at most 3.
+5. **Order and adjacency.** Statements are shown in report order, and one that comes right after the
+   previous one in the report is marked "directly follows E3", so a target cell and its result are read
+   together.
+
+The outcome rule keeps to the calendar now that earlier reports are shown (`outcome.decide`): a report
+older than the deadline year cannot establish a miss, nor an annual target's deadline-year result; it
+can establish a deliverable finished early or a moved deadline; and a commitment repeated before its
+deadline and not mentioned from the deadline year on is `disappeared`. The human guide says the same.
+The judge prompt gained four clarifications the new evidence made necessary (the "directly follows"
+mark; a target cell is not a result; the columns of a flattened row; a bare "this target"), added in two
+rounds while looking at round-1 rows only. The last two did not remove the errors they were written for
+(§8.4).
+
+The budgets, the neighbour rule and the calendar rules are ours [project]. Nothing here uses the aspect
+nodes of the graph: they cover 29,637 statement mentions, not all 110,314 statements. The join that is
+used is the promise graph's own (`related`), and it turned out to matter little: 153 related targets
+fall inside the windows of 110 promises, and per-year retrieval had already found 143 of them.
+
+### 8.3 Checks that need no new labels
+
+| check | first evidence | trajectory |
+|---|---|---|
+| statements per promise | 6 | 11.6 (max 19), from 2.0 report years |
+| share from outside the sentence store | 1.6 % | 42 % |
+| hand-found answer statements shown (8) | 0, by construction | **6** |
+| round-1 verdict rows whose cited statements are all still shown (28) | 28 | 26 (at least one: 28) |
+
+The six recovered: four through the complete rankings (they now rank first or second in their report),
+one through the wider window (the 2023 delay notice for a 2025 target), one as a neighbour (the result
+cell beside the accident-frequency target, itself ranked 26th). The two not recovered: the Indofood
+postponement sentence ranks 8th in a report with many ISPO statements, and the Tiong Woon sentence is
+not reachable by similarity at all. Of the trajectory evidence, 3,301 statements are retrieved, 1,019
+are neighbours and 10 come from the link alone.
+
+### 8.4 What the judge says on the new evidence (system output, unverified)
+
+Judge v2, final prompt, majority of three runs, same model; only the evidence differs.
+
+| outcome | first evidence | trajectory evidence |
+|---|---|---|
+| achieved | 114 (30.5 %) | 173 (46.3 %) |
+| unclear | 200 (53.5 %) | 135 (36.1 %) |
+| revised | 19 (5.1 %) | 29 (7.8 %) |
+| failed | 16 (4.3 %) | 27 (7.2 %) |
+| disappeared | 25 (6.7 %) | 10 (2.7 %) |
+
+132 of the 374 promises change outcome: 99 go from `unclear` or `disappeared` to a verdict (71
+achieved, 16 failed, 12 revised), 19 lose one. The verdicts rest on 365 statements: 352 retrieved, 12
+neighbours, 1 linked; 312 from the deadline-year report, 40 from the year after, 13 from earlier
+reports. So the gain is mostly the first design point, complete rankings inside the report where the
+outcome belongs; the wider window and the neighbours each decide a handful (6 verdicts rest only on
+earlier reports, 4 only on neighbours).
+
+On the round-1 sheet the same judge with the first evidence scores 0.919 (κ 0.88, over-commitment 2/35,
+verdicts right 35/38), so the prompt clarifications did not cost anything there. Its labels cannot
+score the trajectory run, since the annotator saw six other statements, but they show the direction:
+
+| check on the first evidence | system on trajectory evidence |
+|---|---|
+| achieved (14) | achieved 12, unclear 2 |
+| failed (8) | failed 5, revised 2, unclear 1 |
+| revised (6) | revised 3, achieved 3 |
+| unclear (35) | achieved 14, failed 5, revised 2, unclear 14 |
+| disappeared (11) | disappeared 6, failed 2, achieved 1, revised 1, unclear 1 |
+
+Seven of the eight hand-checked promises of §8.1 now get the outcome the full reading in note 11 gave
+them (ThaiBev's two-of-four delivery as `unclear`). For the eighth the system found what the hand search
+had not: Tiong Woon's 2022 report says "The first phase of the project successfully "went-live" on 1
+July 2022", against a launch promised for the first half of 2022, and the outcome is `failed`: literal,
+and one day late.
+
+Reading the new evidence of ten changed round-1 rows (not blind, one reader): the seven that moved from
+`unclear` to a verdict hold, e.g. "There were no non-compliances in FY2022", a training average of 41
+hours against a 26-hour target. Of three whose verdict changed, one follows the rule (allergen
+disclosure: missed and re-dated, so `revised`) and two show error types that are new and not fixed:
+
+- **A flattened multi-column row read across columns.** CDL HTrust's 2024 table runs "Targets for FY
+  2024 | Key results in FY 2024 | Targets for FY 2025"; the model took next year's target
+  ("Decarbonisation target validated with SBTi") for a result and the rule returned `achieved`, although
+  later statements still plan the target. This is over-commitment in a new place: complete retrieval
+  brings in the tables the first evidence never showed.
+- **A bare "this target".** Old Chang Kee's "We have achieved this target for FY2022.", from another
+  page, was taken for the electricity target; against the explicit miss on the right page the two
+  results cancel to `unclear`.
+
+Instability is unchanged: 50 of 374 promises do not get the same outcome three times (53 on the first
+evidence). Cost: USD 1.49 for the three runs (2.27 M input, 0.87 M output tokens), against 1.04.
+
+**What this does to the RQ2 finding.** §6 estimated that for 49 % of dated commitments the company's
+own reports do not let a reader tell the outcome. Much of that was the retrieval: with the result
+sentences in view the system's `unclear` share is 36 %, and `disappeared` falls from about 6 % to under
+3 %. These are system outputs. The §6 figures stay the only human-verified ones, they describe what the
+first evidence showed, and they should not be quoted as a property of the reports.
+
+### 8.5 Held-out check (round 3, to be filled)
+
+`kb/annotation/spotchecks/promise_check_r3_20261003.xlsx`: 60 promises from 23 companies, none on the
+round-1 sheet (the rows every prompt version was tried on), drawn from the 299 other checkable promises
+by the system's outcome: failed 14 of 15, revised 13 of 21, disappeared 4 of 4, achieved 14 of 143,
+unclear 15 of 116; at most 4 per company; seed 20261005. Evidence is the trajectory evidence, 11.7
+statements per row, grouped by report year with the deadline year marked. The system's outcome is in
+the `.key.json` beside the sheet, not on it.
+
+```
+gw-graph promise-evidence --evidence trajectory
+gw-graph promise-outcomes --judge v2 --evidence trajectory --repeats 3
+gw-graph promise-sheet --judge v2 --evidence trajectory --limit 60 --seed 20261005 \
+    --exclude-sheets kb/annotation/spotchecks/promise_check_20261003.xlsx \
+    --out kb/annotation/spotchecks/promise_check_r3_20261003.xlsx
+gw-graph promise-score --sheet kb/annotation/spotchecks/promise_check_r3_20261003.xlsx
+```
+
+The sheet is stratified on the system's outcome: per-class precision reads off directly; accuracy, the
+over-commitment rate and the outcome shares of the 299 need the strata weighted by their sizes above.

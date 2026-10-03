@@ -239,6 +239,13 @@ For the system this points one way: a commitment's outcome needs the statements 
 every report year of the company, in order, which is a join on (company, metric, year) and not a top-k
 similarity search in one year. Not built yet; it is the next concrete step for the graph line.
 
+Update, same day: built, and the diagnosis above was incomplete (`10-promise-trajectories.md` §8).
+Causes 1 and 2 are one mechanism: the dense ranking only covered prose sentences, result sentences
+mostly fail the prose filter, and rank fusion buries what one of its rankings cannot see. Four of the
+answer statements ranked first to third on BM25 and were cut all the same. With both rankings complete,
+a budget per report year and neighbours, six of the eight answer statements are shown and the system
+reaches the outcome of the full reading for seven of the eight promises.
+
 ## 4. Reproducing the timelines
 
 Each timeline is a case-insensitive regex over one company's statements, all years:

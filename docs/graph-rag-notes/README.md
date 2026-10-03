@@ -512,8 +512,31 @@ the same prompt reaches 0.811 and 8/35, so the rule adds to the questions, mostl
 
 The judge is noisy: 15 % of the 374 promises do not get the same outcome in three uncached runs, so the
 reported configuration is the majority of three (USD 0.96). Over the 374: achieved 125, unclear 192,
-revised 22, failed 16, disappeared 19. Unverified beyond the development sheet: a held-out sheet of 50
-promises (`kb/annotation/spotchecks/promise_check_r2_20261003.xlsx`) is ready and not yet filled.
+revised 22, failed 16, disappeared 19. A held-out sheet of 50 promises was drawn for this judge and
+withdrawn unfilled when the evidence changed (§4s).
+
+## 4s. RQ2 trajectory evidence; the "unclear" half was largely a retrieval artefact (2026-10-03)
+
+Full account in `10-promise-trajectories.md` §8. The first outcome evidence fused BM25 with a dense
+ranking that only covered the prose-sentence store (65 % of statements). Result sentences mostly fail
+that prose filter, and RRF buries a statement that can appear in one ranking only: of 2,244 statements
+shown to the judge, 37 (1.6 %) came from outside the store; four hand-found answer statements ranked
+first to third on BM25 and were still cut. Evidence mode `trajectory` ranks every statement on both
+channels (23,089 embedded on demand), takes a budget per report year from the promise's report to the
+year after the deadline, adds the neighbours of the best hits and the targets the promise graph links.
+
+Checks without new labels: 6 of the 8 hand-found answer statements are now shown; 26 of 28 round-1
+verdict rows keep every statement the annotator cited. Same judge, same model, only the evidence
+changed: achieved 114 → 173, unclear 200 → 135, failed 16 → 27, revised 19 → 29, disappeared 25 → 10;
+99 promises gain a verdict, 19 lose one. Most of it comes from complete rankings inside the
+deadline-year report (312 of the 365 statements the verdicts rest on); the wider window and the
+neighbours decide a handful each, and the promise-graph link adds 10 statements that retrieval had not
+found. So §4p's reading that half of the commitments cannot be assessed from the reports does not
+stand as a property of the reports. New error type, not fixed: a flattened multi-column table row read
+across columns gives a wrong `achieved`.
+
+All of this is system output. The held-out check is `kb/annotation/spotchecks/promise_check_r3_20261003.xlsx`
+(60 promises, none from the round-1 sheet), to be filled.
 
 ## 5. Risks
 
@@ -576,6 +599,8 @@ row may reach the report without becoming one of the other two first.
 | A verdict can be derived from answers to simpler sub-questions | [cited] | ClaimDecomp (Chen, Sriram, Choi & Durrett, EMNLP 2022, arXiv 2205.06938): decomposes a claim into "yes-no subquestions whose answers influence the veracity of the claim"; the subquestions "can help identify relevant evidence ... and derive the veracity through their answers". Our judge v2 asks per-evidence questions and derives the outcome by rule |
 | Declining to answer is a recognised way to cut unsupported output | [cited] | Wen et al., "Know Your Limits: A Survey of Abstention in Large Language Models", TACL (arXiv 2407.18418): abstention is "increasingly recognized for its potential to mitigate hallucinations and enhance safety in LLM systems" |
 | Deriving the promise outcome by rule from evidence-level labels cuts over-commitment on our data | [measured] | `10-promise-trajectories.md` §7 |
+| Fusing a complete ranking with one that covers part of the corpus buries what the partial one cannot see | [measured] | `10-promise-trajectories.md` §8.1: dense over the prose store (65 % of statements) + BM25 over all, RRF k = 60; 1.6 % of the evidence shown came from outside the store, and answer statements ranked 1st to 3rd on BM25 were cut. Follows from the RRF score itself: 1/61 for a first place in one list is less than 2/90 for thirtieth place in two |
+| A prose filter built for sentence classification removes the sentences that report results | [measured] | same section: `looks_like_sentence` (letter ratio ≥ 0.75, a listed verb) rejects "For FY2021, our electricity consumption was 61 kwh per square foot (FY2020: 68 …)" and "In 2023, ThaiBev installed solar rooftops at two distribution centers …". Relevant to RQ1 too: the `dev-sent` baseline and the graph arms retrieve over the same filtered set |
 
 ### 7.2 Still unsupported, must be settled before or during implementation
 
