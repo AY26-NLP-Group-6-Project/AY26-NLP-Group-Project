@@ -23,6 +23,7 @@ from collections import Counter, defaultdict
 from pathlib import Path
 
 from graph_rag.config import GraphConfig
+from graph_rag.promises.evidence import where
 from graph_rag.promises.extract import out_dir
 from graph_rag.promises.outcome import OUTCOMES
 
@@ -90,6 +91,21 @@ def sample(promises: list[dict], outcomes: dict[str, dict], n: int, seed: int) -
     return chosen
 
 
+def evidence_cell(evidence: list[dict], deadline: int) -> str:
+    """The evidence as the annotator reads it: one block per report year, the deadline year marked."""
+    if not evidence:
+        return "(nothing retrieved)"
+    lines, year = [], None
+    for e in evidence:
+        if e["year"] != year:
+            year = e["year"]
+            when = "deadline year" if year == deadline else "before the deadline" if year < deadline \
+                else "after the deadline"
+            lines.append(f"—— {year} report ({when}) ——")
+        lines.append(f"[{e['ref']}] {where(e)}: {e['text'][:EVIDENCE_CHARS]}")
+    return "\n\n".join(lines)
+
+
 def sheet_ids(sheet: Path) -> set[str]:
     from openpyxl import load_workbook
 
@@ -123,10 +139,7 @@ def export(cfg: GraphConfig, out: Path | None = None, n: int = 75, seed: int = 2
     key = {}
     for p in chosen:
         o = outcomes[p["promise_id"]]
-        evidence = "\n\n".join(
-            f"[{e['ref']}] {e['year']} report, p.{e['page']}: {e['text'][:EVIDENCE_CHARS]}"
-            for e in o["evidence"]
-        ) or "(nothing retrieved)"
+        evidence = evidence_cell(o["evidence"], p["target_year"])
         others = "; ".join(
             f"deadline {r['target_year']}"
             + (f", quantity {r['quantity']:g}" if r["quantity"] is not None else "")
@@ -190,8 +203,11 @@ GUIDE = [
     ["restated_in", "Later report years that repeat the same commitment."],
     ["other_versions", "The same company's commitments on a similar metric with a different deadline or "
                        "quantity: possible moved goalposts."],
-    ["evidence", "Statements retrieved from the company's reports for the deadline year and the year "
-                 "after, tagged E1, E2, ... with report year and page."],
+    ["evidence", "Statements retrieved from the company's later reports, in report order, tagged E1, E2, "
+                 "... with report year and page. They come from every report after the one that made the "
+                 "promise, up to the year after the deadline; the deadline year's block is marked. "
+                 "'directly follows E3' means the statement comes right after E3 in the report: one "
+                 "passage, or one row of a table (a target cell and then its result), to be read together."],
     [],
     ["What you fill", ""],
     ["promise_ok", "Y if this is the company's own forward-looking commitment with a deadline, and the "
@@ -201,19 +217,30 @@ GUIDE = [
     ["fields_ok", "Y if metric, quantity, unit and baseline are all right; N otherwise (say what in note)."],
     ["outcome", "Judge only from the evidence shown:"],
     ["  achieved", "The evidence says the target was met or the deliverable completed by the deadline, or "
-                   "reports a figure that plainly meets it."],
+                   "reports a figure that plainly meets it. A deliverable reported as finished before "
+                   "the deadline counts."],
     ["  failed", "The evidence says it was missed, or reports a figure at the deadline that plainly "
                  "falls short."],
-    ["  revised", "The evidence restates the commitment with a later deadline, a weaker or changed quantity, "
-                  "or a changed baseline, without reporting the original as met."],
-    ["  unclear", "The evidence talks about this target or its metric but does not let you tell whether it "
-                  "was met (progress with no verdict, 'on track')."],
-    ["  disappeared", "Nothing in the evidence refers to this target or its metric."],
+    ["  revised", "The evidence, from any year, restates the commitment with a later deadline, a weaker "
+                  "or changed quantity, or a changed baseline, or says it was postponed, without "
+                  "reporting the original as met."],
+    ["  unclear", "The evidence from the deadline year or later talks about this target or its metric "
+                  "but does not let you tell whether it was met (progress with no verdict, 'on track')."],
+    ["  disappeared", "Nothing in the evidence from the deadline year or later refers to this target or "
+                      "its metric. A restatement in an earlier year does not count: the question is "
+                      "whether the company still speaks of it once the deadline has come."],
     ["evidence_ref", "The tag(s) your outcome rests on, e.g. E2. Leave blank for disappeared."],
     ["note", "Anything worth knowing: a wrong field, evidence that is about something else, a case worth "
              "writing up."],
     [],
     ["Be strict", "General statements that the company cares about the topic are not 'achieved'."],
+    ["Missed and moved", "If the evidence shows both that the deadline was missed and that the same "
+                         "commitment was given a later deadline, choose 'revised': the new date explains "
+                         "the miss. Choose 'failed' when it was missed and not re-dated."],
+    ["Tables", "A table is parsed into fragments. A fragment that only names the target ('An accident "
+               "frequency rate of zero') is not a result; the result is usually the fragment marked "
+               "'directly follows'. In one long flattened row the columns run together (target, result, "
+               "next year's target): if you cannot tell which column a phrase is in, do not rely on it."],
     ["Recurring targets", "An annual target renewed every year ('zero incidents in FY2023') is judged "
                           "for the deadline year given. Seeing it set again for the next year is routine "
                           "renewal, not 'revised': if the deadline year's result is reported, choose "

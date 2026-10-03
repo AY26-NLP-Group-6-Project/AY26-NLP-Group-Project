@@ -2,9 +2,14 @@
 rule, sheet scoring."""
 
 import json
+import re
+import zlib
+from types import SimpleNamespace
 
+import numpy as np
 import pytest
 from graph_rag.promises import build as B
+from graph_rag.promises import evidence as V
 from graph_rag.promises import extract as E
 from graph_rag.promises import outcome as O
 from graph_rag.promises import sheet as S
@@ -138,8 +143,8 @@ def test_score_reads_a_filled_sheet(tmp_path, monkeypatch):
     assert S.sheet_ids(path) == {"P1", "P2", "P3", "P4"}
 
 
-def label(ref, relation="other", result="none", change="none"):
-    return {"ref": ref, "relation": relation, "deadline_result": result, "change": change}
+def label(ref, relation="other", result="none", change="none", year=None):
+    return {"ref": ref, "year": year, "relation": relation, "deadline_result": result, "change": change}
 
 
 def test_decide_needs_a_statement_about_this_target_that_states_the_outcome():
@@ -159,6 +164,24 @@ def test_decide_needs_a_statement_about_this_target_that_states_the_outcome():
     assert O.decide([label("E1", this, "met"), label("E2", this, "missed")], annual=False)[0] == "unclear"
     assert O.decide([label("E1", "same_metric"), label("E2")], annual=False) == ("unclear", ["E1"])
     assert O.decide([label("E1"), label("E2")], annual=False) == ("disappeared", [])
+
+
+def test_decide_keeps_to_the_calendar_when_the_evidence_spans_earlier_years():
+    this = "this_target"
+    restated = label("E1", this, year=2022)                 # repeated before the 2024 deadline
+    # ... and never mentioned from the deadline year on: it has disappeared
+    assert O.decide([restated, label("E2", year=2024)], annual=False, deadline=2024) == ("disappeared", [])
+    assert O.decide([restated, label("E2", "same_metric", year=2025)], False, 2024) == ("unclear", ["E2"])
+    # a report older than the deadline cannot say the deadline was missed
+    assert O.decide([label("E1", this, "missed", year=2023)], False, 2024)[0] == "disappeared"
+    assert O.decide([label("E1", this, "missed", year=2024)], False, 2024) == ("failed", ["E1"])
+    # it can report a deliverable finished early, but not an annual target's deadline-year result
+    assert O.decide([label("E1", this, "met", year=2023)], False, 2024) == ("achieved", ["E1"])
+    assert O.decide([label("E1", this, "met", year=2023)], True, 2024)[0] == "disappeared"
+    # a deadline moved in an earlier report is a revision, unless the original was then reported met
+    moved = label("E1", this, change="later", year=2022)
+    assert O.decide([moved], False, 2024) == ("revised", ["E1"])
+    assert O.decide([moved, label("E2", this, "met", year=2024)], False, 2024) == ("achieved", ["E2"])
 
 
 def test_parse_labels_keeps_verdict_fields_only_on_this_target_and_flags_gaps():
@@ -201,3 +224,75 @@ def test_propose_v2_retries_a_garbled_reply_and_reads_renewal_as_no_verdict():
     out = O.propose_v2(promise, evidence, FakeClient(["", "not json"]), prompt)
     assert out["outcome"] == "unclear" and not out["parse_ok"]
     assert O.propose_v2(promise, [], FakeClient([]), prompt)["outcome"] == "disappeared"
+
+
+class FakeEmbedder:
+    """Deterministic bag-of-words vectors, so dense ranking works without a model."""
+
+    def embed(self, texts):
+        out = np.zeros((len(texts), 64), dtype=np.float32)
+        for i, text in enumerate(texts):
+            for token in re.findall(r"[a-z]+", text.lower()):
+                out[i, zlib.crc32(token.encode()) % 64] += 1.0
+        norms = np.linalg.norm(out, axis=1, keepdims=True)
+        return out / np.where(norms == 0, 1.0, norms)
+
+
+REPORTS = {
+    2021: ["We aim to cut the accident frequency rate to zero by 2023."],
+    2022: ["Our accident frequency rate target remains zero by 2023 for all sites.",
+           "The accident frequency rate was reviewed by the board twice.",
+           "Water use fell across the group during the year.",
+           "We planted trees in the community garden last spring.",
+           "Group safety ambition restated for 2026 under the new plan."],
+    2023: ["Occupational health and safety accident frequency rate of zero.",
+           "Requires improvement: two cases.",
+           "Energy use per square foot was unchanged from last year.",
+           "The board met four times during the financial year.",
+           "Staff volunteered at the food bank in December again."],
+    2024: ["The accident frequency rate target of zero is now set for 2025 instead."],
+    2025: ["In 2025 the accident frequency rate was zero again this year."],
+}
+
+
+def test_trajectory_evidence_follows_the_promise_through_the_later_reports(tmp_path):
+    from graph_rag.store.duckdb_store import DuckDBGraphStore
+
+    db = tmp_path / "graph.duckdb"
+    store = DuckDBGraphStore(db)
+    for year, texts in REPORTS.items():
+        for idx, text in enumerate(texts):
+            store.con.execute(
+                "INSERT INTO statements (stmt_id, sha256, company, year, page, idx, text, norm_text, source) "
+                "VALUES (?, ?, 'Acme', ?, 9, ?, ?, ?, 'corpus')",
+                [f"r{year}p0009s{idx:03d}", f"sha{year}", year, idx, text, text.lower()])
+    store.con.close()
+    promise = {"promise_id": "P1", "company": "Acme", "metric": "accident frequency rate",
+               "target_year": 2023,
+               "origin": {"year": 2021, "target_text": "cut the accident frequency rate to zero by 2023"},
+               "related": [{"promise_id": "P2"}, {"promise_id": "gone"}]}
+    other = {"promise_id": "P2", "target_year": 2026,
+             "origin": {"stmt_id": "r2022p0009s004", "year": 2022, "page": 9, "file": "sha2022",
+                        "text": REPORTS[2022][4]}}
+    finder = V.TrajectoryFinder(SimpleNamespace(db_path=db), FakeEmbedder(), {"P1": promise, "P2": other},
+                                sentence_store="no-such-store")
+    evidence = finder.find(promise)
+
+    assert finder.window(promise) == [2022, 2023, 2024]              # after the promise, up to deadline + 1
+    assert [e["ref"] for e in evidence] == [f"E{n}" for n in range(1, len(evidence) + 1)]
+    assert [e["year"] for e in evidence] == sorted(e["year"] for e in evidence)
+    assert not any(e["year"] in (2021, 2025) for e in evidence)
+    by_text = {e["text"]: e for e in evidence}
+    # an earlier report gets a small budget, plus the target the promise graph links to it
+    assert [e["via"] for e in evidence if e["year"] == 2022].count("retrieved") == V.K_BEFORE
+    assert by_text[REPORTS[2022][4]]["via"] == "linked"
+    # the cell beside the target row is too short to be retrieved and comes in as its neighbour
+    result, row = by_text["Requires improvement: two cases."], by_text[REPORTS[2023][0]]
+    assert result["via"] == "neighbour" and result["follows"] == row["ref"]
+    assert V.where(result) == f"2023 report, p.9, directly follows {row['ref']}"
+    assert REPORTS[2024][0] in by_text
+
+    cell = S.evidence_cell(evidence, deadline=2023)
+    assert "—— 2022 report (before the deadline) ——" in cell and "—— 2023 report (deadline year) ——" in cell
+    assert f"[{result['ref']}] 2023 report, p.9, directly follows {row['ref']}: Requires improvement" in cell
+    assert S.evidence_cell([], deadline=2023) == "(nothing retrieved)"

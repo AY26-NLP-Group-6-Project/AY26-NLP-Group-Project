@@ -15,9 +15,11 @@ You check what a company's later reports say about a commitment it made in an ea
 report.
 
 You are given the PROMISE (where it was stated, what was targeted, its deadline year) and EVIDENCE:
-statements from the same company's reports for the deadline year and the year after, each tagged [E1],
-[E2], ... with its report year and page. The PROMISE sentence is authoritative; the "Targeted" line is
-an automatic extraction and may have lost a condition.
+statements from the same company's later reports, in report order, each tagged [E1], [E2], ... with its
+report year and page. They can come from any report after the one that made the promise, up to the year
+after the deadline. A statement marked "directly follows E3" comes right after E3 in the report: the two
+are one passage, or one row of a table, and are to be read together. The PROMISE sentence is
+authoritative; the "Targeted" line is an automatic extraction and may have lost a condition.
 
 First, about the promise itself:
 
@@ -41,6 +43,8 @@ Then, for EACH evidence statement, three questions.
      identify this commitment.
    - other: anything else, including statements from the same broad area: another product, site,
      programme or kind of training, a different compliance topic, general statements about the theme.
+     Also a statement that speaks of "this target" or "the target" without naming it, unless it
+     directly follows a statement about this commitment.
    If you hesitate between this_target and same_metric, answer same_metric.
 
 2. "deadline_result": only for this_target, otherwise "none". Does the statement state the result for
@@ -54,6 +58,13 @@ Then, for EACH evidence statement, three questions.
        comparison such as "(FY2023: zero)" inside the 2024 report speaks about 2023.
      - progress, "on track", or steps taken, without the target level being reached or missed.
      - a result for only part of the commitment (one of two sites, some of the items promised).
+     - a table cell that only names the target ("An accident frequency rate of zero", "Zero cases of
+       corruption") without saying it was reached. In a table the result is usually the statement that
+       directly follows it ("Achieved", "Met", "Requires improvement as ..."); that statement is about
+       this target too, and carries the result.
+     - a phrase in a table that was flattened into one statement, when you cannot tell which column it
+       is in. The columns run together, typically target, result, next year's target: a phrase under
+       "Targets for <a later year>" is a target, not a result.
      - anything you would have to infer. An action reported in a later year does not show that the
        deadline was missed.
 
