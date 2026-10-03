@@ -84,10 +84,11 @@ distribution; population estimates need the per-class agreement applied to the 3
 ## 6. Result of the check (2026-10-03)
 
 Sheet returned the same day, all 75 rows filled, every row with a written reason. **Provenance to state
-in the report:** the folder holds a filling script and an annotation file, and several notes read "per
-the user's ruling", so the judgements were drafted with an AI assistant and adjudicated by a team member
-on the ambiguous rows. That makes this an LLM-assisted, human-adjudicated check, not six independent
-annotators; it is described as such wherever the numbers are used.
+in the report:** one team member judged every row; a first pass was drafted with Codex (GPT family) and
+used as the working interface, and the annotator reviewed it row by row and made the final call on each.
+It counts as one human annotator's judgement with an AI-drafted first pass, not as several independent
+annotators. Two things bound the anchoring risk: the system's proposed outcome was not on the sheet, and
+the check disagrees with the system on 30 % of rows, always in the stricter direction.
 
 | | |
 |---|---|
@@ -131,5 +132,6 @@ in ten missed, one in ten no longer mentioned, and one in twenty moved. This is 
 pipeline retrieved (6 statements from the deadline-year reports): an `unclear` or `disappeared` can also
 mean retrieval missed the passage, so both are upper bounds on what the reports themselves leave open.
 
-Limits: one checker and an LLM-assisted one; 14–16 rows per proposed class, so class-level precision
-carries wide intervals; table-only targets are missing from the pool (section 2).
+Limits: one annotator, working from an AI-drafted first pass whose model family is the system's own;
+14–16 rows per proposed class, so class-level precision carries wide intervals; table-only targets are
+missing from the pool (section 2).
