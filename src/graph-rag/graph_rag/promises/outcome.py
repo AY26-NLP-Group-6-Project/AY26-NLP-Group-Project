@@ -29,11 +29,23 @@ PROMPTS = {"v1": REPO_ROOT / "configs" / "prompts" / "promise_outcome.md",
            "v2": REPO_ROOT / "configs" / "prompts" / "promise_outcome_v2.md"}
 PROMPT_PATH = PROMPTS["v1"]
 OUTCOMES = ("achieved", "failed", "revised", "unclear", "disappeared")
+REPORTED = ("achieved", "not_met", "unclear", "disappeared")
 RELATIONS = ("this_target", "same_metric", "other")
 RESULTS = ("met", "missed", "none")
 CHANGES = ("later", "none")
 EVIDENCE_CHARS = 500
 _JSON = re.compile(r"\{.*\}", re.S)
+
+
+def reported(outcome: str) -> str:
+    """The outcome as it is reported: `failed` and `revised` are one class, not met.
+
+    Both say the deadline passed without the target being reached. Which of the two it is depends on
+    whether a missed target that is set again counts as re-dated, and neither the annotator across two
+    rounds nor the judge drew that line the same way (`docs/graph-rag-notes/10` §8.6). The five-way label
+    is kept as detail; counts, shares and agreement are reported on `REPORTED`.
+    """
+    return "not_met" if outcome in ("failed", "revised") else outcome
 
 
 def _sections(path: Path = PROMPT_PATH) -> dict[str, str]:
@@ -248,6 +260,7 @@ def run(cfg: GraphConfig, limit: int | None = None, workers: int = 8, client: LL
         "evidence": evidence,
         "evidence_from": str(evidence_from),
         "promises_judged": len(results),
+        "reported_outcome": dict(Counter(reported(r["outcome"]) for r in results)),
         "proposed_outcome": dict(Counter(r["outcome"] for r in results)),
         "unparsed": sum(not r["parse_ok"] for r in results),
         "mean_evidence": sum(len(r["evidence"]) for r in results) / max(1, len(results)),

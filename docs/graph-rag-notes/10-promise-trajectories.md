@@ -507,3 +507,31 @@ Limits: one annotator with an AI-drafted first pass, as before; 4 to 15 rows per
 rounds differ in evidence, judge and guide, so the comparison of their rates is between two systems as
 wholes; the 299 are the promises left after round 1 took a sample that favoured rare outcomes, so they
 are not a random subset of the 374.
+
+## 9. Reporting convention: failed and revised are one class, "not met" (decided 2026-10-04)
+
+Following §8.6, outcomes are reported on four classes: **achieved, not met, unclear, disappeared**. Not
+met means the deadline passed without the target being reached, whether the report says it was missed
+(`failed`) or gives it a later date or a weaker level (`revised`). The five-way label stays in the data
+as detail, e.g. for picking moved-goalpost cases, and is not used for counts, shares or agreement.
+
+What changed with the decision:
+
+- `outcome.reported()` maps the label; `promise-outcomes` prints `reported_outcome` next to the
+  five-way counts; `promise-score` returns a `reported` block (accuracy, κ, per class, confusion) and
+  its weighted `accuracy` is on the reported classes (`accuracy_five_way` keeps the old one).
+- The annotator's guide has one rule where two collided: `failed` and `revised` count the same, with a
+  line on when to use which, and an annual target set again for the next year is `unclear` only when no
+  result for its own year is reported.
+- The judge's rule (`outcome.decide`) is unchanged: on the reported classes the order of its second and
+  third steps no longer matters.
+
+The figures of §6 to §8 on the reported classes (weighted to each sheet's pool, 95 % intervals):
+
+| | round 1: v1, first evidence | round 3: v2, trajectory evidence, held out |
+|---|---|---|
+| accuracy | 0.82 (0.72 – 0.90) | 0.83 (0.71 – 0.93) |
+| raw accuracy, κ on the sheet | 0.703, 0.61 | 0.800, 0.71 |
+| not met: precision, recall on the sheet | 14/31, 14/14 | 21/27, 21/22 |
+| system's own counts over the 374 | achieved 153, not met 62, unclear 134, disappeared 25 | achieved 173, not met 56, unclear 135, disappeared 10 |
+| human-verified shares | achieved 36 %, not met 8 %, unclear 49 %, disappeared 5 % | achieved 50 %, not met 13 %, unclear 31 %, disappeared 6 % |

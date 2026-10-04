@@ -128,6 +128,12 @@ def test_score_reads_a_filled_sheet(tmp_path, monkeypatch):
     assert result["outcome"]["human_distribution"] == {"achieved": 1, "failed": 2}
     assert result["outcome"]["per_class"]["failed"] == {"precision": 1.0, "recall": 0.5, "support": 2}
     assert S.cohen_kappa(["a", "a", "b", "b"], ["a", "b", "b", "b"]) == pytest.approx(0.5)
+    # as reported, failed and revised are one class
+    assert result["reported"]["human_distribution"] == {"achieved": 1, "not_met": 2}
+    assert result["reported"]["per_class"]["not_met"] == {"precision": 1.0, "recall": 0.5, "support": 2}
+    assert O.reported("revised") == O.reported("failed") == "not_met" and O.reported("unclear") == "unclear"
+    assert S.agreement(["failed", "revised"], ["revised", "revised"], O.OUTCOMES)["accuracy"] == 0.5
+    assert S.agreement(["not_met", "not_met"], ["not_met", "not_met"], O.REPORTED)["accuracy"] == 1.0
 
     # the same sheet scored against another judge's output over the same promises
     judged = [{"promise_id": "P1", "outcome": "achieved"}, {"promise_id": "P2", "outcome": "unclear"},
@@ -151,9 +157,9 @@ def test_population_weights_each_stratum_by_the_pool_it_was_drawn_from():
     assert sum(h == s for h, s in flat) / len(flat) == pytest.approx(0.625)     # the sheet's raw rate
     est = S.population(strata, {"achieved": 100, "failed": 10, "unclear": 50}, draws=200)
     assert est["pool"] == 110                                                   # no row drawn from "unclear"
-    assert est["accuracy"]["estimate"] == pytest.approx((100 * 0.75 + 10 * 0.5) / 110)
-    merged = est["accuracy_failed_revised_as_one"]["estimate"]
-    assert merged == pytest.approx((100 * 0.75 + 10 * 0.75) / 110)
+    # reported classes: the row the annotator called revised and the system failed is "not met" twice
+    assert est["accuracy"]["estimate"] == pytest.approx((100 * 0.75 + 10 * 0.75) / 110)
+    assert est["accuracy_five_way"]["estimate"] == pytest.approx((100 * 0.75 + 10 * 0.5) / 110)
     # every promise the annotator called unclear got a verdict from the system
     assert est["over_commitment"]["estimate"] == pytest.approx(1.0)
     assert est["human_share.unclear"]["estimate"] == pytest.approx((100 * 0.25 + 10 * 0.25) / 110)

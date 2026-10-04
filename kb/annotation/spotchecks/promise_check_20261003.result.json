@@ -6,6 +6,63 @@
     "promise_precision": 0.9866666666666667,
     "fields_ok_rate": 0.9054054054054054
   },
+  "reported": {
+    "n": 74,
+    "human_distribution": {
+      "not_met": 14,
+      "achieved": 14,
+      "unclear": 35,
+      "disappeared": 11
+    },
+    "system_distribution": {
+      "not_met": 31,
+      "achieved": 15,
+      "unclear": 14,
+      "disappeared": 14
+    },
+    "accuracy": 0.7027027027027027,
+    "cohen_kappa": 0.6112702960840497,
+    "per_class": {
+      "achieved": {
+        "precision": 0.8666666666666667,
+        "recall": 0.9285714285714286,
+        "support": 14
+      },
+      "not_met": {
+        "precision": 0.45161290322580644,
+        "recall": 1.0,
+        "support": 14
+      },
+      "unclear": {
+        "precision": 1.0,
+        "recall": 0.4,
+        "support": 35
+      },
+      "disappeared": {
+        "precision": 0.7857142857142857,
+        "recall": 1.0,
+        "support": 11
+      }
+    },
+    "confusion_human_rows_system_cols": {
+      "achieved": {
+        "achieved": 13,
+        "not_met": 1
+      },
+      "not_met": {
+        "not_met": 14
+      },
+      "unclear": {
+        "unclear": 14,
+        "not_met": 16,
+        "disappeared": 3,
+        "achieved": 2
+      },
+      "disappeared": {
+        "disappeared": 11
+      }
+    }
+  },
   "outcome": {
     "n": 74,
     "human_distribution": {
@@ -51,21 +108,6 @@
         "support": 11
       }
     },
-    "over_commitment": {
-      "k": 21,
-      "n": 35,
-      "rate": 0.6
-    },
-    "under_commitment": {
-      "k": 0,
-      "n": 39,
-      "rate": 0.0
-    },
-    "verdict_precision": {
-      "k": 38,
-      "n": 60,
-      "rate": 0.6333333333333333
-    },
     "confusion_human_rows_system_cols": {
       "achieved": {
         "achieved": 13,
@@ -87,6 +129,21 @@
       "disappeared": {
         "disappeared": 11
       }
+    },
+    "over_commitment": {
+      "k": 21,
+      "n": 35,
+      "rate": 0.6
+    },
+    "under_commitment": {
+      "k": 0,
+      "n": 39,
+      "rate": 0.0
+    },
+    "verdict_precision": {
+      "k": 38,
+      "n": 60,
+      "rate": 0.6333333333333333
     },
     "human_by_kind": {
       "milestone": {
@@ -142,7 +199,7 @@
         0.8971447669977082
       ]
     },
-    "accuracy_failed_revised_as_one": {
+    "accuracy_five_way": {
       "estimate": 0.8176056786350904,
       "ci95": [
         0.7214508530685001,

@@ -562,6 +562,12 @@ instead of 49 %. By proposed class the check agrees with `achieved` 13/14, `uncl
 partly a guide ambiguity of ours (a missed annual target set again: renewal, or re-dating?); as one
 class "not met" is right 21/27. Report "not met", not the split.
 
+Decided 2026-10-04 (`10` §9): outcomes are reported on four classes, achieved / not met / unclear /
+disappeared; `failed` and `revised` stay in the data as detail. The scorer, the run statistics and the
+annotator's guide follow. On the reported classes the held-out sheet gives raw accuracy 0.800 (κ 0.71)
+and weighted accuracy 0.83 (0.71 – 0.93); the system's counts over the 374 are achieved 173, not met
+56, unclear 135, disappeared 10.
+
 ## 5. Risks
 
 1. **Aspect canonicalisation is the whole ball game.** If "Scope 1 emissions", "direct emissions"

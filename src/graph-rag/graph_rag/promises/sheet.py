@@ -25,7 +25,7 @@ from pathlib import Path
 from graph_rag.config import GraphConfig
 from graph_rag.promises.evidence import where
 from graph_rag.promises.extract import out_dir
-from graph_rag.promises.outcome import OUTCOMES
+from graph_rag.promises.outcome import OUTCOMES, REPORTED, reported
 
 SHEET_NAME = "check"
 COLUMNS = ["promise_id", "company", "stated_in", "promise_sentence", "extracted", "restated_in",
@@ -238,18 +238,19 @@ GUIDE = [
              "writing up."],
     [],
     ["Be strict", "General statements that the company cares about the topic are not 'achieved'."],
-    ["Missed and moved", "If the evidence shows both that the deadline was missed and that the same "
-                         "commitment was given a later deadline, choose 'revised': the new date explains "
-                         "the miss. Choose 'failed' when it was missed and not re-dated."],
+    ["Not met", "'failed' and 'revised' are reported together as one outcome, not met: the deadline "
+                "passed without the target being reached. Use 'failed' when the evidence reports the miss "
+                "and nothing more; use 'revised' when the commitment was given a later date, a weaker "
+                "level or a new baseline, or was postponed, whether or not the miss is also reported. "
+                "If you hesitate between the two, pick either: they count the same."],
     ["Tables", "A table is parsed into fragments. A fragment that only names the target ('An accident "
                "frequency rate of zero') is not a result; the result is usually the fragment marked "
                "'directly follows'. In one long flattened row the columns run together (target, result, "
                "next year's target): if you cannot tell which column a phrase is in, do not rely on it."],
-    ["Recurring targets", "An annual target renewed every year ('zero incidents in FY2023') is judged "
-                          "for the deadline year given. Seeing it set again for the next year is routine "
-                          "renewal, not 'revised': if the deadline year's result is reported, choose "
-                          "achieved or failed; if the evidence only restates it for the next year, choose "
-                          "unclear. Use 'revised' only when its level or scope was changed."],
+    ["Annual targets", "An annual target ('zero incidents in FY2023') is judged on the result reported "
+                       "for its own year: achieved if met, failed or revised (not met) if missed. Seeing "
+                       "it set again for the next year tells nothing by itself: with no result for the "
+                       "deadline year, choose unclear."],
 ]
 
 
@@ -268,9 +269,27 @@ VERDICTS = tuple(o for o in OUTCOMES if o != "unclear")
 POOL = "_pool"                      # in a sheet's key: how many promises each stratum was drawn from
 
 
-def _not_met(label: str) -> str:
-    """failed and revised as one class: the deadline passed without the target being met."""
-    return "not_met" if label in ("failed", "revised") else label
+def agreement(human: list[str], system: list[str], classes: tuple[str, ...]) -> dict:
+    """Accuracy, kappa, per-class precision and recall, and the confusion, over one set of classes."""
+    pairs = list(zip(human, system, strict=True))
+    per_class = {}
+    for cls in classes:
+        tp = sum(h == cls and s == cls for h, s in pairs)
+        fp = sum(h != cls and s == cls for h, s in pairs)
+        fn = sum(h == cls and s != cls for h, s in pairs)
+        if tp + fp + fn:
+            per_class[cls] = {"precision": tp / (tp + fp) if tp + fp else 0.0,
+                              "recall": tp / (tp + fn) if tp + fn else 0.0, "support": tp + fn}
+    return {
+        "n": len(pairs),
+        "human_distribution": dict(Counter(human)),
+        "system_distribution": dict(Counter(system)),
+        "accuracy": sum(h == s for h, s in pairs) / len(pairs) if pairs else None,
+        "cohen_kappa": cohen_kappa(human, system),
+        "per_class": per_class,
+        "confusion_human_rows_system_cols": {
+            h: dict(Counter(s for hh, s in pairs if hh == h)) for h in classes if h in human},
+    }
 
 
 def population(strata: dict[str, list[tuple[str, str]]], pool: dict[str, int],
@@ -279,7 +298,8 @@ def population(strata: dict[str, list[tuple[str, str]]], pool: dict[str, int],
 
     A sheet is stratified on the outcome proposed when it was drawn, with rare outcomes over-sampled, so
     its raw rates describe no population. Here each stratum's (human, system) pairs are weighted by the
-    stratum's size in the pool. Intervals are 95 % bootstrap, resampling within strata.
+    stratum's size in the pool. Intervals are 95 % bootstrap, resampling within strata. `accuracy` is on
+    the reported classes (failed and revised as one, not met); `accuracy_five_way` keeps them apart.
     """
     strata = {s: pairs for s, pairs in strata.items() if pairs and pool.get(s)}
     total = sum(pool[s] for s in strata)
@@ -294,13 +314,13 @@ def population(strata: dict[str, list[tuple[str, str]]], pool: dict[str, int],
 
     labels = sorted({h for pairs in strata.values() for h, _ in pairs})
     measures = {
-        "accuracy": lambda s: mean(s, lambda h, y: h == y),
-        "accuracy_failed_revised_as_one": lambda s: mean(s, lambda h, y: _not_met(h) == _not_met(y)),
+        "accuracy": lambda s: mean(s, lambda h, y: reported(h) == reported(y)),
+        "accuracy_five_way": lambda s: mean(s, lambda h, y: h == y),
         "over_commitment": lambda s: ratio(s, lambda h, y: y in VERDICTS, lambda h, y: h == "unclear"),
         "under_commitment": lambda s: ratio(s, lambda h, y: y == "unclear", lambda h, y: h in VERDICTS),
         "verdict_precision": lambda s: ratio(s, lambda h, y: h == y, lambda h, y: y in VERDICTS),
         **{f"human_share.{c}": (lambda s, c=c: mean(s, lambda h, y: h == c)) for c in labels},
-        "human_share.not_met": lambda s: mean(s, lambda h, y: _not_met(h) == "not_met"),
+        "human_share.not_met": lambda s: mean(s, lambda h, y: reported(h) == "not_met"),
     }
     rng = random.Random(seed)
     resampled = [{s: [rng.choice(pairs) for _ in pairs] for s, pairs in strata.items()} for _ in range(draws)]
@@ -348,16 +368,6 @@ def score(cfg: GraphConfig, sheet: Path | None = None, outcomes: Path | None = N
     human = [str(r["outcome"]).strip().lower() for r in scored]
     system = [key[r["promise_id"]]["outcome"] for r in scored]
     pairs = list(zip(human, system, strict=True))
-    confusion = {h: dict(Counter(s for hh, s in pairs if hh == h)) for h in OUTCOMES if h in human}
-    per_class = {}
-    for cls in OUTCOMES:
-        tp = sum(h == cls and s == cls for h, s in zip(human, system, strict=True))
-        fp = sum(h != cls and s == cls for h, s in zip(human, system, strict=True))
-        fn = sum(h == cls and s != cls for h, s in zip(human, system, strict=True))
-        if tp + fp + fn:
-            precision = tp / (tp + fp) if tp + fp else 0.0
-            recall = tp / (tp + fn) if tp + fn else 0.0
-            per_class[cls] = {"precision": precision, "recall": recall, "support": tp + fn}
     result = {
         "rows": len(rows),
         "judged": len(judged),
@@ -366,13 +376,11 @@ def score(cfg: GraphConfig, sheet: Path | None = None, outcomes: Path | None = N
             "promise_precision": sum(yn(r["promise_ok"]) for r in judged) / len(judged) if judged else None,
             "fields_ok_rate": sum(yn(r["fields_ok"]) for r in fields) / len(fields) if fields else None,
         },
+        # what is reported: failed and revised as one class, not met
+        "reported": agreement([reported(h) for h in human], [reported(s) for s in system], REPORTED),
+        # the five-way labels as given, kept as detail
         "outcome": {
-            "n": len(scored),
-            "human_distribution": dict(Counter(human)),
-            "system_distribution": dict(Counter(system)),
-            "accuracy": sum(h == s for h, s in pairs) / len(scored) if scored else None,
-            "cohen_kappa": cohen_kappa(human, system),
-            "per_class": per_class,
+            **agreement(human, system, OUTCOMES),
             # the two ways of being wrong about how much the evidence settles
             "over_commitment": _rate(sum(h == "unclear" and s in VERDICTS for h, s in pairs),
                                      human.count("unclear")),
@@ -380,7 +388,6 @@ def score(cfg: GraphConfig, sheet: Path | None = None, outcomes: Path | None = N
                                       sum(h in VERDICTS for h in human)),
             "verdict_precision": _rate(sum(h == s and s in VERDICTS for h, s in pairs),
                                        sum(s in VERDICTS for s in system)),
-            "confusion_human_rows_system_cols": confusion,
             "human_by_kind": {
                 kind: dict(Counter(h for r, h in zip(scored, human, strict=True)
                                    if promises[r["promise_id"]]["kind"] == kind))

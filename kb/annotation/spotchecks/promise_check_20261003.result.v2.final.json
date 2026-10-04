@@ -6,6 +6,63 @@
     "promise_precision": 0.9866666666666667,
     "fields_ok_rate": 0.9054054054054054
   },
+  "reported": {
+    "n": 74,
+    "human_distribution": {
+      "not_met": 14,
+      "achieved": 14,
+      "unclear": 35,
+      "disappeared": 11
+    },
+    "system_distribution": {
+      "not_met": 14,
+      "unclear": 36,
+      "disappeared": 11,
+      "achieved": 13
+    },
+    "accuracy": 0.9324324324324325,
+    "cohen_kappa": 0.9004573580844768,
+    "per_class": {
+      "achieved": {
+        "precision": 0.9230769230769231,
+        "recall": 0.8571428571428571,
+        "support": 14
+      },
+      "not_met": {
+        "precision": 0.9285714285714286,
+        "recall": 0.9285714285714286,
+        "support": 14
+      },
+      "unclear": {
+        "precision": 0.9166666666666666,
+        "recall": 0.9428571428571428,
+        "support": 35
+      },
+      "disappeared": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "support": 11
+      }
+    },
+    "confusion_human_rows_system_cols": {
+      "achieved": {
+        "unclear": 2,
+        "achieved": 12
+      },
+      "not_met": {
+        "not_met": 13,
+        "unclear": 1
+      },
+      "unclear": {
+        "unclear": 33,
+        "achieved": 1,
+        "not_met": 1
+      },
+      "disappeared": {
+        "disappeared": 11
+      }
+    }
+  },
   "outcome": {
     "n": 74,
     "human_distribution": {
@@ -51,21 +108,6 @@
         "support": 11
       }
     },
-    "over_commitment": {
-      "k": 2,
-      "n": 35,
-      "rate": 0.05714285714285714
-    },
-    "under_commitment": {
-      "k": 3,
-      "n": 39,
-      "rate": 0.07692307692307693
-    },
-    "verdict_precision": {
-      "k": 35,
-      "n": 38,
-      "rate": 0.9210526315789473
-    },
     "confusion_human_rows_system_cols": {
       "achieved": {
         "unclear": 2,
@@ -87,6 +129,21 @@
       "disappeared": {
         "disappeared": 11
       }
+    },
+    "over_commitment": {
+      "k": 2,
+      "n": 35,
+      "rate": 0.05714285714285714
+    },
+    "under_commitment": {
+      "k": 3,
+      "n": 39,
+      "rate": 0.07692307692307693
+    },
+    "verdict_precision": {
+      "k": 35,
+      "n": 38,
+      "rate": 0.9210526315789473
     },
     "human_by_kind": {
       "milestone": {
@@ -136,17 +193,17 @@
       }
     },
     "accuracy": {
-      "estimate": 0.8776849376114082,
-      "ci95": [
-        0.776403743315508,
-        0.9619986631016043
-      ]
-    },
-    "accuracy_failed_revised_as_one": {
       "estimate": 0.8835672905525846,
       "ci95": [
         0.7827094474153298,
         0.9678810160427808
+      ]
+    },
+    "accuracy_five_way": {
+      "estimate": 0.8776849376114082,
+      "ci95": [
+        0.776403743315508,
+        0.9619986631016043
       ]
     },
     "over_commitment": {
