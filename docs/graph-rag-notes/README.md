@@ -568,6 +568,44 @@ annotator's guide follow. On the reported classes the held-out sheet gives raw a
 and weighted accuracy 0.83 (0.71 – 0.93); the system's counts over the 374 are achieved 173, not met
 56, unclear 135, disappeared 10.
 
+## 4u. RQ1 does not depend on the prose filter (2026-10-04)
+
+§4s found that the prose filter (`looks_like_sentence`) hides result sentences and that this distorted
+RQ2. The sentence-level baseline of §4k–4m and the graph arms retrieve over the same filtered set, so
+RQ1's "evidence barely helps" could have had the same cause. Checked; it does not.
+
+What the filter removes. Of the 108,376 statements of five words or more it keeps 71,342 (65.8 %). The
+rest fail for: none of its listed verbs and pronouns (is/are/was/were/has/have/had/will/shall/can/may/
+we/our/the group/the company) 21,971 (20.3 %); more than 60 words 7,433 (6.9 %); digit, upper-case or
+URL rules 4,108 (3.8 %); 5 to 7 words 2,489 (2.3 %); letters under 75 % 1,033 (1.0 %). The largest
+group is ordinary prose in the third person and the past tense: "In 2023, ThaiBev installed solar
+rooftops at two distribution centers …".
+
+Store `dev-stmt` (`gw-baseline build --unit statement --reuse dev-sent`, hash `d8a62bfe40c6`): one chunk
+per statement of five words or more, no prose filter; 71,342 vectors taken from `dev-sent`, 37,034
+embedded. Same retriever (`rrf+rerank`, k = 3), same classifier, dev split, 3 uncached repeats. Run
+`20261004T080206Z-baseline-rag-rq1` (code at `92f2ea6` plus the statement unit, committed right after).
+
+The evidence does change: 30 % of same-report spans and 23 % of cross-year spans are statements the
+filter had hidden, and 178 (same report) and 149 (cross year) of the 331 items get a different evidence
+set. The labels do not:
+
+| condition | prose store (4m), vote | all statements, vote | flips right / wrong | p (McNemar, paired) |
+|---|---|---|---|---|
+| sentence_only (no retrieval, the day-to-day reference) | 0.7647 | 0.7686 | +10 / −7 | 0.63 |
+| same_report_rrf | 0.7550 | 0.7591 | +9 / −10 | 1.00 |
+| cross_year_rrf | 0.7804 | 0.7722 | +9 / −13 | 0.52 |
+
+Inside the new run, evidence against `sentence_only`: same report −0.005 (p 0.71), cross year +0.018
+on the mean and +0.004 on the vote (p 1.00). Evidence is cited in 10.9 % and 2.0 % of items (4m: 7.4 %
+and 2.0 %). Cost USD 0.18 to 0.24 per 1,000 items.
+
+So RQ1's finding stands and is now independent of the filter: for labelling what a sentence says, the
+sentence itself carries the answer, and retrieved text, prose or not, is cited in a few items in a
+hundred. RQ2 is the opposite case: whether a target was met is said in another sentence, usually one
+with a figure, and there the filter was decisive. The filter stays as it is for RQ1's stores and the
+graph, so published runs remain comparable; RQ2's evidence does not use it.
+
 ## 5. Risks
 
 1. **Aspect canonicalisation is the whole ball game.** If "Scope 1 emissions", "direct emissions"
@@ -632,7 +670,8 @@ row may reach the report without becoming one of the other two first.
 | Fusing a complete ranking with one that covers part of the corpus buries what the partial one cannot see | [measured] | `10-promise-trajectories.md` §8.1: dense over the prose store (65 % of statements) + BM25 over all, RRF k = 60; 1.6 % of the evidence shown came from outside the store, and answer statements ranked 1st to 3rd on BM25 were cut. Follows from the RRF score itself: 1/61 for a first place in one list is less than 2/90 for thirtieth place in two |
 | On held-out promises the rule-based judge on complete evidence gives a verdict on 8 % of the commitments a human calls unclear (v1 on the first evidence: 31 %), at unchanged accuracy | [measured] | `10-promise-trajectories.md` §8.6: 60 held-out promises weighted to 299; 0.80 (0.68 – 0.90) accuracy against 0.82 |
 | With complete evidence a reader cannot tell the outcome of about 31 % of dated commitments, not 49 % | [measured] | same section, human labels: unclear 30.9 % (21.9 – 39.0) on trajectory evidence against 48.7 % (39.8 – 57.7) on the first evidence; different samples, each weighted to its pool |
-| A prose filter built for sentence classification removes the sentences that report results | [measured] | same section: `looks_like_sentence` (letter ratio ≥ 0.75, a listed verb) rejects "For FY2021, our electricity consumption was 61 kwh per square foot (FY2020: 68 …)" and "In 2023, ThaiBev installed solar rooftops at two distribution centers …". Relevant to RQ1 too: the `dev-sent` baseline and the graph arms retrieve over the same filtered set |
+| A prose filter built for sentence classification removes the sentences that report results | [measured] | same section: `looks_like_sentence` (letter ratio ≥ 0.75, a listed verb) rejects "For FY2021, our electricity consumption was 61 kwh per square foot (FY2020: 68 …)" and "In 2023, ThaiBev installed solar rooftops at two distribution centers …". It removes 34 % of statements of five words or more, 20 % for lacking one of its listed verbs and pronouns (§4u) |
+| RQ1's result does not depend on that filter | [measured] | §4u: sentence-level hybrid over all statements against the prose store, dev, paired on majority votes: same report p = 1.00, cross year p = 0.52, although 30 % and 23 % of the evidence spans change kind |
 
 ### 7.2 Still unsupported, must be settled before or during implementation
 

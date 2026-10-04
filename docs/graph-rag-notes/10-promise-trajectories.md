@@ -336,6 +336,13 @@ postponement sentence ranks 8th in a report with many ISPO statements, and the T
 not reachable by similarity at all. Of the trajectory evidence, 3,301 statements are retrieved, 1,019
 are neighbours and 10 come from the link alone.
 
+One inconsistency, found afterwards (2026-10-04): the two kinds of vectors are not embedded alike. The
+sentence store embeds a statement with a "Company (year), page N:" header, the on-demand path embeds the
+bare text. Re-running the finder with every vector taken from one store built the same way (`dev-stmt`,
+README §4u) keeps 3,949 of the 4,330 evidence statements (91.2 %) and leaves 3 of the 229 verdicts
+resting on a statement that would no longer be shown. The effect is small and the evidence was left as
+it is, since the held-out check of §8.6 was made on it.
+
 ### 8.4 What the judge says on the new evidence (system output, unverified)
 
 Judge v2, final prompt, majority of three runs, same model; only the evidence differs.

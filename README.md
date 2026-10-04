@@ -85,7 +85,7 @@ GW_LLM_CACHE=1                                  SQLite response cache; bypassed 
 GW_CLASSIFIER_STYLE=cited                       cited (label + rationale + cited sources) | label (v1, one word)
 LLM_PRICE_IN_PER_MTOK / LLM_PRICE_OUT_PER_MTOK  USD per million tokens; unset = tokens reported, no dollars
 EMB_PRICE_PER_MTOK                              same, for query embeddings
-GW_BASELINE_BUILD=dev                           which passage store; dev-sent is the sentence-unit ablation store
+GW_BASELINE_BUILD=dev                           which passage store; dev-sent = one prose sentence per chunk, dev-stmt = every statement
 GW_BASELINE_MODE=rrf+rerank                     bm25 | dense | rrf | rrf+rerank
 GW_BASELINE_BACKEND=files                       files | postgres
 PG_DSN=postgresql://gw:gw@localhost:5432/gw
