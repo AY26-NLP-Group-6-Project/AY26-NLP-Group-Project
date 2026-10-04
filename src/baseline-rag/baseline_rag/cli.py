@@ -16,7 +16,9 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--db", type=Path, help="graph DuckDB holding the parsed statements")
     ap.add_argument("--n", type=int, default=3, help="passages to print for `sample`")
     ap.add_argument("--unit", choices=chunk_store.UNITS, default="passage",
-                    help="passage windows (default) or one chunk per prose sentence")
+                    help="passage windows (default), one chunk per prose sentence, or one per statement "
+                         "with no prose filter")
+    ap.add_argument("--reuse", help="build: take the vectors of identical chunks from this existing store")
     ap.add_argument("--dsn", help="Postgres connection string (default PG_DSN or the compose default)")
     ap.add_argument("--out", type=Path, help="zip path for `package`")
     ap.add_argument("--with-eval", action="store_true",
@@ -37,7 +39,8 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     if args.action == "build":
-        print(json.dumps(chunk_store.build(args.build_id, args.db, unit=args.unit), indent=2))
+        print(json.dumps(chunk_store.build(args.build_id, args.db, unit=args.unit, reuse=args.reuse),
+                         indent=2))
         return 0
     chunks, vectors, manifest = chunk_store.load(args.build_id)
     if args.action == "stats":
