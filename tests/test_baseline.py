@@ -129,7 +129,8 @@ def test_statement_unit_keeps_what_the_prose_filter_drops_and_reuses_vectors(tmp
     # a plain third-person sentence has none of the filter's verbs and pronouns
     assert [c.chunk_id for c in chunk_store.build_chunks(db, unit="sentence")] == ["s0"]
     built = chunk_store.build_chunks(db, unit="statement")
-    assert [(c.chunk_id, c.prose_ratio) for c in built] == [("s0", 1.0), ("s1", 0.0)]   # the stub is too short
+    # kept and marked as not prose; the four-word stub is too short for either unit
+    assert [(c.chunk_id, c.prose_ratio) for c in built] == [("s0", 1.0), ("s1", 0.0)]
 
     seen = []
 
