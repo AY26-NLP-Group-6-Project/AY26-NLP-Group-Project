@@ -9,11 +9,27 @@ resolution-markers = [
 
 [manifest]
 members = [
+    "agentic-rag",
     "baseline-rag",
     "example-rag",
     "graph-rag",
     "greenwash-rag",
     "gw-common",
+]
+
+[[package]]
+name = "agentic-rag"
+version = "0.1.0"
+source = { editable = "src/agentic-rag" }
+dependencies = [
+    { name = "baseline-rag" },
+    { name = "gw-common" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "baseline-rag", editable = "src/baseline-rag" },
+    { name = "gw-common", editable = "src/common" },
 ]
 
 [[package]]
@@ -372,6 +388,7 @@ name = "greenwash-rag"
 version = "0.1.0"
 source = { virtual = "." }
 dependencies = [
+    { name = "agentic-rag" },
     { name = "baseline-rag" },
     { name = "example-rag" },
     { name = "graph-rag" },
@@ -387,6 +404,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
+    { name = "agentic-rag", editable = "src/agentic-rag" },
     { name = "baseline-rag", editable = "src/baseline-rag" },
     { name = "example-rag", editable = "src/example-rag" },
     { name = "graph-rag", editable = "src/graph-rag" },
