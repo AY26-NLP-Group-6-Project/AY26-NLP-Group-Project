@@ -63,6 +63,8 @@ def eval_main(argv: list[str] | None = None) -> int:
     ap.add_argument("--publish", type=Path, metavar="RUN_DIR",
                     help="copy manifest, metrics and reports of a run into results/ (versioned)")
     ap.add_argument("--note", default="", help="with --publish: one line on what the run was for")
+    ap.add_argument("--name", help="with --publish: folder under results/, as <group>/<what-it-is>, "
+                                   "e.g. baseline/sentence-hybrid")
     args = ap.parse_args(argv)
 
     if args.list:
@@ -73,7 +75,7 @@ def eval_main(argv: list[str] | None = None) -> int:
         print(compare(Path(args.compare[0]), Path(args.compare[1])))
         return 0
     if args.publish:
-        out = publish(args.publish, RESULTS_DIR, args.note)
+        out = publish(args.publish, RESULTS_DIR, args.note, args.name)
         print(f"published -> {out}")
         return 0
     if args.ragas:

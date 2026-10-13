@@ -91,42 +91,65 @@ def compare(run_a: Path, run_b: Path) -> str:
     return "\n".join(lines)
 
 
-def publish(run_dir: Path, results_root: Path, note: str = "") -> Path:
+def publish(run_dir: Path, results_root: Path, note: str = "", name: str | None = None) -> Path:
     """Copy the small, shareable parts of a run into the versioned results folder.
 
     manifest, metrics, report and the RAG-metric summaries travel; predictions and evidence stay local
-    (they are large and reproducible from the manifest). A one-line note says what the run was for.
+    (they are large and reproducible from the manifest). `name` is the folder the copy gets, as
+    `<group>/<what-it-is>` (for example `baseline/sentence-hybrid`): the run id stays in the manifest,
+    the folder name says what the run was. A one-line note says what it was for.
     """
-    run_id = run_dir.name
-    out = results_root / run_id
+    out = results_root / (name or run_dir.name)
     out.mkdir(parents=True, exist_ok=True)
-    for name in ("manifest.json", "metrics.json", "report.md", "ragas.json", "ragas.md",
+    for file in ("manifest.json", "metrics.json", "report.md", "ragas.json", "ragas.md",
                  "ragas_check_result.json"):
-        src = run_dir / name
+        src = run_dir / file
         if src.exists():
-            out.joinpath(name).write_bytes(src.read_bytes())
+            out.joinpath(file).write_bytes(src.read_bytes())
     if note:
         out.joinpath("NOTE.md").write_text(note.strip() + "\n", encoding="utf-8")
-    index = results_root / "README.md"
-    rows = []
-    for d in sorted(p for p in results_root.iterdir() if p.is_dir()):
-        man_path = d / "manifest.json"
-        if not man_path.exists():
+    write_index(results_root)
+    return out
+
+
+def published_runs(results_root: Path) -> list[Path]:
+    """Every published run under the results folder: `<group>/<name>/`, or `<name>/` from before groups."""
+    runs = []
+    for group in sorted(p for p in results_root.iterdir() if p.is_dir()):
+        if (group / "manifest.json").exists():
+            runs.append(group)
             continue
-        man = json.loads(man_path.read_text(encoding="utf-8"))
+        runs += sorted(p for p in group.iterdir() if p.is_dir() and (p / "manifest.json").exists())
+    return runs
+
+
+def write_index(results_root: Path) -> Path:
+    rows = []
+    for d in published_runs(results_root):
+        man = json.loads((d / "manifest.json").read_text(encoding="utf-8"))
         met = json.loads((d / "metrics.json").read_text(encoding="utf-8"))
         best = _best(met)
         score = met["conditions"][best]["majority"]["action"]["macro_f1"] if best else None
-        note_text = (d / "NOTE.md").read_text(encoding="utf-8").strip() if (d / "NOTE.md").exists() else ""
-        rows.append(f"| [{d.name}]({d.name}/report.md) | {man['system']} | {man['config'].get('split')} "
+        note = (d / "NOTE.md").read_text(encoding="utf-8").strip() if (d / "NOTE.md").exists() else ""
+        rel = d.relative_to(results_root).as_posix()
+        style = (man.get("config", {}).get("classifier") or {}).get("style", "label")
+        rows.append(f"| [{rel}]({rel}/report.md) | {man['system']} | {style} | {man['config'].get('split')} "
                     f"| {man['n_items']} | {man.get('repeats', 1)} | {man['dataset_hash']} "
-                    f"| {best or '—'} | {'—' if score is None else f'{score:.4f}'} | {note_text} |")
+                    f"| {best or '—'} | {'—' if score is None else f'{score:.4f}'} | {note} "
+                    f"| `{man['run_id']}` |")
+    index = results_root / "README.md"
     index.write_text(
-        "# Published runs\n\nSmall, shareable copies of evaluation runs (manifest, metrics, report). "
-        "Add one with `gw-eval --publish artifacts/runs/<run_id> --note \"...\"`; compare two with "
-        "`gw-eval --compare`.\n\n"
-        "| run | system | split | items | repeats | snapshot | best condition | vote macro-F1 | note |\n"
-        "|---|---|---|---|---|---|---|---|---|\n" + "\n".join(rows) + "\n",
+        "# Published runs\n\n"
+        "Small, shareable copies of evaluation runs (manifest, metrics, report; the per-item predictions "
+        "stay in `artifacts/runs/`). One folder per system family, one subfolder per run, named after "
+        "what the run is. Add one with `gw-eval --publish artifacts/runs/<run_id> --name "
+        "<group>/<name> --note \"...\"`; compare two with `gw-eval --compare <dir_a> <dir_b>`.\n\n"
+        "The classifier column is the prompt style: `label` returns one word, `cited` a label with a "
+        "rationale and citations; numbers across the two styles are not paired. The run id is the local "
+        "directory under `artifacts/runs/`.\n\n"
+        "| run | system | classifier | split | items | repeats | snapshot | best condition "
+        "| vote macro-F1 | note | run id |\n"
+        "|---|---|---|---|---|---|---|---|---|---|---|\n" + "\n".join(rows) + "\n",
         encoding="utf-8",
     )
-    return out
+    return index
