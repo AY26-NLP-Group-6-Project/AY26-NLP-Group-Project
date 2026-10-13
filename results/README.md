@@ -1,10 +1,14 @@
 # Published runs
 
-Small, shareable copies of evaluation runs (manifest, metrics, report). Add one with `gw-eval --publish artifacts/runs/<run_id> --note "..."`; compare two with `gw-eval --compare`.
+Small, shareable copies of evaluation runs (manifest, metrics, report; the per-item predictions stay in `artifacts/runs/`). One folder per system family, one subfolder per run, named after what the run is. Add one with `gw-eval --publish artifacts/runs/<run_id> --name <group>/<name> --note "..."`; compare two with `gw-eval --compare <dir_a> <dir_b>`.
 
-| run | system | split | items | repeats | snapshot | best condition | vote macro-F1 | note |
-|---|---|---|---|---|---|---|---|---|
-| [20260929T150108Z-baseline-rag-rq1](20260929T150108Z-baseline-rag-rq1/report.md) | baseline-rag | dev | 331 | 3 | 23dc51f1d9de | local | 0.7640 | 4j passage-level hybrid baseline, label-style classifier |
-| [20260929T152702Z-graph-rag-rq1](20260929T152702Z-graph-rag-rq1/report.md) | graph-rag | dev | 331 | 3 | 23dc51f1d9de | cross_year_fused | 0.7810 | 4j graph arms, label-style classifier (evidence cap 800) |
-| [20260930T004540Z-baseline-rag-rq1](20260930T004540Z-baseline-rag-rq1/report.md) | baseline-rag | dev | 331 | 3 | 23dc51f1d9de | same_report_rrf | 0.7648 | 4k sentence-unit hybrid baseline, label-style classifier |
-| [20260930T083207Z-baseline-rag-rq1](20260930T083207Z-baseline-rag-rq1/report.md) | baseline-rag | dev | 331 | 3 | 3e18cc14e648 | cross_year_rrf | 0.7804 | 4m sentence-unit hybrid baseline, cited classifier; RAG metrics in 4n |
+The classifier column is the prompt style: `label` returns one word, `cited` a label with a rationale and citations; numbers across the two styles are not paired. The run id is the local directory under `artifacts/runs/`.
+
+| run | system | classifier | split | items | repeats | snapshot | best condition | vote macro-F1 | note | run id |
+|---|---|---|---|---|---|---|---|---|---|---|
+| [baseline/all-statements-hybrid-cited](baseline/all-statements-hybrid-cited/report.md) | baseline-rag | cited | dev | 331 | 3 | 3e18cc14e648 | cross_year_rrf | 0.7722 | Sentence-level hybrid retrieval over every statement (108,376, no prose filter), cited classifier; paired against sentence-hybrid-cited | `20261004T080206Z-baseline-rag-rq1` |
+| [baseline/passage-hybrid](baseline/passage-hybrid/report.md) | baseline-rag | label | dev | 331 | 3 | 23dc51f1d9de | local | 0.7640 | Passage-level hybrid retrieval (BM25 + dense + RRF + rerank over 18,839 passages of about 200 words), label-style classifier | `20260929T150108Z-baseline-rag-rq1` |
+| [baseline/sentence-hybrid](baseline/sentence-hybrid/report.md) | baseline-rag | label | dev | 331 | 3 | 23dc51f1d9de | same_report_rrf | 0.7648 | Sentence-level hybrid retrieval over the prose-sentence store (71,342 sentences), label-style classifier; separates retrieval unit from graph structure | `20260930T004540Z-baseline-rag-rq1` |
+| [baseline/sentence-hybrid-cited](baseline/sentence-hybrid-cited/report.md) | baseline-rag | cited | dev | 331 | 3 | 3e18cc14e648 | cross_year_rrf | 0.7804 | Sentence-level hybrid retrieval, cited classifier, with speed, cost, grounding and the RAGAS-style metrics plus their human spot-check; the reference baseline run | `20260930T083207Z-baseline-rag-rq1` |
+| [graph/graph-arms](graph/graph-arms/report.md) | graph-rag | label | dev | 331 | 3 | 23dc51f1d9de | cross_year_fused | 0.7810 | Graph and graph+hybrid fused retrieval, label-style classifier, evidence cap 800 characters | `20260929T152702Z-graph-rag-rq1` |
+| [graph/graph-arms-cited](graph/graph-arms-cited/report.md) | graph-rag | cited | dev | 331 | 3 | 3e18cc14e648 | cross_year_fused | 0.7799 | Graph and graph+hybrid fused retrieval, cited classifier; paired against baseline/sentence-hybrid-cited | `20261002T053125Z-graph-rag-rq1` |

@@ -1,6 +1,6 @@
-"""Aspect extraction hand-off: export work, score returned work (gate A8).
+"""Aspect extraction hand-off: export work, score returned work against the gate).
 
-Decision D3 says aspects outside the 1,000 annotated sentences are extracted by an LLM. The
+Aspects outside the 1,000 annotated sentences are extracted by an LLM. The
 extractor is deliberately a *different model family* from the one that produced `LLM_pre`, so that
 "which spans are aspects" and "what action does this aspect take" do not share a bias. Whoever runs
 it, the output only enters the graph after clearing the gate in `score()`.
@@ -36,7 +36,7 @@ CATEGORIES = (
     "data and cybersecurity protection",
 )
 
-# Gate A8 (project thresholds, provisional until the first real run):
+# The gate (project thresholds):
 GATE = {"partial_f1": 0.60, "category_accuracy": 0.70, "no_aspect_false_positive_rate": 0.35}
 
 # --------------------------------------------------------------------------- export
@@ -164,7 +164,7 @@ def score(pred_path: Path, gold_path: Path) -> dict:
 
     # boundary_exact: same characters up to case/whitespace (the strict reading of "exact").
     # token_set_exact: same token set, ignoring order and punctuation (lenient).
-    # partial: token Jaccard >= 0.5 (the A8 gate metric).
+    # partial: token Jaccard >= 0.5 (the gate metric).
     strict_not_substring = sum(
         1
         for sid, g in gold_by_id.items()

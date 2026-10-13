@@ -9,7 +9,7 @@ from pydantic import BaseModel, Field
 
 
 class Label(StrEnum):
-    """The single label set (03-eval-contract.md): three A3CG actions plus `none`."""
+    """The single label set (docs/evaluation.md): three A3CG actions plus `none`."""
 
     IMPLEMENTED = "implemented"
     PLANNING = "planning"

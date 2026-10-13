@@ -83,13 +83,49 @@ def stats(cfg: GraphConfig, top: int = 15) -> None:
         print(f"  {c.company:28.28s} {c.canonical:38.38s} {c.years}")
 
 
+def _promises(args, cfg: GraphConfig) -> int:
+    """RQ2 stages: targets -> promises -> proposed outcomes -> human sheet -> scoring."""
+    from graph_rag.promises import build as promise_build
+    from graph_rag.promises import evidence as promise_evidence
+    from graph_rag.promises import extract as target_extract
+    from graph_rag.promises import outcome as promise_outcome
+    from graph_rag.promises import sheet as promise_sheet
+
+    if args.stage == "targets":
+        result = target_extract.extract(cfg, limit=args.limit)
+    elif args.stage == "targets-export":
+        result = target_extract.export_shards(cfg, shards=args.k)
+    elif args.stage == "targets-ingest":
+        result = target_extract.ingest(cfg, source=args.source or "external")
+    elif args.stage == "promises":
+        result = promise_build.build(cfg, source=args.source)
+    elif args.stage == "promise-evidence":
+        result = promise_evidence.build(cfg, mode=args.evidence, limit=args.limit)
+    elif args.stage == "promise-outcomes":
+        result = promise_outcome.run(cfg, limit=args.limit, judge=args.judge, repeats=args.repeats,
+                                     evidence=args.evidence,
+                                     evidence_from=Path(args.evidence_from) if args.evidence_from else None)
+    elif args.stage == "promise-sheet":
+        default = promise_outcome.outcomes_path(cfg, args.judge, args.evidence)
+        result = promise_sheet.export(
+            cfg, Path(args.out) if args.out else None, n=args.limit or 75, seed=args.seed or 20261003,
+            outcomes=Path(args.outcomes) if args.outcomes else default,
+            exclude=tuple(Path(s) for s in args.exclude_sheets))
+    else:
+        result = promise_sheet.score(cfg, Path(args.sheet) if args.sheet else None,
+                                     Path(args.outcomes) if args.outcomes else None)
+    print(json.dumps(result, indent=2))
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser("gw-graph")
     ap.add_argument(
         "stage",
         choices=[*STAGES, "build", "stats", "export-extract", "export-gold", "score-extraction",
                  "canon-pools", "canon-tune", "canon-verify", "canon-spotcheck", "canon-spotcheck-score",
-                 "export-a3cg"],
+                 "export-a3cg", "targets", "targets-export", "targets-ingest", "promises",
+                 "promise-evidence", "promise-outcomes", "promise-sheet", "promise-score"],
     )
     ap.add_argument("--config", default="configs/graph.dev.yaml")
     ap.add_argument("--build-id")
@@ -115,6 +151,22 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--prefix", default="pool")
     ap.add_argument("--seed", type=int)
     ap.add_argument("--sheet", help="returned spot-check CSV for canon-spotcheck-score")
+    ap.add_argument("--source", help="targets-ingest: tag of the outside extractor; promises: which "
+                                     "targets file to build from (targets.<source>.jsonl)")
+    ap.add_argument("--judge", choices=["v1", "v2"], default="v2",
+                    help="promise-outcomes / promise-sheet: v1 lets the model name the outcome, v2 labels "
+                         "the evidence and decides by rule")
+    ap.add_argument("--evidence", choices=["deadline", "trajectory"], default="trajectory",
+                    help="promise-evidence / -outcomes / -sheet: deadline = top 6 from the deadline-year "
+                         "reports (the first version); trajectory = every later report, year by year")
+    ap.add_argument("--evidence-from",
+                    help="promise-outcomes: take the evidence from this evidence or outcomes file instead")
+    ap.add_argument("--repeats", type=int, default=1,
+                    help="promise-outcomes: judge each promise N times without cache and take the majority")
+    ap.add_argument("--outcomes", help="promise-sheet: outcomes file to draw from (default: the judge's); "
+                                       "promise-score: score this judge output instead of the sheet's key")
+    ap.add_argument("--exclude-sheets", nargs="*", default=[],
+                    help="promise-sheet: earlier sheets whose promises must not be drawn again")
     args = ap.parse_args(argv)
 
     cfg = GraphConfig.load(args.config, build_id=args.build_id)
@@ -125,6 +177,8 @@ def main(argv: list[str] | None = None) -> int:
         out = Path(args.out or cfg.out_dir / "extract_input.jsonl")
         print(json.dumps(extraction.export_input(cfg, out, args.limit, args.per_report), indent=2))
         return 0
+    if args.stage.startswith("targets") or args.stage.startswith("promise"):
+        return _promises(args, cfg)
     if args.stage == "export-a3cg":
         from graph_rag import a3cg_match
 

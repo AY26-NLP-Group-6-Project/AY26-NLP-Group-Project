@@ -10,7 +10,7 @@ scores micro precision 1.0 and macro/micro F1 0.95/0.94 on the test pools — be
 clustering. Only the pairwise metrics separate methods here. Because a wrong merge fuses two unrelated
 claims into one timeline, selection now maximises **pairwise F0.5** on validation (precision weighted
 over recall) and the gate is **pairwise precision** on test. This change was made after the first
-test numbers had been seen; it is disclosed in docs/graph-rag-notes/README.md, and a clean final
+test numbers had been seen; it is disclosed in docs/graph.md, and a clean final
 number needs fresh test pools.
 """
 

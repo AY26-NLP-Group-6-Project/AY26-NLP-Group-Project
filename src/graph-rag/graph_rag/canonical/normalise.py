@@ -1,4 +1,4 @@
-"""Morphological normalisation of aspect surface forms (the M2 baseline).
+"""Morphological normalisation of aspect surface forms (the canonicalisation baseline).
 
 This is the "Morph Norm" family from the canonicalisation literature (CESI, WWW 2018, section 7.3:
 "removing tense, pluralization, capitalization etc."). CESI's own results are the reason it is only a

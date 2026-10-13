@@ -1,4 +1,4 @@
-"""Bounded traversal policy (M7). Registered as its own system so it is compared, not assumed."""
+"""Bounded traversal policy, a stub. Registered as its own system so it is compared, not assumed."""
 
 from __future__ import annotations
 
@@ -13,7 +13,7 @@ class AgenticGraphRagSystem(BaseSystem):
     name = "agentic-graph-rag"
 
     def supported_conditions(self) -> list[EvidenceCondition]:
-        # M7: CROSS_YEAR_AGENTIC. The agent plans and rewrites; the reranker still picks
+        # CROSS_YEAR_AGENTIC. The agent plans and rewrites; the reranker still picks
         # (arXiv 2601.07711 finds agents worse than a reranker at final document selection).
         return []
 

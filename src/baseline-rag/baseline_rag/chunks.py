@@ -70,13 +70,16 @@ def _statements(db_path: Path) -> list[tuple]:
         con.close()
 
 
-UNITS = ("passage", "sentence")
+UNITS = ("passage", "sentence", "statement")
+MIN_STATEMENT_WORDS = 5     # shorter fragments are headers and lone table cells
 
 
 def build_chunks(db_path: Path | None = None, unit: str = "passage") -> list[Chunk]:
     """`passage`: ~TARGET_WORDS-word windows over every statement. `sentence`: one chunk per prose
     statement, the same unit and the same prose filter the graph arm retrieves over, so the two can be
-    compared with retrieval granularity held fixed."""
+    compared with retrieval granularity held fixed. `statement`: one chunk per statement with no prose
+    filter, i.e. `sentence` plus the table rows and the sentences full of figures that the filter
+    rejects (`prose_ratio` 0 marks them), to measure what that filter costs."""
     if unit not in UNITS:
         raise ValueError(f"unit must be one of {UNITS}")
     rows = _statements(db_path or GRAPH_DB)
@@ -86,6 +89,13 @@ def build_chunks(db_path: Path | None = None, unit: str = "passage") -> list[Chu
                   statement_ids=[stmt_id], prose_ratio=1.0)
             for sha, company, year, page, _idx, stmt_id, text in rows
             if text and looks_like_sentence(text)
+        ]
+    if unit == "statement":
+        return [
+            Chunk(chunk_id=stmt_id, text=text, company=company, year=year, page=page, file=sha,
+                  statement_ids=[stmt_id], prose_ratio=1.0 if looks_like_sentence(text) else 0.0)
+            for sha, company, year, page, _idx, stmt_id, text in rows
+            if text and len(text.split()) >= MIN_STATEMENT_WORDS
         ]
     chunks: list[Chunk] = []
     current: list[tuple] = []          # (stmt_id, text, page, is_prose)
@@ -132,12 +142,31 @@ def embed_chunks(chunks: list[Chunk], client: LLMClient | None = None) -> np.nda
 
 
 def build(build_id: str = "dev", db_path: Path | None = None, store_root: Path | None = None,
-          unit: str = "passage") -> dict:
+          unit: str = "passage", reuse: str | None = None) -> dict:
+    """`reuse` names a store built from the same statements: a chunk with the same id and text takes its
+    vector from there, so only the chunks that store lacks are embedded."""
     chunks = build_chunks(db_path, unit)
     if not chunks:
         raise ValueError("no chunks built: is the graph DuckDB present?")
     client = LLMClient()
-    vectors = embed_chunks(chunks, client)
+    reused = 0
+    if reuse:
+        old_chunks, old_vectors, old_manifest = load(reuse, store_root)
+        if old_manifest["embed_model"] != client.settings.embed_model:
+            raise ValueError(f"{reuse} was embedded with {old_manifest['embed_model']}")
+        row_of = {(c.chunk_id, c.text): i for i, c in enumerate(old_chunks)}
+        rows = [row_of.get((c.chunk_id, c.text)) for c in chunks]
+        fresh = [c for c, row in zip(chunks, rows, strict=True) if row is None]
+        new_vectors = embed_chunks(fresh, client) if fresh else np.zeros((0, old_vectors.shape[1]))
+        vectors = np.zeros((len(chunks), old_vectors.shape[1]), dtype=np.float32)
+        at = 0
+        for i, row in enumerate(rows):
+            if row is None:
+                vectors[i], at = new_vectors[at], at + 1
+            else:
+                vectors[i], reused = old_vectors[row], reused + 1
+    else:
+        vectors = embed_chunks(chunks, client)
     out_dir = (store_root or STORE_ROOT) / build_id
     out_dir.mkdir(parents=True, exist_ok=True)
     with (out_dir / "chunks.jsonl").open("w", encoding="utf-8") as f:
@@ -160,6 +189,8 @@ def build(build_id: str = "dev", db_path: Path | None = None, store_root: Path |
         "chunks_sha256": digest,
         "source_db": str(db_path or GRAPH_DB),
     }
+    if reuse:
+        manifest["vectors_reused"] = {"from": reuse, "chunks": reused}
     (out_dir / "manifest.json").write_text(json.dumps(manifest, indent=2), encoding="utf-8")
     return manifest
 

@@ -128,7 +128,7 @@ def latency_summary(latencies_ms: Sequence[float]) -> dict:
             "mean_ms": float(a.mean())}
 
 
-# ----------------------------------------------------------------- retrieval (used from M4 on)
+# ----------------------------------------------------------------- retrieval
 def precision_at_k(ranked: Sequence[str], relevant: set[str], k: int) -> float:
     top = ranked[:k]
     return sum(d in relevant for d in top) / k if k else 0.0

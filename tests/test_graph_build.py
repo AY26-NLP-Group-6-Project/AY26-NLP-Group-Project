@@ -1,7 +1,7 @@
 """Graph store and build helpers, on a synthetic in-memory graph.
 
 These tests must not need the corpus: they check the joins and the derived edges, which is what the
-M1 gate is about. Corpus-scale numbers live in artifacts/graph/<build_id>/build_manifest.json.
+build gate is about. Corpus-scale numbers live in artifacts/graph/<build_id>/build_manifest.json.
 """
 
 from graph_rag.build.derive import run as derive_run

@@ -1,0 +1,280 @@
+{
+  "rows": 75,
+  "judged": 75,
+  "extraction": {
+    "promise_ok": 74,
+    "promise_precision": 0.9866666666666667,
+    "fields_ok_rate": 0.9054054054054054
+  },
+  "reported": {
+    "n": 74,
+    "human_distribution": {
+      "not_met": 14,
+      "achieved": 14,
+      "unclear": 35,
+      "disappeared": 11
+    },
+    "system_distribution": {
+      "not_met": 31,
+      "achieved": 15,
+      "unclear": 14,
+      "disappeared": 14
+    },
+    "accuracy": 0.7027027027027027,
+    "cohen_kappa": 0.6112702960840497,
+    "per_class": {
+      "achieved": {
+        "precision": 0.8666666666666667,
+        "recall": 0.9285714285714286,
+        "support": 14
+      },
+      "not_met": {
+        "precision": 0.45161290322580644,
+        "recall": 1.0,
+        "support": 14
+      },
+      "unclear": {
+        "precision": 1.0,
+        "recall": 0.4,
+        "support": 35
+      },
+      "disappeared": {
+        "precision": 0.7857142857142857,
+        "recall": 1.0,
+        "support": 11
+      }
+    },
+    "confusion_human_rows_system_cols": {
+      "achieved": {
+        "achieved": 13,
+        "not_met": 1
+      },
+      "not_met": {
+        "not_met": 14
+      },
+      "unclear": {
+        "unclear": 14,
+        "not_met": 16,
+        "disappeared": 3,
+        "achieved": 2
+      },
+      "disappeared": {
+        "disappeared": 11
+      }
+    }
+  },
+  "outcome": {
+    "n": 74,
+    "human_distribution": {
+      "revised": 6,
+      "achieved": 14,
+      "unclear": 35,
+      "failed": 8,
+      "disappeared": 11
+    },
+    "system_distribution": {
+      "revised": 16,
+      "achieved": 15,
+      "unclear": 14,
+      "failed": 15,
+      "disappeared": 14
+    },
+    "accuracy": 0.7027027027027027,
+    "cohen_kappa": 0.6305038583749432,
+    "per_class": {
+      "achieved": {
+        "precision": 0.8666666666666667,
+        "recall": 0.9285714285714286,
+        "support": 14
+      },
+      "failed": {
+        "precision": 0.5333333333333333,
+        "recall": 1.0,
+        "support": 8
+      },
+      "revised": {
+        "precision": 0.375,
+        "recall": 1.0,
+        "support": 6
+      },
+      "unclear": {
+        "precision": 1.0,
+        "recall": 0.4,
+        "support": 35
+      },
+      "disappeared": {
+        "precision": 0.7857142857142857,
+        "recall": 1.0,
+        "support": 11
+      }
+    },
+    "confusion_human_rows_system_cols": {
+      "achieved": {
+        "achieved": 13,
+        "failed": 1
+      },
+      "failed": {
+        "failed": 8
+      },
+      "revised": {
+        "revised": 6
+      },
+      "unclear": {
+        "unclear": 14,
+        "revised": 10,
+        "failed": 6,
+        "disappeared": 3,
+        "achieved": 2
+      },
+      "disappeared": {
+        "disappeared": 11
+      }
+    },
+    "over_commitment": {
+      "k": 21,
+      "n": 35,
+      "rate": 0.6
+    },
+    "under_commitment": {
+      "k": 0,
+      "n": 39,
+      "rate": 0.0
+    },
+    "verdict_precision": {
+      "k": 38,
+      "n": 60,
+      "rate": 0.6333333333333333
+    },
+    "human_by_kind": {
+      "milestone": {
+        "disappeared": 7,
+        "achieved": 5,
+        "failed": 1,
+        "revised": 3,
+        "unclear": 6
+      },
+      "qualitative": {
+        "unclear": 7,
+        "achieved": 1,
+        "disappeared": 2,
+        "failed": 1
+      },
+      "quantitative": {
+        "revised": 3,
+        "achieved": 8,
+        "unclear": 22,
+        "failed": 6,
+        "disappeared": 2
+      }
+    }
+  },
+  "population": {
+    "pool": 374,
+    "strata": {
+      "revised": {
+        "pool": 29,
+        "sampled": 16
+      },
+      "achieved": {
+        "pool": 153,
+        "sampled": 15
+      },
+      "unclear": {
+        "pool": 134,
+        "sampled": 15
+      },
+      "failed": {
+        "pool": 33,
+        "sampled": 15
+      },
+      "disappeared": {
+        "pool": 25,
+        "sampled": 14
+      }
+    },
+    "accuracy": {
+      "estimate": 0.8176056786350904,
+      "ci95": [
+        0.7214508530685001,
+        0.8971447669977082
+      ]
+    },
+    "accuracy_five_way": {
+      "estimate": 0.8176056786350904,
+      "ci95": [
+        0.7214508530685001,
+        0.8971447669977082
+      ]
+    },
+    "over_commitment": {
+      "estimate": 0.31338191562367246,
+      "ci95": [
+        0.19826490165283076,
+        0.42004791714970247
+      ]
+    },
+    "under_commitment": {
+      "estimate": 0.0,
+      "ci95": [
+        0.0,
+        0.0
+      ]
+    },
+    "verdict_precision": {
+      "estimate": 0.7529910714285715,
+      "ci95": [
+        0.625610119047619,
+        0.8588095238095238
+      ]
+    },
+    "human_share.achieved": {
+      "estimate": 0.360427807486631,
+      "ci95": [
+        0.27860962566844916,
+        0.42085561497326207
+      ]
+    },
+    "human_share.disappeared": {
+      "estimate": 0.052521008403361345,
+      "ci95": [
+        0.03819709702062644,
+        0.06684491978609626
+      ]
+    },
+    "human_share.failed": {
+      "estimate": 0.04705882352941177,
+      "ci95": [
+        0.023529411764705885,
+        0.07058823529411765
+      ]
+    },
+    "human_share.not_a_promise": {
+      "estimate": 0.02388591800356506,
+      "ci95": [
+        0.0,
+        0.07165775401069517
+      ]
+    },
+    "human_share.revised": {
+      "estimate": 0.029077540106951873,
+      "ci95": [
+        0.009692513368983958,
+        0.048462566844919786
+      ]
+    },
+    "human_share.unclear": {
+      "estimate": 0.4870289024700789,
+      "ci95": [
+        0.39794053985230454,
+        0.5774318818436465
+      ]
+    },
+    "human_share.not_met": {
+      "estimate": 0.07613636363636364,
+      "ci95": [
+        0.04672459893048128,
+        0.10451203208556151
+      ]
+    }
+  }
+}

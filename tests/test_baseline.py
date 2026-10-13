@@ -2,6 +2,7 @@
 
 import json
 from dataclasses import asdict
+from types import SimpleNamespace
 
 import numpy as np
 import pytest
@@ -117,6 +118,37 @@ def test_sentence_unit_is_one_prose_statement_per_chunk(tmp_path):
     other.mkdir()
     with pytest.raises(ValueError):
         chunk_store.build_chunks(_tiny_db(other, rows), unit="paragraph")
+
+
+def test_statement_unit_keeps_what_the_prose_filter_drops_and_reuses_vectors(tmp_path, monkeypatch):
+    prose = "We have reduced our Scope 1 emissions by twelve per cent compared with the prior year."
+    result = "In 2023, ThaiBev installed solar rooftops at two distribution centers in Nakhon Ratchasima."
+    rows = [("sha1", "Acme", 2024, 3, 0, "s0", prose), ("sha1", "Acme", 2024, 3, 1, "s1", result),
+            ("sha1", "Acme", 2024, 3, 2, "s2", "Page 3 of 26")]
+    db = _tiny_db(tmp_path, rows)
+    # a plain third-person sentence has none of the filter's verbs and pronouns
+    assert [c.chunk_id for c in chunk_store.build_chunks(db, unit="sentence")] == ["s0"]
+    built = chunk_store.build_chunks(db, unit="statement")
+    # kept and marked as not prose; the four-word stub is too short for either unit
+    assert [(c.chunk_id, c.prose_ratio) for c in built] == [("s0", 1.0), ("s1", 0.0)]
+
+    seen = []
+
+    class FakeClient:
+        settings = SimpleNamespace(embed_model="fake-embedder")
+
+        def embed(self, texts):
+            seen.extend(texts)
+            return np.full((len(texts), 4), 0.5, dtype=np.float32)
+
+    monkeypatch.setattr(chunk_store, "LLMClient", FakeClient)
+    root = tmp_path / "store"
+    chunk_store.build("sent", db, root, unit="sentence")
+    assert len(seen) == 1
+    manifest = chunk_store.build("stmt", db, root, unit="statement", reuse="sent")
+    assert len(seen) == 2 and seen[1].endswith(result)        # only the chunk the old store lacks
+    assert manifest["chunks"] == 2 and manifest["vectors_reused"] == {"from": "sent", "chunks": 1}
+    assert chunk_store.load("stmt", root)[1].shape == (2, 4)
 
 
 def test_vector_literal_and_package(tmp_path, monkeypatch):
