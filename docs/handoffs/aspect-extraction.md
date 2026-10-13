@@ -1,4 +1,4 @@
-# 05 · Aspect extraction hand-off (for the GPT / Codex side)
+# Aspect extraction hand-off (for an outside extractor)
 
 Read this page and `configs/prompts/aspect_extraction.md`; that is the whole job. Nothing else in
 the repo is required.
@@ -109,7 +109,7 @@ Extracted aspects are stored with `method='llm'` and are never mixed with `metho
 every experiment can be re-run with or without them and we can always say which edges came from
 where.
 
-## 8. Run 1 · GPT-6 via Codex, 2026-09-12 — independent review
+## 8. The run that was made (GPT-6 via Codex, 2026-09-12), reviewed independently
 
 Artefacts: `artifacts/graph/dev/extraction_gpt6_20260912/` (manifest, prompt copy, per-batch inputs
 and predictions, merged outputs, validation and score reports).

@@ -1,4 +1,4 @@
-# 07 · Canonicalisation spot-check (for a teammate, ~15-20 minutes)
+# Canonicalisation spot-check (for a teammate, 15–20 minutes)
 
 ## What and why
 

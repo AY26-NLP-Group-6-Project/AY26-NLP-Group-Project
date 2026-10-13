@@ -2,7 +2,7 @@
 
 Used by `graph_rag.promises.outcome` with judge `v2`. Under v1 the model named the outcome itself and
 over-committed: on the human check it gave a verdict on 21 of the 35 promises the annotator called
-unclear (`docs/graph-rag-notes/10-promise-trajectories.md` §6). Here the model only labels each evidence
+unclear (`docs/promises.md`, section 5). Here the model only labels each evidence
 statement and says whether the promise is an annual target. The outcome is derived from those labels by
 a fixed rule (`outcome.decide`) whose default is `unclear`, the "not enough information" class of claim
 verification (FEVER, Thorne et al., NAACL 2018). Breaking the verdict into questions per piece of

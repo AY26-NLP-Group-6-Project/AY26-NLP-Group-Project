@@ -1,6 +1,7 @@
 """Blind human spot-check of the canonicalisation gold.
 
-Why: the M2 gold was written by the same assistant that designed the pipeline and the guideline, so
+Why: the canonicalisation gold was written by the same assistant that designed the pipeline and the
+guideline, so
 the gate result depends on how strict that gold is. A teammate labels a sample of phrase pairs
 **without seeing the assistant's labels**; agreement (Cohen's kappa, plus raw agreement) then says how
 far the gold can be trusted, and disagreements show whether the guideline is too strict or too loose.

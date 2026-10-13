@@ -1,8 +1,8 @@
-# 11 · RQ2 case studies: ten commitments followed through the reports
+# Case studies: ten commitments followed through the reports
 
 Started 2026-10-03. The supervisor asked for fulfilled and unfulfilled promises shown as cases with
-evidence (`08-promise-fulfilment-market-screen.md`). `10-promise-trajectories.md` gives the counts; this
-note gives the cases, each as a timeline of the company's own sentences.
+evidence (`market-screen.md`). `promises.md` gives the counts; this file gives the cases, each as a
+timeline of the company's own sentences.
 
 Reading rules for everything below:
 
@@ -19,7 +19,7 @@ Reading rules for everything below:
 
 ## 1. How the cases were chosen
 
-Pool: the 74 human-checked promises of `10` §5–6, verdict rows first (achieved 14, failed 8, revised 6,
+Pool: the 74 promises of the first human check (`promises.md`), verdict rows first (achieved 14, failed 8, revised 6,
 disappeared 11). Criteria: the commitment names a date and something checkable; the outcome sentence
 comes from the same company's later reports, with no outside source; one case per pattern; at most two
 threads per company; small and large issuers both present.
@@ -224,7 +224,7 @@ The same search was then run for **all 11 rows the check labelled `disappeared`*
 | P00760 ThaiBev training in Buriram and Chiang Rai, 2023 | no |
 | P00723 ThaiBev 150 beverage providers attending, 2021 | no |
 
-**5 of 11 are in the reports after all.** Taken at face value the `disappeared` share of `10` §6 (5.3 %)
+**5 of 11 are in the reports after all.** Taken at face value the `disappeared` share of the first check (5.3 %, `promises.md`)
 would fall to roughly 3 %; n is 11, the search was done by one person who knew the labels, so this is a
 direction, not a corrected estimate. The three causes are distinct:
 
@@ -239,7 +239,7 @@ For the system this points one way: a commitment's outcome needs the statements 
 every report year of the company, in order, which is a join on (company, metric, year) and not a top-k
 similarity search in one year. Not built yet; it is the next concrete step for the graph line.
 
-Update, same day: built, and the diagnosis above was incomplete (`10-promise-trajectories.md` §8).
+Update, same day: built, and the diagnosis above was incomplete (`promises.md`, section 4).
 Causes 1 and 2 are one mechanism: the dense ranking only covered prose sentences, result sentences
 mostly fail the prose filter, and rank fusion buries what one of its rankings cannot see. Four of the
 answer statements ranked first to third on BM25 and were cut all the same. With both rankings complete,
@@ -278,10 +278,10 @@ PATTERNS = [  # (case, company, pattern)
 - **Assistive screening, not a verdict.** The cases show where a reader should look and what the reports
   say there. Whether a postponement was justified, or whether an unmentioned pledge was quietly kept,
   is outside what the text can settle.
-- **Chosen, not sampled.** The ten threads illustrate patterns. Prevalence is in `10` §6.
+- **Chosen, not sampled.** The ten threads illustrate patterns. Prevalence is in `promises.md`.
 - **Parsed text only.** Figures inside images are not seen; flattened tables lose their column
   structure; "not found" means not found in the parsed statements with the patterns above.
 - **One reader.** The search and the reading were done by one person with the sheet labels in view.
-- **For the market screen (`08`).** The dated events these cases yield are disclosures: the report in
+- **For the market screen (`market-screen.md`).** The dated events these cases yield are disclosures: the report in
   which a miss or a postponement is first stated (Indofood Agri 2022 and 2024, Old Chang Kee 2022 and
   2024, Kim Heng 2023 and 2024). Report publication dates are not in the store yet.

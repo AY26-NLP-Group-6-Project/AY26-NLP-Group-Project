@@ -17,6 +17,17 @@ category; the 50 pilot rows, labelled by all six annotators, are in dev.
 Agreement: 50 rows carry six labels (observed agreement 0.861, Fleiss' κ 0.809); the other 950 carry one.
 `uv run gw-data build gw1000` recomputes these figures from the `A1`–`A6` columns.
 
+## Human check sheets (`spotchecks/`)
+
+| file | what |
+|---|---|
+| `ragas-check.csv`, `.result.json`, `ragas.summary.json` | the blind calibration of the RAG-metric judge (186 rows), its scoring and the judged run's summary |
+| `promise-check-first-evidence.xlsx`, `.key.json`, `.result*.json` | the first RQ2 check: 75 promises on the first evidence; the key holds the system's proposals and the strata sizes; results for the first judge (`result.json`) and the rule-based judge on the same evidence (`result.v2*.json`) |
+| `promise-check-trajectory.xlsx`, `.key.json`, `.result.json` | the held-out RQ2 check: 60 promises on the trajectory evidence, the final system |
+
+Each sheet carries its guide on a second tab. Score with `gw-graph promise-score --sheet <xlsx>`
+(`docs/promises.md`).
+
 ## Changing it
 
 Edit `eval.xlsx` (sheet `eval`) and rebuild; never edit the snapshots by hand.

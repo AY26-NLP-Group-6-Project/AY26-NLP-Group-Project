@@ -1,4 +1,4 @@
-"""Structured targets: the dated commitments RQ2 follows across years (roadmap M3).
+"""Structured targets: the dated commitments RQ2 follows across years.
 
 Two steps, both auditable:
 

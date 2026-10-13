@@ -42,7 +42,7 @@ def reported(outcome: str) -> str:
 
     Both say the deadline passed without the target being reached. Which of the two it is depends on
     whether a missed target that is set again counts as re-dated, and neither the annotator across two
-    rounds nor the judge drew that line the same way (`docs/graph-rag-notes/10` §8.6). The five-way label
+    rounds nor the judge drew that line the same way (`docs/promises.md`, section 7). The five-way label
     is kept as detail; counts, shares and agreement are reported on `REPORTED`.
     """
     return "not_met" if outcome in ("failed", "revised") else outcome

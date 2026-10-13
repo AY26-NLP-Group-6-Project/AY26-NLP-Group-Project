@@ -1,4 +1,4 @@
-# 06 · Canonicalisation gold hand-off (for the GPT / Codex side)
+# Canonicalisation gold hand-off (for an outside annotator)
 
 Read this page and `configs/prompts/aspect_clustering_gold.md`; that is the whole job.
 
@@ -59,7 +59,7 @@ mean F1; on this gold, where most clusters are singletons, merging nothing maxim
 - Do not merge across pools, and do not reuse groupings from one pool in another: pools are judged
   independently.
 
-## 6. Run 1 · Claude, 2026-09-13
+## 6. The run that was made (Claude, 2026-09-13)
 
 Gold written by Claude in-session rather than by Codex, after discussion: the method under test is
 OpenAI embeddings + HAC, not the annotator, so the circularity that made the extraction run need an

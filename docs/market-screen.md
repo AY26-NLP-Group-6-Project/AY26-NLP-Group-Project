@@ -1,6 +1,6 @@
-# 08 · Promise fulfilment and stock prices: literature screen (2026-09-14)
+# Promise fulfilment and stock prices: a literature screen
 
-Trigger: supervisor feedback (Dr. Rui, 2026-09-14) suggested highlighting fulfilled / unfulfilled promises as
+Written 2026-09-14. Trigger: supervisor feedback suggested highlighting fulfilled / unfulfilled promises as
 case studies and "probably" testing whether fulfilment correlates with stock price. This note records a
 targeted screen (three parallel searches: prior evidence, inference methodology, Singapore evidence and data)
 and the design it supports. Tags: [full] full text or key sections read, [abs] abstract only,

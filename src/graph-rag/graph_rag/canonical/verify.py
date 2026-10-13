@@ -5,7 +5,8 @@ Design, and where each part comes from:
 - **Propose with embeddings, decide with an LLM.** EDC (Zhang & Soh, EMNLP 2024, section 3, phase 3)
   retrieves candidates by vector similarity and has an LLM verify each transformation "to prevent
   issues of over-generalization"; it reports that CESI's embedding clustering over-generalises
-  (e.g. merging 'place of birth' and 'date of death'). Our first M2 run failed for the same reason.
+  (e.g. merging 'place of birth' and 'date of death'). Our first canonicalisation run failed for the
+  same reason.
 - **Top-k candidates.** EDC retrieves the top-5 candidates per element; `k` and a similarity floor
   bound the number of LLM calls.
 - **Forced binary answer and handwritten rules.** Peeters, Steiner & Bizer ("Entity Matching using

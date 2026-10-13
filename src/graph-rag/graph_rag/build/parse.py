@@ -1,7 +1,7 @@
 """Stage 1: companies, reports and statements.
 
 Deterministic: everything here comes from `kb/manifest.csv` and the PDF text, with no model in the
-loop. Scope is decision D2 — the companies the eval set touches, across all of their years.
+loop. Scope is set in the config: the companies the eval set touches, or every kept report.
 """
 
 from __future__ import annotations

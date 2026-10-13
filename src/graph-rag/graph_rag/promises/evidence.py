@@ -7,7 +7,7 @@ reports of the deadline year and the year after. It has a structural flaw. Dense
 shared sentence store, which keeps prose sentences and leaves out 35 % of all statements, among them
 most result sentences ("... was 61 kwh per square foot (FY2020: 68 kwh per square foot)"). A statement
 outside the store can score in one of the two fused rankings only, so RRF puts it below statements that
-are mediocre in both: of eight answer statements found by hand (`docs/graph-rag-notes/11`), four ranked
+are mediocre in both: of eight answer statements found by hand (`docs/case-studies.md`), four ranked
 first to third on BM25 and were still cut.
 
 `trajectory` (default) follows the promise through every report after the one that made it, up to the
