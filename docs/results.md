@@ -84,16 +84,17 @@ years merged) → **374 checkable inside the corpus** (32 companies, deadlines 2
 | unclear where the check has a verdict | 0 % | 15 % (4–24) |
 | verdicts that are right | 75 % (63–86) | 84 % (71–93) |
 
-Outcomes are reported on four classes: achieved, **not met** (missed, or re-dated or weakened),
-unclear, disappeared; the split between "failed" and "revised" is not reliable, for the system or
-between two rounds of annotation, and stays in the data as detail only.
+Outcomes are reported on four classes: achieved, **failed** (missed, or re-dated or weakened: the
+deadline passed without the target being reported as met), unclear, disappeared. The judge's finer
+`revised` label is not reliable, for the system or between two rounds of annotation, and stays in the
+data as detail only.
 
 ### What the commitments did, human-verified
 
 | outcome | on the first evidence | on the complete evidence |
 |---|---|---|
 | achieved | 36 % (28–42) | **50 % (41–59)** |
-| not met | 8 % (5–11) | **13 % (8–21)** |
+| failed, including re-dated | 8 % (5–11) | **13 % (8–21)** |
 | unclear | 49 % (40–58) | **31 % (22–39)** |
 | disappeared | 5 % (4–7) | 6 % (1–14) |
 
@@ -108,11 +109,11 @@ store). With complete retrieval the human-verified `unclear` share is 31 %.
 | system says | checked | agrees |
 |---|---|---|
 | achieved | 14 | 13 |
-| not met | 27 | 21 (and it misses 1 of 22) |
+| failed | 27 | 21 (and it misses 1 of 22) |
 | unclear | 15 | 11 |
 | disappeared | 4 | 3 |
 
-Counts over the 374: achieved 173, not met 56, unclear 135, disappeared 10.
+Counts over the 374: achieved 173, failed 56, unclear 135, disappeared 10.
 
 ### Case studies
 
@@ -131,14 +132,14 @@ admitted; one issuer both ways; partial delivery not reconciled; never mentioned
    system's verdicts are right 84 % of the time, and it over-commits on 8 % of the commitments a person
    cannot settle.
 4. About half of dated commitments in these reports can be verified as met from the issuer's own later
-   reports; one in eight was not met; a third cannot be judged from the text.
+   reports; one in eight failed, by missing the deadline or moving it; a third cannot be judged from the text.
 5. The prose filter that sentence classification relies on hides the sentences that report results;
    any system that checks outcomes must retrieve over every statement.
 
 ## 4. Limits
 
-- One annotator with an AI-drafted first pass for the promise checks; six annotators but one per row
-  for 950 of the 1,000 classification items.
+- One annotator with an AI-drafted first pass for the promise checks so far (a two-annotator sheet of
+  150 promises is being filled); six annotators but one per row for 950 of the 1,000 classification items.
 - The judge is noisy: 15 % of promises do not get the same outcome in three runs; the majority is used.
 - Flattened multi-column tables can be read across columns and produce a wrong `achieved`; a bare
   "this target" can be mis-attributed.

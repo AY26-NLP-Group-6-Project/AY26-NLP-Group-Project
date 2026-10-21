@@ -114,16 +114,30 @@ ms against 117–326 ms for the hybrid path. The graph's case moves to RQ2.
 - Held-out check of the final system: 60 promises (`promise-check-trajectory.xlsx`), all judged the same
   day. Weighted to the 299 pool: accuracy 0.80 five-way / 0.83 with failed and revised as one, verdict
   where the check says unclear 8 % (3–15), verdicts right 84 % (71–93). Human-verified shares: achieved
-  50 %, not met 13 %, unclear 31 %, disappeared 6 %. The failed/revised boundary accounted for 8 of 20
+  50 %, failed 13 %, unclear 31 %, disappeared 6 %. The failed/revised boundary accounted for 8 of 20
   disagreements, partly a guide ambiguity of ours.
 
 ## 2026-10-04 · Reporting convention; the prose filter and RQ1
 
 - Decision: outcomes are reported on four classes, achieved / not met / unclear / disappeared
-  (`promises.md`). Scorer, run statistics and the annotator's guide follow.
+  (`promises.md`). Scorer, run statistics and the annotator's guide follow. Renamed on 2026-10-21:
+  the class is called failed, and `revised` is no longer a label on the sheets.
 - `results/baseline/all-statements-hybrid-cited`: the sentence-level hybrid over every statement, paired
   against the prose-store run: p = 1.00 (same report), 0.52 (cross year), 0.63 (sentence only). RQ1 does
   not depend on the filter; RQ2 did.
+
+## 2026-10-21 · Two-annotator sheet
+
+Teammates can annotate. Decided: the labels are achieved / failed / unclear / disappeared, with a
+re-dated commitment counted as failed (the deadline passed without the target being reported as met),
+so `revised` leaves the sheets; the judge keeps it internally and reports it as failed. New workbook
+`kb/annotation/spotchecks/promise-check-pair.xlsx`: 150 promises, the 60 held-out rows (the user's
+earlier labels prefilled as Annotator 1) plus 90 drawn at random from the 239 never checked; columns
+for Annotator 1, Annotator 2, adjudication and a final label; a second tab with the guide and live
+agreement formulas. `promise-pair-copy` gives a teammate a copy without the first annotator's columns,
+`promise-pair-merge` folds it back, `promise-pair-score` reports agreement, the system against each
+annotator and against the final label, and the two pools (the 60 weighted by their strata, the 90 as a
+plain random sample of the 239).
 
 ## 2026-10-13 · Documentation reorganised
 

@@ -16,7 +16,7 @@ what the two human checks found; the dated record is in `history.md`, the page-c
 | promises | restatements of one commitment across years merged; same-metric commitments with another deadline or quantity linked as `related` | rule, deterministic | `gw-graph promises --source <tag>` |
 | checkable | stated before its deadline; deadline ≤ 2025 with a report for that year or the next; metric names something | rule | same |
 | evidence | statements from the company's later reports (section 4) | hybrid retrieval, per report year | `gw-graph promise-evidence` |
-| outcome | achieved / failed / revised / unclear / disappeared, reported as achieved / not met / unclear / disappeared | the model labels each statement, a rule decides (section 5); majority of three runs | `gw-graph promise-outcomes --repeats 3` |
+| outcome | achieved / failed / revised / unclear / disappeared inside the judge; reported and annotated as achieved / failed / unclear / disappeared, a re-dated commitment counting as failed | the model labels each statement, a rule decides (section 5); majority of three runs | `gw-graph promise-outcomes --repeats 3` |
 | human check | a blind sheet, scored against the system and weighted back to the pool | `gw-graph promise-sheet`, `gw-graph promise-score --sheet …` |
 
 Grounding. A *promise with verifiable timing* is ML-Promise's notion (Seki et al., EMNLP 2025),
@@ -78,6 +78,16 @@ Two rounds were filled, on two versions of the system:
 
 (A round-2 sheet was drawn on judge v2 with the first evidence and withdrawn unfilled when the evidence
 changed.)
+
+A third sheet, for two annotators, is in progress: `promise-check-pair.xlsx`, 150 promises, the 60
+held-out rows (the earlier labels prefilled as Annotator 1, so those rows gain a second, independent
+opinion and a human–human κ on the rows the headline numbers rest on) plus 90 drawn at random from the
+239 promises never checked (whose raw rates estimate that pool directly). Each annotator fills their
+own five columns on a blind copy (`promise-pair-copy`, merged back with `promise-pair-merge`);
+disagreements are settled in `adjudicate`, the settled label goes to `final`, and a second tab shows
+the guide and the agreement as it forms. Labels on this sheet: achieved / failed / unclear /
+disappeared (section 7). `promise-pair-score` reports agreement between the annotators, the system
+against each and against `final`, and the two pools separately.
 
 ## 4. Evidence
 
@@ -204,7 +214,7 @@ What the commitments did, human-verified:
 | outcome | first evidence (round 1, pool 374) | complete evidence (round 3, pool 299) |
 |---|---|---|
 | achieved | 36.0 % (27.9–42.1) | **50.1 % (40.7–58.7)** |
-| not met | 7.6 % (4.7–10.5) | **12.8 % (7.9–20.5)** |
+| failed, including re-dated | 7.6 % (4.7–10.5) | **12.8 % (7.9–20.5)** |
 | unclear | 48.7 % (39.8–57.7) | **30.9 % (21.9–39.0)** |
 | disappeared | 5.3 % (3.8–6.7) | 6.2 % (0.7–13.9) |
 | not a promise | 2.4 % | 0 % |
@@ -235,20 +245,25 @@ evidence shows the commitment to be: 8 of the 11 misses are a scope or baseline 
 left to its context (5 of them only the later evidence supplies), 3 are misreadings ("up to 20 %" as
 20 %; "explore setting targets" as setting them; a qualifying age dropped).
 
-## 7. Reporting convention: failed and revised are one class
+## 7. Reporting convention: a re-dated commitment is a failed deadline
 
-Both say the deadline passed without the target being reached. Which of the two it is depends on
-whether a missed target that is set again counts as re-dated; the round-3 guide carried two rules that
+The judge's five labels include `revised`, a commitment given a later date or a weaker level without
+the original being reported as met. Whether such a row is `failed` or `revised` turned out to depend on
+whether a missed target that is set again counts as re-dated: the round-3 guide carried two rules that
 collided there (ours), the annotator followed one in six rows and the other elsewhere, round 1 had only
-the first, and the system follows the first. Re-deriving the outcome with the other rule moves raw
-accuracy from 0.667 to 0.700 only. So outcomes are reported on **achieved / not met / unclear /
-disappeared**: `outcome.reported()` maps the label, `promise-outcomes` prints the merged counts,
-`promise-score` returns a `reported` block and its weighted `accuracy` is on the merged classes, and the
-guide has one rule. The five-way label stays in the data as detail, for example to pick moved-goalpost
-cases. The judge's rule is unchanged: on the merged classes the order of its second and third steps no
-longer matters. As one class, "not met" is right 21 times in 27 on the held-out sheet and misses 1 of 22.
+the first, and the system follows the first. Re-deriving the outcome with the other rule moved raw
+accuracy from 0.667 to 0.700 only.
 
-System counts over the 374 on trajectory evidence: achieved 173, not met 56, unclear 135, disappeared 10.
+Decision (2026-10-04, renamed 2026-10-21): the deadline was stated; if the deadline year passed without
+the target being reported as met, the outcome is **failed**, whether the report admits the miss or
+moves the date. Outcomes are reported and, from the two-annotator sheet on, annotated on **achieved /
+failed / unclear / disappeared**. `outcome.reported()` maps `revised` to `failed`; `promise-outcomes`
+prints the merged counts; `promise-score` returns a `reported` block and its weighted `accuracy` is on
+the merged classes (`accuracy_five_way` keeps the judge's own labels apart); the guide has one rule.
+The judge's rule is unchanged, and `revised` stays in its output as detail, for example to pick
+moved-goalpost cases. On the held-out sheet the merged class is right 21 times in 27 and misses 1 of 22.
+
+System counts over the 374 on trajectory evidence: achieved 173, failed 56, unclear 135, disappeared 10.
 
 ## 8. Known limits
 
