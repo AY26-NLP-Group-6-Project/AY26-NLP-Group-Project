@@ -61,8 +61,9 @@ def test_export_prefills_annotator1_mixes_in_random_rows_and_hides_them_in_the_c
     info = P.export_pair(None, out, outcomes, held_out=held, n_random=3, seed=1)
     assert info["rows"] == 6 and info["held_out"] == 3 and info["random"] == 3 and info["random_pool"] == 5
     rows = {r["promise_id"]: r for r in P.read_pair_rows(out)}
-    assert rows["P002"]["a1_outcome"] == "failed"                 # revised became failed
-    assert rows["P003"]["a1_promise_ok"] == "N" and rows["P003"]["a1_outcome"] is None
+    assert rows["P002"]["a1_outcome"] == "failed"                   # revised became failed
+    assert rows["P002"]["a1_note"] == "re-dated"
+    assert rows["P003"]["a1_outcome"] == "not_a_promise"                                    # promise_ok N
     assert all(rows[i]["a1_outcome"] is None for i in rows if i not in ("P001", "P002", "P003"))
     key = json.loads(out.with_suffix(".key.json").read_text(encoding="utf-8"))
     assert key["P002"]["reported"] == "failed" and key["P002"]["part"] == "held_out"
@@ -70,7 +71,10 @@ def test_export_prefills_annotator1_mixes_in_random_rows_and_hides_them_in_the_c
     wb = load_workbook(out)
     assert wb.sheetnames == [P.SHEET_NAME, P.GUIDE_SHEET]
     assert [c.value for c in wb[P.SHEET_NAME][2]] == P.HEADER
-    assert any(str(c.value).startswith("=SUMPRODUCT") for row in wb[P.GUIDE_SHEET].iter_rows() for c in row)
+    assert len(P.HEADER) == 14
+    guide_cells = [c.value for row in wb[P.GUIDE_SHEET].iter_rows() for c in row if c.value]
+    assert any(str(v).startswith("=SUMPRODUCT") for v in guide_cells)
+    assert "promise_ok" not in guide_cells and "evidence_ref" not in guide_cells
 
     copy = P.blind_copy(out, tmp_path / "copy.xlsx", annotator=2)
     copied = {r["promise_id"]: r for r in P.read_pair_rows(copy)}
@@ -86,10 +90,8 @@ def test_merge_then_score_reports_agreement_and_the_two_pools(world):
     ws = wb[P.SHEET_NAME]
     for row in ws.iter_rows(min_row=P.FIRST_ROW):
         pid = row[0].value
-        row[P.COL["a2_promise_ok"] - 1].value = "N" if pid == "P003" else "Y"
-        row[P.COL["a2_fields_ok"] - 1].value = "Y"
-        a2 = None if pid == "P003" else ("unclear" if pid == "P001" else "failed")
-        row[P.COL["a2_outcome"] - 1].value = a2
+        row[P.COL["a2_outcome"] - 1].value = {"P003": "not_a_promise", "P001": "unclear"}.get(pid, "failed")
+        row[P.COL["a2_note"] - 1].value = "E1"
     wb.save(copy)
     assert P.merge(out, copy, annotator=2)["copied"] == 6
 
@@ -97,8 +99,7 @@ def test_merge_then_score_reports_agreement_and_the_two_pools(world):
     ws = wb[P.SHEET_NAME]
     for row in ws.iter_rows(min_row=P.FIRST_ROW):            # the first annotator finishes, then adjudication
         pid = row[0].value
-        if row[P.COL["a1_outcome"] - 1].value is None and pid != "P003":
-            row[P.COL["a1_promise_ok"] - 1].value = "Y"
+        if row[P.COL["a1_outcome"] - 1].value is None:
             row[P.COL["a1_outcome"] - 1].value = "failed"
         row[P.COL["final"] - 1].value = {"P001": "achieved", "P003": "not_a_promise"}.get(pid, "failed")
     wb.save(out)
@@ -107,7 +108,6 @@ def test_merge_then_score_reports_agreement_and_the_two_pools(world):
     assert result["filled"] == {"annotator1": 6, "annotator2": 6, "final": 6}
     iaa = result["iaa"]
     assert iaa["n"] == 6 and iaa["accuracy"] == pytest.approx(5 / 6)     # only P001 differs
-    assert iaa["promise_ok_agreement"] == {"k": 6, "n": 6, "rate": 1.0}
     assert result["system_vs_final"]["n"] == 6
     assert result["population_random"]["n"] == 3 and result["population_random"]["pool"] == 5
     assert result["population_held_out"]["pool"] == 6        # strata with no sampled row are left out

@@ -83,7 +83,7 @@ A third sheet, for two annotators, is in progress: `promise-check-pair.xlsx`, 15
 held-out rows (the earlier labels prefilled as Annotator 1, so those rows gain a second, independent
 opinion and a human–human κ on the rows the headline numbers rest on) plus 90 drawn at random from the
 239 promises never checked (whose raw rates estimate that pool directly). Each annotator fills their
-own five columns on a blind copy (`promise-pair-copy`, merged back with `promise-pair-merge`);
+own two columns, outcome and note, on a blind copy (`promise-pair-copy`, merged back with `promise-pair-merge`);
 disagreements are settled in `adjudicate`, the settled label goes to `final`, and a second tab shows
 the guide and the agreement as it forms. Labels on this sheet: achieved / failed / unclear /
 disappeared (section 7). `promise-pair-score` reports agreement between the annotators, the system

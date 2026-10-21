@@ -1,10 +1,11 @@
 """The two-annotator check sheet for RQ2: export, blind copies, merging, scoring.
 
-One row per promise. Two annotators fill their own five columns (promise_ok, fields_ok, outcome,
-evidence_ref, note) without seeing each other's; disagreements are settled in `adjudicate` and the
-settled label goes to `final`. The labels are achieved / failed / unclear / disappeared: a commitment
-whose deadline passed without the target being reported as met is failed, whether the report admits
-the miss or moves the date. The system's proposal is never on the sheet; it stays in the key file.
+One row per promise. Each annotator fills two columns, `outcome` and `note`, without seeing the other's;
+disagreements are settled in `adjudicate` and the settled label goes to `final`. The labels are
+achieved / failed / unclear / disappeared, plus not_a_promise for rows that are no dated commitment of
+the company's own. A commitment whose deadline passed without the target being reported as met is
+failed, whether the report admits the miss or moves the date. The system's proposal is never on the
+sheet; it stays in the key file.
 
 A second tab holds the annotation guide and live inter-annotator agreement (Excel formulas over the
 check tab), so the people filling the sheet see the agreement as it forms. `score_pair` recomputes the
@@ -30,16 +31,17 @@ from graph_rag.promises.outcome import REPORTED, reported
 
 SHEET_NAME = "check"
 GUIDE_SHEET = "guide and IAA"
-ANN_FIELDS = ("promise_ok", "fields_ok", "outcome", "evidence_ref", "note")
+ANN_FIELDS = ("outcome", "note")
 BASE = ["promise_id", "company", "stated_in", "promise_sentence", "extracted", "restated_in",
         "other_versions", "evidence"]
 HEADER = BASE + [f"a1_{f}" for f in ANN_FIELDS] + [f"a2_{f}" for f in ANN_FIELDS] + ["adjudicate", "final"]
-GROUPS = [("Promise", 1, 7), ("Evidence", 8, 8), ("Annotator 1", 9, 13), ("Annotator 2", 14, 18),
-          ("Adjudication", 19, 20)]
-FINAL_LABELS = (*REPORTED, "not_a_promise")
+GROUPS = [("Promise", 1, 7), ("Evidence", 8, 8), ("Annotator 1", 9, 10), ("Annotator 2", 11, 12),
+          ("Adjudication", 13, 14)]
+LABELS = (*REPORTED, "not_a_promise")
 FIRST_ROW = 3                                   # two header rows: group titles, then field names
 COL = {name: i + 1 for i, name in enumerate(HEADER)}
 DESIGN = "_design"
+DROPPED_GUIDE_ROWS = ("promise_ok", "fields_ok", "evidence_ref")
 
 
 def _letter(name: str) -> str:
@@ -54,8 +56,9 @@ def export_pair(cfg: GraphConfig, out: Path, outcomes: Path, held_out: Path | No
     """Write the master workbook.
 
     `held_out`: an earlier filled single-annotator sheet on the same evidence; its rows are included
-    and, with `prefill`, its labels become Annotator 1 (revised → failed). `n_random` more promises are
-    drawn at random from the checkable promises not on `held_out` or any `exclude` sheet.
+    and, with `prefill`, its labels become Annotator 1 (revised → failed, promise_ok N → not_a_promise).
+    `n_random` more promises are drawn at random from the checkable promises not on `held_out` or any
+    `exclude` sheet.
     """
     from openpyxl import Workbook
     from openpyxl.cell.cell import ILLEGAL_CHARACTERS_RE
@@ -73,7 +76,7 @@ def export_pair(cfg: GraphConfig, out: Path, outcomes: Path, held_out: Path | No
     held_rows, prefilled = [], {}
     held_design = {}
     if held_out:
-        held_rows = [r for r in single.read_rows(held_out)]
+        held_rows = single.read_rows(held_out)
         held_ids = [r["promise_id"] for r in held_rows]
         key_path = held_out.with_suffix(".key.json")
         held_key = json.loads(key_path.read_text(encoding="utf-8")) if key_path.exists() else {}
@@ -82,11 +85,11 @@ def export_pair(cfg: GraphConfig, out: Path, outcomes: Path, held_out: Path | No
         if prefill:
             for r in held_rows:
                 outcome = str(r.get("outcome") or "").strip().lower()
+                not_promise = str(r.get("promise_ok") or "").strip().upper() == "N"
                 prefilled[r["promise_id"]] = {
-                    "promise_ok": r.get("promise_ok"), "fields_ok": r.get("fields_ok"),
-                    "outcome": reported(outcome) if outcome else None,
-                    "evidence_ref": r.get("evidence_ref"), "note": r.get("note")}
-    seen = set(prefilled) | {r["promise_id"] for r in held_rows}
+                    "outcome": "not_a_promise" if not_promise else (reported(outcome) if outcome else None),
+                    "note": r.get("note")}
+    seen = {r["promise_id"] for r in held_rows}
     for s in exclude:
         seen |= single.sheet_ids(Path(s))
     remaining = sorted(i for i in promises if i not in seen and i in judged)
@@ -115,7 +118,7 @@ def export_pair(cfg: GraphConfig, out: Path, outcomes: Path, held_out: Path | No
             pid, p["company"], f"{p['origin']['year']} report, p.{p['origin']['page']}", p["origin"]["text"],
             single.describe_target(p), ", ".join(str(y) for y in p["stated_in_years"][1:]), others,
             single.evidence_cell(o["evidence"], p["target_year"]),
-            *(a1.get(f) for f in ANN_FIELDS), *([None] * len(ANN_FIELDS)), None, None,
+            a1.get("outcome"), a1.get("note"), None, None, None, None,
         )])
         key[pid] = {"outcome": o["outcome"], "reported": reported(o["outcome"]), "rationale": o["rationale"],
                     "evidence_refs": o["evidence_refs"],
@@ -123,9 +126,9 @@ def export_pair(cfg: GraphConfig, out: Path, outcomes: Path, held_out: Path | No
     key[DESIGN] = {"held_out": held_design, "random": {"pool": len(remaining), "n": len(random_ids),
                                                       "seed": seed}}
 
-    widths = {"A": 9, "B": 16, "C": 16, "D": 60, "E": 30, "F": 12, "G": 26, "H": 95}
-    for name in HEADER[8:]:
-        widths[_letter(name)] = 34 if name.endswith("note") or name == "adjudicate" else 12
+    widths = {"A": 9, "B": 16, "C": 16, "D": 60, "E": 30, "F": 12, "G": 26, "H": 95,
+              _letter("a1_outcome"): 14, _letter("a1_note"): 40, _letter("a2_outcome"): 14,
+              _letter("a2_note"): 40, _letter("adjudicate"): 40, _letter("final"): 14}
     for col, width in widths.items():
         ws.column_dimensions[col].width = width
     for cell in [*ws[1], *ws[2]]:
@@ -137,18 +140,16 @@ def export_pair(cfg: GraphConfig, out: Path, outcomes: Path, held_out: Path | No
     for row in ws.iter_rows(min_row=FIRST_ROW):
         for cell in row:
             cell.alignment = Alignment(wrap_text=True, vertical="top")
-        for cell in row[COL["a1_promise_ok"] - 1:COL["a1_note"]]:
+        for cell in row[COL["a1_outcome"] - 1:COL["a1_note"]]:
             cell.fill = fills["a1"]
-        for cell in row[COL["a2_promise_ok"] - 1:COL["a2_note"]]:
+        for cell in row[COL["a2_outcome"] - 1:COL["a2_note"]]:
             cell.fill = fills["a2"]
         for cell in row[COL["adjudicate"] - 1:COL["final"]]:
             cell.fill = fills["adj"]
     last = FIRST_ROW + len(chosen) - 1
-    labels = '"' + ",".join(REPORTED) + '"'
-    for name, formula in (("a1_promise_ok", '"Y,N"'), ("a1_fields_ok", '"Y,N"'), ("a1_outcome", labels),
-                          ("a2_promise_ok", '"Y,N"'), ("a2_fields_ok", '"Y,N"'), ("a2_outcome", labels),
-                          ("final", '"' + ",".join(FINAL_LABELS) + '"')):
-        dv = DataValidation(type="list", formula1=formula, allow_blank=True)
+    labels = '"' + ",".join(LABELS) + '"'
+    for name in ("a1_outcome", "a2_outcome", "final"):
+        dv = DataValidation(type="list", formula1=labels, allow_blank=True)
         dv.add(f"{_letter(name)}{FIRST_ROW}:{_letter(name)}{last}")
         ws.add_data_validation(dv)
     ws.freeze_panes = f"E{FIRST_ROW}"
@@ -164,19 +165,41 @@ def export_pair(cfg: GraphConfig, out: Path, outcomes: Path, held_out: Path | No
             "key": str(out.with_suffix(".key.json"))}
 
 
+OUTCOME_HELP = ("Judge only from the evidence shown, for the deadline year the promise names. Choose "
+                "not_a_promise if the row is no forward-looking commitment of the company's own with a "
+                "deadline (a result already achieved, a national or regulatory goal, a wrong deadline), "
+                "and say why in the note.")
+NOTE_HELP = ("The tag(s) your outcome rests on (e.g. E2; E5), and anything worth knowing: a wrong "
+             "extracted field, evidence that is about something else, a case worth writing up.")
+
+
+def pair_guide() -> list[list[str]]:
+    """The shared guide, less the columns this sheet does not have, plus its own two."""
+    rows = [r for r in single.GUIDE if not (r and r[0].strip() in DROPPED_GUIDE_ROWS)]
+    out = []
+    for r in rows:
+        if r and r[0] == "outcome":
+            out.append(["outcome", OUTCOME_HELP])
+        elif r and r[0] == "note":
+            out.append(["note", NOTE_HELP])
+        else:
+            out.append(r)
+    return out
+
+
 def _guide_tab(wb, last: int) -> None:
     """The guide, then live agreement figures computed by Excel from the check tab."""
     from openpyxl.styles import Alignment, Font
 
     ws = wb.create_sheet(GUIDE_SHEET)
-    for line in single.GUIDE:
+    for line in pair_guide():
         ws.append(line)
     ws.append([])
     ws.append(["Inter-annotator agreement", "computed live from the check tab, on rows both annotators "
                                              "have labelled; the scorer recomputes the same figures"])
     ws.cell(ws.max_row, 1).font = Font(bold=True)
-    rng = lambda name: f"{SHEET_NAME}!${_letter(name)}${FIRST_ROW}:${_letter(name)}${last}"  # noqa: E731
-    k1, k2 = rng("a1_outcome"), rng("a2_outcome")
+    k1 = f"{SHEET_NAME}!${_letter('a1_outcome')}${FIRST_ROW}:${_letter('a1_outcome')}${last}"
+    k2 = f"{SHEET_NAME}!${_letter('a2_outcome')}${FIRST_ROW}:${_letter('a2_outcome')}${last}"
     ws.append(["rows labelled by both", f'=SUMPRODUCT(({k1}<>"")*({k2}<>""))'])
     n_row = ws.max_row
     ws.append(["outcome agreements", f'=SUMPRODUCT(({k1}<>"")*({k2}<>"")*({k1}={k2}))'])
@@ -185,7 +208,7 @@ def _guide_tab(wb, last: int) -> None:
     po_row = ws.max_row
     ws.append(["label", "Annotator 1", "Annotator 2", "both"])
     first_class = ws.max_row + 1
-    for label in REPORTED:
+    for label in LABELS:
         ws.append([label, f'=COUNTIFS({k1},"{label}",{k2},"<>")', f'=COUNTIFS({k2},"{label}",{k1},"<>")',
                    f'=COUNTIFS({k1},"{label}",{k2},"{label}")'])
     last_class = ws.max_row
@@ -195,12 +218,8 @@ def _guide_tab(wb, last: int) -> None:
     pe_row = ws.max_row
     ws.append(["Cohen's kappa (outcome)",
                f'=IF(OR(B{n_row}=0,B{pe_row}=1),"",(B{po_row}-B{pe_row})/(1-B{pe_row}))'])
-    for field in ("promise_ok", "fields_ok"):
-        f1, f2 = rng(f"a1_{field}"), rng(f"a2_{field}")
-        ws.append([f"{field} agreement",
-                   f'=IF(SUMPRODUCT(({f1}<>"")*({f2}<>""))=0,"",'
-                   f'SUMPRODUCT(({f1}<>"")*({f2}<>"")*({f1}={f2}))/SUMPRODUCT(({f1}<>"")*({f2}<>"")))'])
-    ws.append(["rows with a final label", f"=COUNTA({rng('final')})"])
+    final = f"{SHEET_NAME}!${_letter('final')}${FIRST_ROW}:${_letter('final')}${last}"
+    ws.append(["rows with a final label", f"=COUNTA({final})"])
     ws.column_dimensions["A"].width = 26
     ws.column_dimensions["B"].width = 110
     for row in ws.iter_rows():
@@ -224,7 +243,7 @@ def blind_copy(master: Path, out: Path, annotator: int) -> Path:
 
 
 def merge(master: Path, filled: Path, annotator: int) -> dict:
-    """Copy one annotator's five columns from a filled copy into the master, by promise id."""
+    """Copy one annotator's columns from a filled copy into the master, by promise id."""
     from openpyxl import load_workbook
 
     prefix = f"a{annotator}_"
@@ -255,7 +274,7 @@ def read_pair_rows(sheet: Path) -> list[dict]:
 
 def _label(value) -> str | None:
     s = str(value or "").strip().lower()
-    return s if s in FINAL_LABELS else None
+    return s if s in LABELS else None
 
 
 def score_pair(cfg: GraphConfig, sheet: Path, outcomes: Path | None = None) -> dict:
@@ -266,31 +285,20 @@ def score_pair(cfg: GraphConfig, sheet: Path, outcomes: Path | None = None) -> d
     system = ({o["promise_id"]: reported(o["outcome"]) for o in single._load(outcomes)} if outcomes
               else {i: v["reported"] for i, v in key.items() if i != DESIGN})
     rows = read_pair_rows(sheet)
-
-    def human(r: dict, prefix: str) -> str | None:
-        ok = str(r.get(prefix + "promise_ok") or "").strip().upper()
-        if ok == "N":
-            return "not_a_promise"
-        return _label(r.get(prefix + "outcome"))
-
-    a1 = {r["promise_id"]: human(r, "a1_") for r in rows}
-    a2 = {r["promise_id"]: human(r, "a2_") for r in rows}
+    a1 = {r["promise_id"]: _label(r.get("a1_outcome")) for r in rows}
+    a2 = {r["promise_id"]: _label(r.get("a2_outcome")) for r in rows}
     final = {r["promise_id"]: _label(r.get("final")) for r in rows}
     both = [i for i in a1 if a1[i] and a2[i]]
     result = {"rows": len(rows), "filled": {"annotator1": sum(bool(v) for v in a1.values()),
                                            "annotator2": sum(bool(v) for v in a2.values()),
                                            "final": sum(bool(v) for v in final.values())}}
     if both:
-        result["iaa"] = {
-            **single.agreement([a1[i] for i in both], [a2[i] for i in both], FINAL_LABELS),
-            "promise_ok_agreement": _share(rows, "promise_ok"),
-            "fields_ok_agreement": _share(rows, "fields_ok"),
-        }
+        result["iaa"] = single.agreement([a1[i] for i in both], [a2[i] for i in both], LABELS)
     for name, labels in (("annotator1", a1), ("annotator2", a2), ("final", final)):
         ids = [i for i in labels if labels[i] and i in system]
         if ids:
             result[f"system_vs_{name}"] = single.agreement([labels[i] for i in ids],
-                                                           [system[i] for i in ids], FINAL_LABELS)
+                                                           [system[i] for i in ids], LABELS)
     # what the sample says about its pools, from the final labels
     parts = {"random": [i for i in final if final[i] and key[i]["part"] == "random"],
              "held_out": [i for i in final if final[i] and key[i]["part"] == "held_out"]}
@@ -303,17 +311,9 @@ def score_pair(cfg: GraphConfig, sheet: Path, outcomes: Path | None = None) -> d
         for i in parts["held_out"]:
             strata.setdefault(held["drawn_as"][i], []).append((final[i], system[i]))
         result["population_held_out"] = single.population(strata, held["pool"])
-    name = f"{sheet.stem}.result.json"
-    (base / name).write_text(json.dumps(result, indent=2), encoding="utf-8")
+    (base / f"{sheet.stem}.result.json").write_text(json.dumps(result, indent=2), encoding="utf-8")
     sheet.with_suffix(".result.json").write_text(json.dumps(result, indent=2), encoding="utf-8")
     return result
-
-
-def _share(rows: list[dict], field: str) -> dict:
-    pairs = [(str(r.get(f"a1_{field}") or "").strip().upper(),
-              str(r.get(f"a2_{field}") or "").strip().upper()) for r in rows]
-    pairs = [(x, y) for x, y in pairs if x and y]
-    return single._rate(sum(x == y for x, y in pairs), len(pairs))
 
 
 def _raw_shares(pairs: list[tuple[str, str]], pool: int | None, draws: int = 4000,

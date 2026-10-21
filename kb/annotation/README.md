@@ -24,7 +24,7 @@ Agreement: 50 rows carry six labels (observed agreement 0.861, Fleiss' κ 0.809)
 | `ragas-check.csv`, `.result.json`, `ragas.summary.json` | the blind calibration of the RAG-metric judge (186 rows), its scoring and the judged run's summary |
 | `promise-check-first-evidence.xlsx`, `.key.json`, `.result*.json` | the first RQ2 check: 75 promises on the first evidence; the key holds the system's proposals and the strata sizes; results for the first judge (`result.json`) and the rule-based judge on the same evidence (`result.v2*.json`) |
 | `promise-check-trajectory.xlsx`, `.key.json`, `.result.json` | the held-out RQ2 check: 60 promises on the trajectory evidence, the final system |
-| `promise-check-pair.xlsx`, `.key.json`; `promise-check-pair.annotator2.xlsx` | the two-annotator sheet: those 60 (earlier labels prefilled as Annotator 1) plus 90 random promises never checked; columns per annotator, adjudication and final; a second tab with the guide and live agreement. The `annotator2` file is the blind copy for a teammate |
+| `promise-check-pair.xlsx`, `.key.json`; `promise-check-pair.annotator2.xlsx` | the two-annotator sheet: those 60 (earlier labels prefilled as Annotator 1) plus 90 random promises never checked; an outcome and a note per annotator, then adjudication and final; a second tab with the guide and live agreement. The `annotator2` file is the blind copy for a teammate |
 
 Each sheet carries its guide on a second tab. Score a single-annotator sheet with
 `gw-graph promise-score --sheet <xlsx>` and the two-annotator sheet with `gw-graph promise-pair-score`
