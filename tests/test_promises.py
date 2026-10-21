@@ -129,11 +129,11 @@ def test_score_reads_a_filled_sheet(tmp_path, monkeypatch):
     assert result["outcome"]["per_class"]["failed"] == {"precision": 1.0, "recall": 0.5, "support": 2}
     assert S.cohen_kappa(["a", "a", "b", "b"], ["a", "b", "b", "b"]) == pytest.approx(0.5)
     # as reported, failed and revised are one class
-    assert result["reported"]["human_distribution"] == {"achieved": 1, "not_met": 2}
-    assert result["reported"]["per_class"]["not_met"] == {"precision": 1.0, "recall": 0.5, "support": 2}
-    assert O.reported("revised") == O.reported("failed") == "not_met" and O.reported("unclear") == "unclear"
+    assert result["reported"]["human_distribution"] == {"achieved": 1, "failed": 2}
+    assert result["reported"]["per_class"]["failed"] == {"precision": 1.0, "recall": 0.5, "support": 2}
+    assert O.reported("revised") == O.reported("failed") == "failed" and O.reported("unclear") == "unclear"
     assert S.agreement(["failed", "revised"], ["revised", "revised"], O.OUTCOMES)["accuracy"] == 0.5
-    assert S.agreement(["not_met", "not_met"], ["not_met", "not_met"], O.REPORTED)["accuracy"] == 1.0
+    assert S.agreement(["failed", "failed"], ["failed", "failed"], O.REPORTED)["accuracy"] == 1.0
 
     # the same sheet scored against another judge's output over the same promises
     judged = [{"promise_id": "P1", "outcome": "achieved"}, {"promise_id": "P2", "outcome": "unclear"},
@@ -163,7 +163,7 @@ def test_population_weights_each_stratum_by_the_pool_it_was_drawn_from():
     # every promise the annotator called unclear got a verdict from the system
     assert est["over_commitment"]["estimate"] == pytest.approx(1.0)
     assert est["human_share.unclear"]["estimate"] == pytest.approx((100 * 0.25 + 10 * 0.25) / 110)
-    assert est["human_share.not_met"]["estimate"] == pytest.approx(10 * 0.75 / 110)
+    assert est["human_share.failed"]["estimate"] == pytest.approx(10 * 0.75 / 110)
     low, high = est["accuracy"]["ci95"]
     assert low <= est["accuracy"]["estimate"] <= high
 

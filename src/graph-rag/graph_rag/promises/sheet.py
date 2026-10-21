@@ -106,11 +106,25 @@ def evidence_cell(evidence: list[dict], deadline: int) -> str:
     return "\n\n".join(lines)
 
 
-def sheet_ids(sheet: Path) -> set[str]:
+def read_rows(sheet: Path) -> list[dict]:
+    """Rows of a check sheet as dicts, whatever header rows precede the one that starts `promise_id`."""
     from openpyxl import load_workbook
 
     ws = load_workbook(sheet, data_only=True)[SHEET_NAME]
-    return {str(r[0]) for r in ws.iter_rows(min_row=2, values_only=True) if r[0]}
+    head: list[str] | None = None
+    rows = []
+    for values in ws.iter_rows(values_only=True):
+        if head is None:
+            if values and values[0] == "promise_id":
+                head = [str(c) for c in values]
+            continue
+        if values[0]:
+            rows.append(dict(zip(head, values, strict=False)))
+    return rows
+
+
+def sheet_ids(sheet: Path) -> set[str]:
+    return {str(r["promise_id"]) for r in read_rows(sheet)}
 
 
 def export(cfg: GraphConfig, out: Path | None = None, n: int = 75, seed: int = 20261003,
@@ -167,7 +181,7 @@ def export(cfg: GraphConfig, out: Path | None = None, n: int = 75, seed: int = 2
         for cell in row[8:13]:
             cell.fill = fill
     last = len(chosen) + 1
-    for col, formula in (("I", '"Y,N"'), ("J", '"Y,N"'), ("K", '"' + ",".join(OUTCOMES) + '"')):
+    for col, formula in (("I", '"Y,N"'), ("J", '"Y,N"'), ("K", '"' + ",".join(REPORTED) + '"')):
         dv = DataValidation(type="list", formula1=formula, allow_blank=True)
         dv.add(f"{col}2:{col}{last}")
         ws.add_data_validation(dv)
@@ -198,7 +212,9 @@ def export(cfg: GraphConfig, out: Path | None = None, n: int = 75, seed: int = 2
 
 
 GUIDE = [
-    ["Promise check", "One row = one dated commitment a company made in an earlier sustainability report."],
+    ["Promise check", "One row = one dated commitment a company made in an earlier sustainability report. "
+                      "Two annotators label independently; where their outcomes differ the row is settled "
+                      "in 'adjudicate' and the settled label goes to 'final'."],
     [],
     ["What you see", ""],
     ["stated_in", "The report (year, page) where the commitment was first found."],
@@ -219,38 +235,41 @@ GUIDE = [
                    "or regulatory goal, not a commitment, or the deadline is wrong. If N, leave the rest "
                    "blank."],
     ["fields_ok", "Y if metric, quantity, unit and baseline are all right; N otherwise (say what in note)."],
-    ["outcome", "Judge only from the evidence shown:"],
-    ["  achieved", "The evidence says the target was met or the deliverable completed by the deadline, or "
-                   "reports a figure that plainly meets it. A deliverable reported as finished before "
-                   "the deadline counts."],
-    ["  failed", "The evidence says it was missed, or reports a figure at the deadline that plainly "
-                 "falls short."],
-    ["  revised", "The evidence, from any year, restates the commitment with a later deadline, a weaker "
-                  "or changed quantity, or a changed baseline, or says it was postponed, without "
-                  "reporting the original as met."],
+    ["outcome", "Judge only from the evidence shown, for the deadline year the promise names:"],
+    ["  achieved", "The evidence says the target was met or the deliverable completed in or by the "
+                   "deadline year, or reports a figure that plainly meets it. A deliverable reported as "
+                   "finished before the deadline counts."],
+    ["  failed", "The deadline year has passed and the evidence does not report the target as met: it "
+                 "says it was missed, reports a figure at the deadline that falls short, or gives the same "
+                 "commitment a later date, a weaker level or a new baseline, or says it was postponed. A "
+                 "moved deadline is a failed deadline."],
     ["  unclear", "The evidence from the deadline year or later talks about this target or its metric "
-                  "but does not let you tell whether it was met (progress with no verdict, 'on track')."],
+                  "but does not let you tell whether it was met: progress with no verdict, 'on track', a "
+                  "result for part of the commitment, a result for another year."],
     ["  disappeared", "Nothing in the evidence from the deadline year or later refers to this target or "
                       "its metric. A restatement in an earlier year does not count: the question is "
                       "whether the company still speaks of it once the deadline has come."],
-    ["evidence_ref", "The tag(s) your outcome rests on, e.g. E2. Leave blank for disappeared."],
+    ["evidence_ref", "The tag(s) your outcome rests on, e.g. E2; E5. Leave blank for disappeared."],
     ["note", "Anything worth knowing: a wrong field, evidence that is about something else, a case worth "
              "writing up."],
+    ["adjudicate", "After both annotators are done, for rows where the outcomes differ: who settled it "
+                   "and why, in a few words."],
+    ["final", "The settled outcome, or the agreed one; not_a_promise when promise_ok is N."],
     [],
-    ["Be strict", "General statements that the company cares about the topic are not 'achieved'."],
-    ["Not met", "'failed' and 'revised' are reported together as one outcome, not met: the deadline "
-                "passed without the target being reached. Use 'failed' when the evidence reports the miss "
-                "and nothing more; use 'revised' when the commitment was given a later date, a weaker "
-                "level or a new baseline, or was postponed, whether or not the miss is also reported. "
-                "If you hesitate between the two, pick either: they count the same."],
+    ["Be strict", "General statements that the company cares about the topic are not 'achieved'. Do not "
+                  "infer: an action reported in a later year does not show that the deadline was missed, "
+                  "and a related measure (an absolute amount for an intensity target, another site, "
+                  "another product) is not this target."],
+    ["Annual targets", "An annual target ('zero incidents in FY2023') is judged on the result reported "
+                       "for its own year: achieved if met, failed if missed. Seeing it set again for the "
+                       "next year tells nothing by itself: with no result for the deadline year, choose "
+                       "unclear."],
     ["Tables", "A table is parsed into fragments. A fragment that only names the target ('An accident "
                "frequency rate of zero') is not a result; the result is usually the fragment marked "
                "'directly follows'. In one long flattened row the columns run together (target, result, "
                "next year's target): if you cannot tell which column a phrase is in, do not rely on it."],
-    ["Annual targets", "An annual target ('zero incidents in FY2023') is judged on the result reported "
-                       "for its own year: achieved if met, failed or revised (not met) if missed. Seeing "
-                       "it set again for the next year tells nothing by itself: with no result for the "
-                       "deadline year, choose unclear."],
+    ["Independence", "Fill your own columns without looking at the other annotator's. The system's "
+                     "proposal is not on this sheet."],
 ]
 
 
@@ -312,15 +331,14 @@ def population(strata: dict[str, list[tuple[str, str]]], pool: dict[str, int],
         base = mean(sample, among)
         return mean(sample, lambda h, y: among(h, y) and hit(h, y)) / base if base else None
 
-    labels = sorted({h for pairs in strata.values() for h, _ in pairs})
+    labels = sorted({reported(h) for pairs in strata.values() for h, _ in pairs})
     measures = {
         "accuracy": lambda s: mean(s, lambda h, y: reported(h) == reported(y)),
         "accuracy_five_way": lambda s: mean(s, lambda h, y: h == y),
         "over_commitment": lambda s: ratio(s, lambda h, y: y in VERDICTS, lambda h, y: h == "unclear"),
         "under_commitment": lambda s: ratio(s, lambda h, y: y == "unclear", lambda h, y: h in VERDICTS),
         "verdict_precision": lambda s: ratio(s, lambda h, y: h == y, lambda h, y: y in VERDICTS),
-        **{f"human_share.{c}": (lambda s, c=c: mean(s, lambda h, y: h == c)) for c in labels},
-        "human_share.not_met": lambda s: mean(s, lambda h, y: reported(h) == "not_met"),
+        **{f"human_share.{c}": (lambda s, c=c: mean(s, lambda h, y: reported(h) == c)) for c in labels},
     }
     rng = random.Random(seed)
     resampled = [{s: [rng.choice(pairs) for _ in pairs] for s, pairs in strata.items()} for _ in range(draws)]
@@ -343,8 +361,6 @@ def score(cfg: GraphConfig, sheet: Path | None = None, outcomes: Path | None = N
     When the key records the strata the sheet was drawn from, the result carries `population`: the
     same measures weighted back to the pool, which is what may be compared across sheets.
     """
-    from openpyxl import load_workbook
-
     base = out_dir(cfg)
     sheet = sheet or (base / "promise_check.xlsx")
     beside = sheet.with_suffix(".key.json")
@@ -352,10 +368,7 @@ def score(cfg: GraphConfig, sheet: Path | None = None, outcomes: Path | None = N
     design = json.loads(key_path.read_text(encoding="utf-8")) if key_path.exists() else {}
     key = {o["promise_id"]: o for o in _load(Path(outcomes))} if outcomes else design
     promises = {p["promise_id"]: p for p in _load(base / "promises.jsonl")}
-    ws = load_workbook(sheet, data_only=True)[SHEET_NAME]
-    it = ws.iter_rows(values_only=True)
-    head = [str(c) for c in next(it)]
-    rows = [dict(zip(head, r, strict=False)) for r in it if r[0]]
+    rows = read_rows(sheet)
 
     def yn(v) -> bool | None:
         s = str(v or "").strip().upper()

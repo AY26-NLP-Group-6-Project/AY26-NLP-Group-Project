@@ -29,7 +29,7 @@ PROMPTS = {"v1": REPO_ROOT / "configs" / "prompts" / "promise_outcome.md",
            "v2": REPO_ROOT / "configs" / "prompts" / "promise_outcome_v2.md"}
 PROMPT_PATH = PROMPTS["v1"]
 OUTCOMES = ("achieved", "failed", "revised", "unclear", "disappeared")
-REPORTED = ("achieved", "not_met", "unclear", "disappeared")
+REPORTED = ("achieved", "failed", "unclear", "disappeared")
 RELATIONS = ("this_target", "same_metric", "other")
 RESULTS = ("met", "missed", "none")
 CHANGES = ("later", "none")
@@ -38,14 +38,14 @@ _JSON = re.compile(r"\{.*\}", re.S)
 
 
 def reported(outcome: str) -> str:
-    """The outcome as it is reported: `failed` and `revised` are one class, not met.
+    """The outcome as it is reported: a re-dated commitment (`revised`) is a failed deadline.
 
-    Both say the deadline passed without the target being reached. Which of the two it is depends on
-    whether a missed target that is set again counts as re-dated, and neither the annotator across two
-    rounds nor the judge drew that line the same way (`docs/promises.md`, section 7). The five-way label
-    is kept as detail; counts, shares and agreement are reported on `REPORTED`.
+    The deadline passed without the target being reported as met, whether the report admits the miss
+    or moves the date. Where the line between the two falls was not drawn the same way by the annotator
+    across two rounds or by the judge (`docs/promises.md`, section 7), so counts, shares and agreement
+    are reported on `REPORTED`; the five-way label is kept as detail.
     """
-    return "not_met" if outcome in ("failed", "revised") else outcome
+    return "failed" if outcome == "revised" else outcome
 
 
 def _sections(path: Path = PROMPT_PATH) -> dict[str, str]:
