@@ -14,7 +14,8 @@ sample back to the pools it was drawn from.
 
 The sample mixes two parts, and the key records which row is which: promises already judged once on
 this evidence (so the earlier labels can be re-used as Annotator 1 and the headline rows gain a second
-opinion), and a plain random draw from the promises never checked, whose raw rates estimate that pool.
+opinion), placed first as one block, and a plain random draw from the promises never checked, whose raw
+rates estimate that pool.
 """
 
 from __future__ import annotations
@@ -94,8 +95,9 @@ def export_pair(cfg: GraphConfig, out: Path, outcomes: Path, held_out: Path | No
         seen |= single.sheet_ids(Path(s))
     remaining = sorted(i for i in promises if i not in seen and i in judged)
     random_ids = sorted(rng.sample(remaining, min(n_random, len(remaining))))
-    chosen = [r["promise_id"] for r in held_rows] + random_ids
-    rng.shuffle(chosen)                          # so the two parts cannot be told apart on the sheet
+    random_part = list(random_ids)
+    rng.shuffle(random_part)
+    chosen = [r["promise_id"] for r in held_rows] + random_part   # the rows judged before as one block, first
 
     wb = Workbook()
     ws = wb.active
