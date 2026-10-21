@@ -20,7 +20,8 @@ def _promise(pid, company, year=2022, deadline=2023):
 
 def _outcome(pid, outcome):
     return {"promise_id": pid, "outcome": outcome, "rationale": "r", "evidence_refs": ["E1"],
-            "evidence": [{"ref": "E1", "year": 2023, "page": 4, "text": "There were no incidents in FY2023."}]}
+            "evidence": [{"ref": "E1", "year": 2023, "page": 4,
+                          "text": "There were no incidents in FY2023."}]}
 
 
 def _write(path, rows):
@@ -32,9 +33,11 @@ def world(tmp_path, monkeypatch):
     monkeypatch.setattr(S, "out_dir", lambda cfg: tmp_path)
     monkeypatch.setattr(P, "out_dir", lambda cfg: tmp_path)
     ids = [f"P{i:03d}" for i in range(1, 9)]
-    _write(tmp_path / "promises.jsonl", [_promise(i, "Acme" if n % 2 else "Other") for n, i in enumerate(ids)])
+    _write(tmp_path / "promises.jsonl",
+           [_promise(i, "Acme" if n % 2 else "Other") for n, i in enumerate(ids)])
     outcomes = tmp_path / "outcomes.jsonl"
-    _write(outcomes, [_outcome(i, ["achieved", "revised", "unclear", "failed"][n % 4]) for n, i in enumerate(ids)])
+    labels = ["achieved", "revised", "unclear", "failed"]
+    _write(outcomes, [_outcome(i, labels[n % 4]) for n, i in enumerate(ids)])
     # an earlier single-annotator sheet on three of them, with its key and strata
     wb = Workbook()
     ws = wb.active
@@ -85,7 +88,8 @@ def test_merge_then_score_reports_agreement_and_the_two_pools(world):
         pid = row[0].value
         row[P.COL["a2_promise_ok"] - 1].value = "N" if pid == "P003" else "Y"
         row[P.COL["a2_fields_ok"] - 1].value = "Y"
-        row[P.COL["a2_outcome"] - 1].value = None if pid == "P003" else ("unclear" if pid == "P001" else "failed")
+        a2 = None if pid == "P003" else ("unclear" if pid == "P001" else "failed")
+        row[P.COL["a2_outcome"] - 1].value = a2
     wb.save(copy)
     assert P.merge(out, copy, annotator=2)["copied"] == 6
 
