@@ -60,7 +60,8 @@ def test_export_prefills_annotator1_mixes_in_random_rows_and_hides_them_in_the_c
     out = tmp_path / "pair.xlsx"
     info = P.export_pair(None, out, outcomes, held_out=held, n_random=3, seed=1)
     assert info["rows"] == 6 and info["held_out"] == 3 and info["random"] == 3 and info["random_pool"] == 5
-    assert [r["promise_id"] for r in P.read_pair_rows(out)][:3] == ["P001", "P002", "P003"]   # judged rows first
+    first_three = [r["promise_id"] for r in P.read_pair_rows(out)][:3]
+    assert first_three == ["P001", "P002", "P003"]                   # the rows judged before come first
     rows = {r["promise_id"]: r for r in P.read_pair_rows(out)}
     assert rows["P002"]["a1_outcome"] == "failed"                   # revised became failed
     assert rows["P002"]["a1_note"] == "re-dated"
