@@ -22,6 +22,7 @@ import statistics
 import subprocess
 import time
 from collections import Counter
+from concurrent.futures import ThreadPoolExecutor
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -46,6 +47,10 @@ from gw_common.schemas import (
 REPO_ROOT = Path(__file__).resolve().parents[4]
 RUNS_DIR = REPO_ROOT / "artifacts" / "runs"
 EVIDENCE_K = 3
+# Evidence retrieval is embarrassingly parallel across items, and most of its wall time is waiting
+# (the embedding API round trip, the planner's chat) or GIL-released compute (ONNX rerank), so items
+# run in a thread pool, like the classifier's own pool. 1 = sequential.
+RETRIEVAL_WORKERS = max(1, int(os.getenv("GW_RETRIEVAL_WORKERS", "8")))
 SLICE_REPORT_KEYS = ("row_type", "aspect_source", "category", "agreement", "gold")
 
 
@@ -81,21 +86,36 @@ def collect_evidence(
     The harness removes the target whatever the retriever did, so no arm can score by re-reading the
     sentence it classifies; the count is reported so a retriever that leaks is visible. When
     `timings_ms` is given it is filled with each item's retrieval time, measured here so that every
-    retriever is timed the same way.
+    retriever is timed the same way. Items run in a thread pool (`GW_RETRIEVAL_WORKERS`, default 8):
+    every request is independent, and the state underneath — the BM25 index, the embedding cache, the
+    agent's trace lock — is read-only or lock-guarded. Per-item latency under concurrency measures
+    queueing, not the retriever, so the p50/p95 in the report are per-call times collected while
+    `workers` calls were in flight.
     """
     retriever = getattr(system, "retriever", lambda: None)()
     if retriever is None or condition in (EvidenceCondition.SENTENCE_ONLY, EvidenceCondition.LOCAL):
         return {}, 0
-    evidence, dropped = {}, 0
-    for it in items:
+
+    def one(it: GoldItem) -> tuple[str, list[EvidenceSpan], int, float]:
         q = build_query(it, condition)
         t0 = time.perf_counter()
         returned = retriever.retrieve(q, k=k)
-        if timings_ms is not None:
-            timings_ms[it.item_id] = (time.perf_counter() - t0) * 1000
         spans, n = drop_target(returned, q)
-        evidence[it.item_id] = spans
+        return it.item_id, spans, n, (time.perf_counter() - t0) * 1000
+
+    if RETRIEVAL_WORKERS > 1:
+        with ThreadPoolExecutor(max_workers=RETRIEVAL_WORKERS) as pool:
+            results = list(pool.map(one, items))
+    else:
+        results = [one(it) for it in items]
+
+    evidence: dict[str, list[EvidenceSpan]] = {}
+    dropped = 0
+    for item_id, spans, n, ms in results:
+        evidence[item_id] = spans
         dropped += n
+        if timings_ms is not None:
+            timings_ms[item_id] = ms
     return evidence, dropped
 
 

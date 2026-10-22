@@ -8,6 +8,7 @@ happens in `retrieve.py`.
 from __future__ import annotations
 
 import math
+import threading
 from collections import Counter, defaultdict
 from collections.abc import Sequence
 
@@ -83,17 +84,24 @@ def rrf(*rankings: Sequence[tuple[int, float]], k0: int = RRF_K) -> list[tuple[i
 
 
 class CrossEncoderReranker:
-    """ONNX cross-encoder via fastembed: no GPU, no torch, and it loads once per process."""
+    """ONNX cross-encoder via fastembed: no GPU, no torch, and it loads once per process.
+
+    Thread-safe under the eval harness's retrieval pool: the ONNX runtime releases the GIL and
+    `InferenceSession.run` is safe to call concurrently, so only the one-time lazy load needs a lock.
+    """
 
     def __init__(self, model: str = RERANKER_MODEL) -> None:
         self.model_name = model
         self._model = None
+        self._load_lock = threading.Lock()
 
     def _load(self):
         if self._model is None:
-            from fastembed.rerank.cross_encoder import TextCrossEncoder
+            with self._load_lock:
+                if self._model is None:      # double-checked: parallel retrievals share one model
+                    from fastembed.rerank.cross_encoder import TextCrossEncoder
 
-            self._model = TextCrossEncoder(model_name=self.model_name)
+                    self._model = TextCrossEncoder(model_name=self.model_name)
         return self._model
 
     def rerank(self, query: str, documents: Sequence[str]) -> list[float]:
