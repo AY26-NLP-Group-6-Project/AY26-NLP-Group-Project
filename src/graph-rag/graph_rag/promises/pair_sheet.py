@@ -197,18 +197,26 @@ def _guide_tab(wb, last: int) -> None:
     for line in pair_guide():
         ws.append(line)
     ws.append([])
-    ws.append(["Inter-annotator agreement", "computed live from the check tab, on rows both annotators "
-                                             "have labelled; the scorer recomputes the same figures"])
-    ws.cell(ws.max_row, 1).font = Font(bold=True)
     k1 = f"{SHEET_NAME}!${_letter('a1_outcome')}${FIRST_ROW}:${_letter('a1_outcome')}${last}"
     k2 = f"{SHEET_NAME}!${_letter('a2_outcome')}${FIRST_ROW}:${_letter('a2_outcome')}${last}"
+    ws.append(["Progress", "each annotator on their own, computed live from the check tab"])
+    ws.cell(ws.max_row, 1).font = Font(bold=True)
+    ws.append(["rows filled", f"=COUNTA({k1})", f"=COUNTA({k2})"])
+    ws.append(["label", "Annotator 1", "Annotator 2"])
+    for label in LABELS:
+        ws.append([label, f'=COUNTIF({k1},"{label}")', f'=COUNTIF({k2},"{label}")'])
+    ws.append([])
+    ws.append(["Inter-annotator agreement", "on the rows both annotators have labelled, so it stays at 0 "
+                                             "until the second annotator's labels are in; the scorer "
+                                             "recomputes the same figures"])
+    ws.cell(ws.max_row, 1).font = Font(bold=True)
     ws.append(["rows labelled by both", f'=SUMPRODUCT(({k1}<>"")*({k2}<>""))'])
     n_row = ws.max_row
     ws.append(["outcome agreements", f'=SUMPRODUCT(({k1}<>"")*({k2}<>"")*({k1}={k2}))'])
     agree_row = ws.max_row
     ws.append(["observed agreement", f'=IF(B{n_row}=0,"",B{agree_row}/B{n_row})'])
     po_row = ws.max_row
-    ws.append(["label", "Annotator 1", "Annotator 2", "both"])
+    ws.append(["label", "Annotator 1 (paired rows)", "Annotator 2 (paired rows)", "both agree"])
     first_class = ws.max_row + 1
     for label in LABELS:
         ws.append([label, f'=COUNTIFS({k1},"{label}",{k2},"<>")', f'=COUNTIFS({k2},"{label}",{k1},"<>")',
@@ -224,6 +232,8 @@ def _guide_tab(wb, last: int) -> None:
     ws.append(["rows with a final label", f"=COUNTA({final})"])
     ws.column_dimensions["A"].width = 26
     ws.column_dimensions["B"].width = 110
+    ws.column_dimensions["C"].width = 24
+    ws.column_dimensions["D"].width = 14
     for row in ws.iter_rows():
         for cell in row:
             cell.alignment = Alignment(wrap_text=True, vertical="top")

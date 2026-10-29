@@ -16,7 +16,7 @@
   "git_dirty": true,
   "graph_build_id": null,
   "llm": {
-    "chat_model": "gpt-6-luna",
+    "chat_model": "gpt-5.6-luna",
     "chat_base_url": "https://api.openai.com/v1",
     "embed_model": "text-embedding-3-small",
     "embed_base_url": "https://api.openai.com/v1",
@@ -63,6 +63,15 @@
       "workers": 8,
       "max_evidence": 3,
       "evidence_chars": 800
+    },
+    "retriever": {
+      "store": "statements",
+      "chunks_sha256": "d8a62bfe40c6",
+      "unit": "statement",
+      "chunks": 108376,
+      "mode": "rrf+rerank",
+      "backend": "files",
+      "recorded": "post hoc: the run predates the field; store from the run command"
     }
   }
 }

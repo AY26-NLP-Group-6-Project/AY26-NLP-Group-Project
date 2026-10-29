@@ -153,7 +153,7 @@ of the former notes index.
   graph's aspects were extracted and human-checked with it. The passage store (`passages`, 18,839,
   `c80d0ab23191`) stays as the granularity ablation; the prose-sentence store (71,342, `b1c181dcaf1a`)
   is retired. Run manifests now record the store the retriever read.
-- Chat model: `.env` moved to `gpt-6-luna` before these runs; everything below is on it, and the user
+- Chat model: `.env` moved to `gpt-5.6-luna` before these runs; everything below is on it, and the user
   decided to keep it for the whole project from here on. The runs of 2026-09-29 to 10-04 (`gpt-5.6-luna`,
   prose-sentence store) are removed from `results/`; they remain in git at `7731d73`.
 - RQ1, cited classifier, 331 dev items, 3 repeats, run ids `20261029T143225Z` (statements),
