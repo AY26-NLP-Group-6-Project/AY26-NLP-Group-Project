@@ -32,7 +32,7 @@ class HybridRetriever:
             raise ValueError(f"mode must be one of {MODES}")
         if backend not in BACKENDS:
             raise ValueError(f"backend must be one of {BACKENDS}")
-        self.mode, self.backend = mode, backend
+        self.mode, self.backend, self.build_id = mode, backend, build_id
         if backend == "postgres":
             # Same chunks, served by pgvector: chunk text and metadata come from the database,
             # BM25 is rebuilt in-process over those rows, dense candidates come from the HNSW index.
@@ -51,6 +51,12 @@ class HybridRetriever:
         self._by_company: dict[str, list[int]] = defaultdict(list)
         for i, c in enumerate(self.chunks):
             self._by_company[c.company].append(i)
+
+    def describe(self) -> dict:
+        """What the run retrieved over; the runner writes it into the manifest."""
+        return {"store": self.build_id, "chunks_sha256": self.manifest.get("chunks_sha256"),
+                "unit": self.manifest.get("unit"), "chunks": self.manifest.get("chunks"),
+                "mode": self.mode, "backend": self.backend}
 
     # ------------------------------------------------------------------ filters
     def _allowed(self, query: Query) -> set[int] | None:

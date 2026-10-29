@@ -51,6 +51,12 @@ class GraphRetriever:
             )
         self.store = DuckDBGraphStore(self.cfg.db_path, read_only=True)
 
+    def describe(self) -> dict:
+        """What the run retrieved over; the runner writes it into the manifest."""
+        statements = self.store.con.execute("SELECT count(*) FROM statements").fetchone()[0]
+        return {"store": "graph", "graph_build_id": self.cfg.build_id, "statements": statements,
+                "unit": "statement"}
+
     # --------------------------------------------------------------- graph
     def _group_for(self, aspect: str | None) -> str | None:
         if not aspect:

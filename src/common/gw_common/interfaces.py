@@ -24,6 +24,9 @@ if TYPE_CHECKING:  # keep FastAPI out of the import path of the eval harness
 
 @runtime_checkable
 class Retriever(Protocol):
+    """A retriever may also offer `describe() -> dict` naming what it reads (store, content hash);
+    the runner writes that into the run manifest, so every number can be traced to its knowledge base."""
+
     def retrieve(self, query: Query, *, k: int = 10) -> list[EvidenceSpan]:
         """Return at most k evidence spans honouring the filters carried by `query`."""
 

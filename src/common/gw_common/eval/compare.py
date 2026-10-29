@@ -133,7 +133,8 @@ def write_index(results_root: Path) -> Path:
         note = (d / "NOTE.md").read_text(encoding="utf-8").strip() if (d / "NOTE.md").exists() else ""
         rel = d.relative_to(results_root).as_posix()
         style = (man.get("config", {}).get("classifier") or {}).get("style", "label")
-        rows.append(f"| [{rel}]({rel}/report.md) | {man['system']} | {style} | {man['config'].get('split')} "
+        rows.append(f"| [{rel}]({rel}/report.md) | {man['system']} | {style} | {_store(man)} "
+                    f"| {man['config'].get('split')} "
                     f"| {man['n_items']} | {man.get('repeats', 1)} | {man['dataset_hash']} "
                     f"| {best or '—'} | {'—' if score is None else f'{score:.4f}'} | {note} "
                     f"| `{man['run_id']}` |")
@@ -145,11 +146,21 @@ def write_index(results_root: Path) -> Path:
         "what the run is. Add one with `gw-eval --publish artifacts/runs/<run_id> --name "
         "<group>/<name> --note \"...\"`; compare two with `gw-eval --compare <dir_a> <dir_b>`.\n\n"
         "The classifier column is the prompt style: `label` returns one word, `cited` a label with a "
-        "rationale and citations; numbers across the two styles are not paired. The run id is the local "
-        "directory under `artifacts/runs/`.\n\n"
-        "| run | system | classifier | split | items | repeats | snapshot | best condition "
+        "rationale and citations; numbers across the two styles are not paired. The store column is "
+        "what the retriever read (chunk store and its content hash, or the graph build). The run id is "
+        "the local directory under `artifacts/runs/`.\n\n"
+        "| run | system | classifier | store | split | items | repeats | snapshot | best condition "
         "| vote macro-F1 | note | run id |\n"
-        "|---|---|---|---|---|---|---|---|---|---|---|\n" + "\n".join(rows) + "\n",
+        "|---|---|---|---|---|---|---|---|---|---|---|---|\n" + "\n".join(rows) + "\n",
         encoding="utf-8",
     )
     return index
+
+
+def _store(manifest: dict) -> str:
+    info = manifest.get("config", {}).get("retriever") or {}
+    if info.get("store") == "graph":
+        return f"graph `{info.get('graph_build_id')}`"
+    if info.get("store"):
+        return f"`{info['store']}` {info.get('chunks_sha256', '')}".strip()
+    return "—"
