@@ -2,7 +2,7 @@
 the entry point and `name`, add the folder to `[tool.uv.workspace].members` in the root pyproject,
 run `uv sync`, and `uv run gw-eval --list` shows it.
 
-What is here is the smallest honest system: BM25 over the shared passage store with the company and
+What is here is the smallest honest system: BM25 over the shared chunk store with the company and
 year filters every condition requires, and the shared classifier. Replace `retrieve` (and, only if the
 classifier *is* your contribution, `classifier`) and keep the rest.
 
@@ -27,7 +27,7 @@ from gw_common.schemas import EvidenceCondition, EvidenceSpan, Query
 
 
 class Bm25SameCompanyRetriever:
-    def __init__(self, build_id: str = "dev") -> None:
+    def __init__(self, build_id: str = chunk_store.DEFAULT_BUILD) -> None:
         self.chunks, _vectors, self.manifest = chunk_store.load(build_id)   # the shared KB, as-is
         self.index = BM25([c.indexed_text() for c in self.chunks])
         self.by_company: dict[str, list[int]] = defaultdict(list)

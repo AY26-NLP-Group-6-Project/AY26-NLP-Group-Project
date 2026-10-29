@@ -22,10 +22,10 @@ from functools import lru_cache
 
 from gw_common.evidence import is_target_span
 from gw_common.schemas import EvidenceCondition, EvidenceSpan, Query
+from gw_common.text import is_statement
 
 from graph_rag.build.text import aspect_key
 from graph_rag.config import GraphConfig
-from graph_rag.extract import looks_like_sentence
 from graph_rag.store.duckdb_store import GROUP_ID, DuckDBGraphStore
 
 _TOKEN = re.compile(r"[a-z0-9]+")
@@ -47,7 +47,7 @@ class GraphRetriever:
                 f"graph store not found at {self.cfg.db_path}. graph-rag needs the parsed corpus and claim "
                 "graph: build it with `gw-graph build` (requires the reports under kb/raw/) or copy "
                 "artifacts/graph/<build>/graph.duckdb from a teammate. baseline-rag and example-rag "
-                "need only the passage store."
+                "need only the chunk store."
             )
         self.store = DuckDBGraphStore(self.cfg.db_path, read_only=True)
 
@@ -74,7 +74,7 @@ class GraphRetriever:
         rows = self.store.statements_for(query.company, gid)
         q = set(_tokens(query.text))
         seen, out = set(), []
-        rows = [r for r in rows if r["year"] != anchor_year and looks_like_sentence(r["text"])]
+        rows = [r for r in rows if r["year"] != anchor_year]
         rows.sort(key=lambda r: (abs((anchor_year or r["year"]) - r["year"]),
                                  -len(q & set(_tokens(r["text"])))))
         for r in rows:
@@ -99,7 +99,7 @@ class GraphRetriever:
             "SELECT stmt_id, text, year, page, sha256 FROM statements WHERE company = ?", [company]
         ).fetchall()
         docs = [(sid, text, year, page, sha)
-                for sid, text, year, page, sha in rows if looks_like_sentence(text)]
+                for sid, text, year, page, sha in rows if is_statement(text)]
         toks = [_tokens(d[1]) for d in docs]
         df = Counter(t for ts in toks for t in set(ts))
         avgdl = sum(len(t) for t in toks) / max(1, len(toks))

@@ -12,13 +12,14 @@ from gw_common.classifiers.llm_action import LLMActionClassifier
 from gw_common.interfaces import ActionClassifier, BaseSystem, Retriever
 from gw_common.schemas import EvidenceCondition
 
+from baseline_rag.chunks import DEFAULT_BUILD
 from baseline_rag.retrieve import HybridRetriever, supported_conditions
 
 
 class BaselineRagSystem(BaseSystem):
     name = "baseline-rag"
 
-    def __init__(self, build_id: str = "dev", mode: str | None = None) -> None:
+    def __init__(self, build_id: str = DEFAULT_BUILD, mode: str | None = None) -> None:
         self.build_id = os.getenv("GW_BASELINE_BUILD", build_id)
         self.mode = mode or os.getenv("GW_BASELINE_MODE", "rrf+rerank")
         self.backend = os.getenv("GW_BASELINE_BACKEND", "files")

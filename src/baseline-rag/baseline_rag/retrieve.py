@@ -26,7 +26,7 @@ BACKENDS = ("files", "postgres")
 
 
 class HybridRetriever:
-    def __init__(self, build_id: str = "dev", mode: str = "rrf+rerank",
+    def __init__(self, build_id: str = chunk_store.DEFAULT_BUILD, mode: str = "rrf+rerank",
                  client: LLMClient | None = None, backend: str = "files") -> None:
         if mode not in MODES:
             raise ValueError(f"mode must be one of {MODES}")
@@ -34,7 +34,7 @@ class HybridRetriever:
             raise ValueError(f"backend must be one of {BACKENDS}")
         self.mode, self.backend = mode, backend
         if backend == "postgres":
-            # Same passages, served by pgvector: chunk text and metadata come from the database,
+            # Same chunks, served by pgvector: chunk text and metadata come from the database,
             # BM25 is rebuilt in-process over those rows, dense candidates come from the HNSW index.
             from baseline_rag.pg import PgChunkSource
 

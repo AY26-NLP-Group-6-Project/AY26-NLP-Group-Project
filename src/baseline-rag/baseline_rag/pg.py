@@ -3,11 +3,11 @@
 The files under `artifacts/baseline/<build_id>/` stay the source of truth (they are what gets packaged
 and handed around). This module loads them into Postgres without re-embedding, verifies a database
 against the files, and serves dense candidates from pgvector so a teammate with only the database can
-retrieve over the identical passages.
+retrieve over the identical chunks.
 
     docker compose up -d
-    uv run gw-baseline pg-import --build-id dev
-    uv run gw-baseline pg-check  --build-id dev
+    uv run gw-baseline pg-import --build-id statements
+    uv run gw-baseline pg-check  --build-id statements
     GW_BASELINE_BACKEND=postgres uv run gw-eval --system baseline-rag ...
 
 Vectors travel as pgvector's text literal (`[0.1,0.2,...]`), so no extra client library is needed.
@@ -45,18 +45,18 @@ def _vector_literal(row: np.ndarray) -> str:
     return "[" + ",".join(f"{x:.7g}" for x in row.tolist()) + "]"
 
 
-def import_store(build_id: str = "dev", conn_str: str | None = None) -> dict:
+def import_store(build_id: str = chunk_store.DEFAULT_BUILD, conn_str: str | None = None) -> dict:
     """Truncate the build's rows and COPY the files in. Idempotent; never touches other builds."""
     chunks, vectors, manifest = chunk_store.load(build_id)
     with _connect(conn_str) as con, con.cursor() as cur:
         cur.execute("DELETE FROM chunks WHERE build_id = %s", (build_id,))
         with cur.copy(
-            "COPY chunks (build_id, chunk_id, company, year, page, file, statement_ids, prose_ratio, "
+            "COPY chunks (build_id, chunk_id, company, year, page, file, statement_ids, "
             "text, embedding) FROM STDIN"
         ) as copy:
             for c, vec in zip(chunks, vectors, strict=True):
                 copy.write_row((build_id, c.chunk_id, c.company, c.year, c.page, c.file,
-                                c.statement_ids, c.prose_ratio, c.text, _vector_literal(vec)))
+                                c.statement_ids, c.text, _vector_literal(vec)))
         cur.execute(
             "INSERT INTO kb_manifest (build_id, manifest, loaded_at) VALUES (%s, %s, now()) "
             "ON CONFLICT (build_id) DO UPDATE SET manifest = EXCLUDED.manifest, loaded_at = now()",
@@ -66,7 +66,7 @@ def import_store(build_id: str = "dev", conn_str: str | None = None) -> dict:
     return {"build_id": build_id, "rows": len(chunks), "chunks_sha256": manifest["chunks_sha256"]}
 
 
-def check(build_id: str = "dev", conn_str: str | None = None) -> dict:
+def check(build_id: str = chunk_store.DEFAULT_BUILD, conn_str: str | None = None) -> dict:
     """Does the database hold the same build as the files? Row count and text hash must both match."""
     _, _, manifest = chunk_store.load(build_id)
     with _connect(conn_str) as con, con.cursor() as cur:
@@ -92,7 +92,7 @@ def check(build_id: str = "dev", conn_str: str | None = None) -> dict:
 class PgChunkSource:
     """Chunks and dense candidates straight from Postgres; BM25 stays in-process over the same rows."""
 
-    def __init__(self, build_id: str = "dev", conn_str: str | None = None) -> None:
+    def __init__(self, build_id: str = chunk_store.DEFAULT_BUILD, conn_str: str | None = None) -> None:
         self.build_id = build_id
         self.conn_str = conn_str or dsn()
         self.con = _connect(self.conn_str)
@@ -103,11 +103,11 @@ class PgChunkSource:
                 raise RuntimeError(f"build {build_id!r} is not loaded; run `gw-baseline pg-import`")
             self.manifest = row[0]
             cur.execute(
-                "SELECT chunk_id, text, company, year, page, file, statement_ids, prose_ratio "
+                "SELECT chunk_id, text, company, year, page, file, statement_ids "
                 "FROM chunks WHERE build_id = %s ORDER BY chunk_id", (build_id,)
             )
             self.chunks = [Chunk(chunk_id=r[0], text=r[1], company=r[2], year=r[3], page=r[4], file=r[5],
-                                 statement_ids=list(r[6]), prose_ratio=r[7]) for r in cur.fetchall()]
+                                 statement_ids=list(r[6])) for r in cur.fetchall()]
         self._index = {c.chunk_id: i for i, c in enumerate(self.chunks)}
 
     def dense_search(self, query_vector, allowed_ids: set[int] | None, k: int) -> list[tuple[int, float]]:
@@ -130,9 +130,10 @@ class PgChunkSource:
             return [(self._index[cid], float(score)) for cid, score in cur.fetchall()]
 
 
-def package(build_id: str = "dev", out: Path | None = None, with_eval: bool = False) -> dict:
+def package(build_id: str = chunk_store.DEFAULT_BUILD, out: Path | None = None,
+            with_eval: bool = False) -> dict:
     """Zip the store for distribution: the three files, a checksum list and a README with the import
-    steps. Derived passages and metadata only, never the source PDFs. `with_eval` adds the frozen
+    steps. Derived text and metadata only, never the source PDFs. `with_eval` adds the frozen
     human-gold evaluation snapshot (`data/eval/gw1000.human_majority.*.jsonl` + build report) under
     `eval/`, so a teammate evaluates on the identical items; the A3CG snapshots are never included."""
     src = chunk_store.STORE_ROOT / build_id
@@ -162,12 +163,12 @@ def package(build_id: str = "dev", out: Path | None = None, with_eval: bool = Fa
 
 
 def _package_readme(build_id: str, manifest: dict, sums: dict[str, str]) -> str:
-    unit = manifest.get("unit", "passage")
-    what = {"passage": f"passages of about {manifest['target_words']} words, one sentence of overlap, "
-                       "tables and page furniture kept and marked by prose_ratio",
-            "sentence": "prose sentences, one per chunk; the store the sentence-level baseline and the "
-                        "graph arms retrieve over",
-            "statement": "statements of five words or more, one per chunk, no prose filter"}[unit]
+    unit = manifest.get("unit", "statement")
+    what = {"statement": f"every statement of {manifest.get('min_statement_words', 5)} words or more, "
+                         "one per chunk: prose, table rows and metric lines alike; the unit every arm "
+                         "retrieves over",
+            "passage": f"passages of about {manifest['target_words']} words over the same statements, "
+                       "one sentence of overlap, never crossing a report; the granularity ablation"}[unit]
     passages = f"{manifest['chunks']:,} ({what})"
     eval_files = [f[5:] for f in sums if f.startswith("eval/")]
     eval_section = "" if not eval_files else (
@@ -194,7 +195,7 @@ themselves remain the issuers' copyright and are not included. Do not publish or
 ## Files
 
 - `chunks.jsonl` — one chunk per line: `chunk_id, text, company, year, page, file (report sha256),
-  statement_ids, prose_ratio`
+  statement_ids`
 - `embeddings.npy` — row *i* is the vector of line *i* of `chunks.jsonl`
 - `manifest.json` — the table above, machine-readable
 - `SHA256SUMS` (archive root) — verify with `sha256sum -c SHA256SUMS`

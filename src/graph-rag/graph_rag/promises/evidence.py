@@ -2,19 +2,19 @@
 
 Two modes.
 
-`deadline` is the first version, kept so earlier results can be reproduced: hybrid top-6 over the
-reports of the deadline year and the year after. It has a structural flaw. Dense retrieval only saw the
-shared sentence store, which keeps prose sentences and leaves out 35 % of all statements, among them
-most result sentences ("... was 61 kwh per square foot (FY2020: 68 kwh per square foot)"). A statement
-outside the store can score in one of the two fused rankings only, so RRF puts it below statements that
-are mediocre in both: of eight answer statements found by hand (`docs/case-studies.md`), four ranked
-first to third on BM25 and were still cut.
+`deadline` is the first version, kept for reference: hybrid top-6 over the reports of the deadline
+year and the year after. Its recorded results were produced when the dense index covered only the
+sentence-shaped statements (65 % of all), and most result sentences ("... was 61 kwh per square foot
+(FY2020: 68 kwh per square foot)") were outside it. A statement that scores in one of the two fused
+rankings only is put by RRF below statements that are mediocre in both: of eight answer statements found
+by hand (`docs/case-studies.md`), four ranked first to third on BM25 and were still cut. The one-year
+window and the single budget remain its limits.
 
 `trajectory` (default) follows the promise through every report after the one that made it, up to the
 year after the deadline:
 
-- every statement of a report is ranked by BM25 and by dense similarity; vectors the sentence store
-  lacks are embedded on demand (cached), so RRF fuses two complete rankings;
+- every statement of a report is ranked by BM25 and by dense similarity; vectors the store lacks
+  (statements under five words) are embedded on demand (cached), so RRF fuses two complete rankings;
 - each report year has its own budget, the first report at or after the deadline the largest. A delay
   announced two years early is in an earlier report, not in the deadline one;
 - the neighbours of the best hits in that report are added: a target table is parsed into one statement
@@ -47,7 +47,7 @@ MODES = ("deadline", "trajectory")
 EVIDENCE_K = 6
 CANDIDATES = 40
 MIN_WORDS = 5
-SENTENCE_STORE = "dev-sent"
+STORE = chunk_store.DEFAULT_BUILD
 K_DEADLINE = 6          # the first report at or after the deadline: where the outcome should be reported
 K_AFTER = 3             # the report after that
 K_BEFORE = 2            # each report between the promise and the deadline
@@ -67,11 +67,11 @@ def query_of(promise: dict) -> str:
 class EvidenceFinder:
     """Mode `deadline`."""
 
-    def __init__(self, cfg: GraphConfig, client: LLMClient, sentence_store: str = SENTENCE_STORE) -> None:
+    def __init__(self, cfg: GraphConfig, client: LLMClient, store: str = STORE) -> None:
         self.store = DuckDBGraphStore(cfg.db_path, read_only=True)
         self.client = client
         try:
-            chunks, self.vectors, _ = chunk_store.load(sentence_store)
+            chunks, self.vectors, _ = chunk_store.load(store)
             self.row_of = {c.chunk_id: i for i, c in enumerate(chunks)}
         except FileNotFoundError:        # dense is an improvement, not a requirement
             self.vectors, self.row_of = None, {}
@@ -118,8 +118,8 @@ class TrajectoryFinder(EvidenceFinder):
     """Mode `trajectory`."""
 
     def __init__(self, cfg: GraphConfig, client: LLMClient, promises: dict[str, dict],
-                 sentence_store: str = SENTENCE_STORE) -> None:
-        super().__init__(cfg, client, sentence_store)
+                 store: str = STORE) -> None:
+        super().__init__(cfg, client, store)
         self.promises = promises
         self.embedded = 0
 

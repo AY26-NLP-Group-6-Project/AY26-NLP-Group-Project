@@ -1,20 +1,17 @@
-"""Text hygiene shared by every system, so the arms read the same corpus.
+"""Text conventions shared by every system, so the arms read the same corpus.
 
-`looks_like_sentence` decides what counts as prose rather than page furniture (GRI index rows, table
-fragments, headers). It started in the graph builder; it lives here because the baseline retriever
-must apply the same filter, or the two arms would be reading different corpora and the RQ1
-comparison would measure that instead of the retrieval strategy.
+The knowledge base is every statement of the parsed reports with at least `MIN_STATEMENT_WORDS` words:
+prose, table rows and metric lines alike. Shorter fragments are headers, page numbers and lone table
+cells. `is_statement` is that one rule; the baseline chunker and the graph's lexical fallback both
+apply it, so the two arms retrieve over the same set.
 """
 
 from __future__ import annotations
 
 import re
 
-# Kept exactly as the graph builder had it: changing the wording would change which statements the
-# graph already contains and break comparability with the runs recorded in the notes.
-_WORDY = re.compile(
-    r"\b(is|are|was|were|has|have|had|will|shall|can|may|we|our|the group|the company)\b", re.I
-)
+MIN_STATEMENT_WORDS = 5
+
 _TOKEN = re.compile(r"[a-z0-9]+")
 STOPWORDS = set(
     "the a an and or of to in for on with by at from as is are was were be been our we its their this "
@@ -22,22 +19,9 @@ STOPWORDS = set(
 )
 
 
-def looks_like_sentence(text: str) -> bool:
-    """Coarse pre-filter for prose: 8-60 words, mostly letters, no URLs, not a shouty header."""
-    words = text.split()
-    if not 8 <= len(words) <= 60:
-        return False
-    chars = [c for c in text if not c.isspace()]
-    letters = [c for c in chars if c.isalpha()]
-    if not chars or len(letters) / len(chars) < 0.75:
-        return False
-    if sum(c.isdigit() for c in chars) / len(chars) > 0.10:
-        return False
-    if sum(c.isupper() for c in letters) / max(1, len(letters)) > 0.30:
-        return False
-    if re.search(r"https?:|www\.|\.{4,}|@", text):
-        return False
-    return bool(_WORDY.search(text))
+def is_statement(text: str) -> bool:
+    """A retrievable unit: at least `MIN_STATEMENT_WORDS` whitespace-separated words."""
+    return len(text.split()) >= MIN_STATEMENT_WORDS
 
 
 def tokens(text: str, *, drop_stopwords: bool = True, min_len: int = 3) -> list[str]:

@@ -21,7 +21,7 @@ RERANKER_MODEL = "Xenova/ms-marco-MiniLM-L-6-v2"
 
 
 class BM25:
-    """Okapi BM25 over an in-memory inverted index (about 10k passages here)."""
+    """Okapi BM25 over an in-memory inverted index (about 100k chunks here)."""
 
     def __init__(self, documents: Sequence[str], k1: float = 1.5, b: float = 0.75) -> None:
         self.k1, self.b = k1, b

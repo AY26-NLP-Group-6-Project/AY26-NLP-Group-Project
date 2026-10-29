@@ -300,7 +300,7 @@ def test_trajectory_evidence_follows_the_promise_through_the_later_reports(tmp_p
              "origin": {"stmt_id": "r2022p0009s004", "year": 2022, "page": 9, "file": "sha2022",
                         "text": REPORTS[2022][4]}}
     finder = V.TrajectoryFinder(SimpleNamespace(db_path=db), FakeEmbedder(), {"P1": promise, "P2": other},
-                                sentence_store="no-such-store")
+                                store="no-such-store")
     evidence = finder.find(promise)
 
     assert finder.window(promise) == [2022, 2023, 2024]              # after the promise, up to deadline + 1
