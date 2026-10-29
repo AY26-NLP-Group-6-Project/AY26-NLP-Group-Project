@@ -203,7 +203,8 @@ themselves remain the issuers' copyright and are not included. Do not publish or
 
 **Option A, files only (no database):** unzip so the folder sits at `artifacts/baseline/{build_id}/`
 inside the repo. `gw-baseline stats --build-id {build_id}` should print hash `{manifest['chunks_sha256']}`.
-`GW_BASELINE_BUILD={build_id} uv run gw-eval --system baseline-rag ...` then retrieves over these exact chunks.
+`GW_BASELINE_BUILD={build_id} uv run gw-eval --system baseline-rag ...` then retrieves over these exact
+chunks.
 
 **Option B, shared Postgres + pgvector:**
 

@@ -126,6 +126,6 @@ tests/                       pytest
 5. **Never feed the gold; never return the target sentence.** The harness strips the one and drops the
    other, and counts the drops.
 6. **Provenance.** Every number in a document carries its run folder, snapshot hash and store hash.
-7. **Data.** Raw PDFs stay in `kb/raw/`; the passage package is derived text for academic use inside
-   the group; A3CG snapshots are for reference runs only and are not redistributed.
+7. **Data.** Raw PDFs stay in `kb/raw/`; the chunk-store packages are derived text for academic use
+   inside the group; A3CG snapshots are for reference runs only and are not redistributed.
 8. **Commits.** One line, prefixed (`feat:`, `fix:`, `docs:`, `test:`, `chore:`), one per finished step.

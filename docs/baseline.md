@@ -75,6 +75,6 @@ same top-5 lists. Retrieval is still our pipeline; Postgres serves vectors and m
 `uv run gw-baseline package --build-id <store> [--with-eval]` writes `dist/gw-kb-<store>-<hash>.zip`:
 the three store files, `SHA256SUMS`, a README with both import paths and what the unit is, and
 optionally the frozen evaluation snapshot. One archive per store: `dev` about 100 MB, `dev-sent` about
-450 MB, `dev-stmt` about 700 MB (float32 vectors compress little). Teammates comparing against the
+370 MB, `dev-stmt` about 560 MB (float32 vectors compress little). Teammates comparing against the
 reference baseline need `dev-sent`. Derived text and metadata only; the PDFs are never included. `dist/`
 is git-ignored; the archives travel through a channel the group controls.
