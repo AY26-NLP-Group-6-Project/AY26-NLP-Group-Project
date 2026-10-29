@@ -25,7 +25,7 @@ are. The reference and the record are under [`docs/`](docs/README.md); the findi
 | data | where it sits | how you get it |
 |---|---|---|
 | frozen evaluation set, 1,000 sentences | `data/eval/gw1000.*.jsonl` | in git; built from `kb/annotation/eval.xlsx` |
-| passage store (18,839 passages, vectors, manifest) | `artifacts/baseline/dev/` | the `gw-kb-dev-<hash>.zip` package shared inside the group, or `gw-baseline build` from the parsed corpus |
+| chunk stores: `dev` (18,839 passages), `dev-sent` (71,342 prose sentences, the store the reference baseline retrieves over), `dev-stmt` (108,376 statements) | `artifacts/baseline/<build>/` | one `gw-kb-<build>-<hash>.zip` per store, shared inside the group, or `gw-baseline build` from the parsed corpus |
 | parsed corpus and claim graph (`graph-rag` only) | `artifacts/graph/dev/graph.duckdb` | `gw-graph build` from the raw PDFs, or a copy from a teammate |
 | raw reports | `kb/raw/` | never redistributed; `kb/README.md` |
 
@@ -34,8 +34,8 @@ are. The reference and the record are under [`docs/`](docs/README.md); the findi
 ```bash
 uv sync                                        # the workspace: src/common, src/baseline-rag, src/graph-rag, src/example-rag
 cp .env.example .env                           # fill LLM_API_KEY and EMB_API_KEY; model, effort and prices are set
-unzip gw-kb-dev-<hash>.zip -d artifacts/baseline/
-uv run gw-baseline stats                       # the manifest; hash c80d0ab23191
+unzip gw-kb-dev-<hash>.zip -d artifacts/baseline/        # and gw-kb-dev-sent-<hash>.zip for the sentence store
+uv run gw-baseline stats                       # the manifest; hash c80d0ab23191 (dev-sent: b1c181dcaf1a)
 uv run gw-data list                            # the versioned snapshots
 uv run pytest -q                               # no network needed
 uv run gw-eval --system example-rag --split dev --sample 20 --repeats 1     # smoke run

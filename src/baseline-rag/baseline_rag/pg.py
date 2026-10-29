@@ -162,8 +162,13 @@ def package(build_id: str = "dev", out: Path | None = None, with_eval: bool = Fa
 
 
 def _package_readme(build_id: str, manifest: dict, sums: dict[str, str]) -> str:
-    passages = (f"{manifest['chunks']:,} ({manifest.get('unit', 'passage')} unit, "
-                f"target {manifest['target_words']} words)")
+    unit = manifest.get("unit", "passage")
+    what = {"passage": f"passages of about {manifest['target_words']} words, one sentence of overlap, "
+                       "tables and page furniture kept and marked by prose_ratio",
+            "sentence": "prose sentences, one per chunk; the store the sentence-level baseline and the "
+                        "graph arms retrieve over",
+            "statement": "statements of five words or more, one per chunk, no prose filter"}[unit]
+    passages = f"{manifest['chunks']:,} ({what})"
     eval_files = [f[5:] for f in sums if f.startswith("eval/")]
     eval_section = "" if not eval_files else (
         "\n## Evaluation snapshot (included)\n\n"
@@ -175,20 +180,20 @@ def _package_readme(build_id: str, manifest: dict, sums: dict[str, str]) -> str:
     return f"""# Greenwash-RAG knowledge base · build `{build_id}`
 
 Packaged {datetime.now(UTC):%Y-%m-%d %H:%M} UTC. **Academic use only (AI6127 group project).** These are
-derived passages and metadata from SGX-listed companies' public sustainability reports; the reports
+derived text chunks and metadata from SGX-listed companies' public sustainability reports; the reports
 themselves remain the issuers' copyright and are not included. Do not publish or redistribute.
 
 | | |
 |---|---|
-| passages | {passages} |
+| chunks | {passages} |
 | companies / reports | {manifest['companies']} / {manifest['reports']} |
 | words | {manifest['words']:,} |
 | embedding | `{manifest['embed_model']}`, {manifest['dim']} dims, L2-normalised, float32 |
-| content hash | `{manifest['chunks_sha256']}` (over the passage texts; every run manifest records it) |
+| content hash | `{manifest['chunks_sha256']}` (over the chunk texts; every run manifest records it) |
 {eval_section}
 ## Files
 
-- `chunks.jsonl` — one passage per line: `chunk_id, text, company, year, page, file (report sha256),
+- `chunks.jsonl` — one chunk per line: `chunk_id, text, company, year, page, file (report sha256),
   statement_ids, prose_ratio`
 - `embeddings.npy` — row *i* is the vector of line *i* of `chunks.jsonl`
 - `manifest.json` — the table above, machine-readable
@@ -198,7 +203,7 @@ themselves remain the issuers' copyright and are not included. Do not publish or
 
 **Option A, files only (no database):** unzip so the folder sits at `artifacts/baseline/{build_id}/`
 inside the repo. `gw-baseline stats --build-id {build_id}` should print hash `{manifest['chunks_sha256']}`.
-Every `gw-eval --system baseline-rag` run then retrieves over these exact passages.
+`GW_BASELINE_BUILD={build_id} uv run gw-eval --system baseline-rag ...` then retrieves over these exact chunks.
 
 **Option B, shared Postgres + pgvector:**
 
