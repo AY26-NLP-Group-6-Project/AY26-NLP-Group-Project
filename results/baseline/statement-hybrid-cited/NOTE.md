@@ -1,0 +1,1 @@
+Hybrid retrieval (BM25 + dense + RRF + rerank) over the statement store, every statement of five words or more (108,376, hash d8a62bfe40c6), cited classifier; the reference baseline, with the RAG metrics

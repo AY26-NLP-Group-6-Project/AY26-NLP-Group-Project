@@ -1,9 +1,10 @@
 {
-  "run_id": "20261004T080206Z-baseline-rag-rq1",
+  "run_id": "20261029T143243Z-baseline-rag-rq1",
   "system": "baseline-rag",
   "task": "rq1",
   "conditions": [
     "sentence_only",
+    "local",
     "same_report_rrf",
     "cross_year_rrf"
   ],
@@ -11,11 +12,11 @@
   "dataset_hash": "3e18cc14e648",
   "label_source": "human_majority",
   "n_items": 331,
-  "git_sha": "92f2ea65f4c340cf5d8d5c26f1e134944827de3f",
+  "git_sha": "b3d0673153d2668a7478578051c8b8525ae19dcb",
   "git_dirty": true,
   "graph_build_id": null,
   "llm": {
-    "chat_model": "gpt-5.6-luna",
+    "chat_model": "gpt-6-luna",
     "chat_base_url": "https://api.openai.com/v1",
     "embed_model": "text-embedding-3-small",
     "embed_base_url": "https://api.openai.com/v1",
@@ -30,9 +31,9 @@
   },
   "repeats": 3,
   "seed": 20260929,
-  "started_at": "2026-10-04T08:02:06.508607+00:00",
-  "finished_at": "2026-10-04T08:28:26.893863+00:00",
-  "wall_seconds": 1580.3854500999441,
+  "started_at": "2026-10-29T14:32:43.565647+00:00",
+  "finished_at": "2026-10-29T15:15:13.412035+00:00",
+  "wall_seconds": 2549.844733600039,
   "config": {
     "split": "dev",
     "slices": {},
@@ -62,6 +63,15 @@
       "workers": 8,
       "max_evidence": 3,
       "evidence_chars": 800
+    },
+    "retriever": {
+      "store": "passages",
+      "chunks_sha256": "c80d0ab23191",
+      "unit": "passage",
+      "chunks": 18839,
+      "mode": "rrf+rerank",
+      "backend": "files",
+      "recorded": "post hoc: the run predates the field; store from the run command"
     }
   }
 }

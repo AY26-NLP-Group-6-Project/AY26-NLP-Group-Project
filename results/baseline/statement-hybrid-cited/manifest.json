@@ -1,5 +1,5 @@
 {
-  "run_id": "20260930T083207Z-baseline-rag-rq1",
+  "run_id": "20261029T143225Z-baseline-rag-rq1",
   "system": "baseline-rag",
   "task": "rq1",
   "conditions": [
@@ -12,11 +12,11 @@
   "dataset_hash": "3e18cc14e648",
   "label_source": "human_majority",
   "n_items": 331,
-  "git_sha": "426779b2f4d877eceb2353ba023fae5a516e5448",
-  "git_dirty": false,
+  "git_sha": "b3d0673153d2668a7478578051c8b8525ae19dcb",
+  "git_dirty": true,
   "graph_build_id": null,
   "llm": {
-    "chat_model": "gpt-5.6-luna",
+    "chat_model": "gpt-6-luna",
     "chat_base_url": "https://api.openai.com/v1",
     "embed_model": "text-embedding-3-small",
     "embed_base_url": "https://api.openai.com/v1",
@@ -24,16 +24,16 @@
     "reasoning_effort": "low",
     "cache": false,
     "prices_usd_per_mtok": {
-      "chat_in": null,
-      "chat_out": null,
-      "embed": null
+      "chat_in": 0.2,
+      "chat_out": 1.2,
+      "embed": 0.02
     }
   },
   "repeats": 3,
   "seed": 20260929,
-  "started_at": "2026-09-30T08:32:07.187617+00:00",
-  "finished_at": "2026-09-30T08:51:26.231217+00:00",
-  "wall_seconds": 1159.0433577999938,
+  "started_at": "2026-10-29T14:32:25.784020+00:00",
+  "finished_at": "2026-10-29T15:21:29.594465+00:00",
+  "wall_seconds": 2943.8168707999866,
   "config": {
     "split": "dev",
     "slices": {},
