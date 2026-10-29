@@ -58,7 +58,7 @@ evidence they hand it: at most `k = 3` spans of at most 800 characters each.
 |---|---|---|
 | `sentence_only` | nothing (the A3CG setting; every delta is measured against it) | harness |
 | `local` | the neighbouring sentences from the same page | harness |
-| `same_report_rrf` | passages or sentences retrieved from the **same report** | the system's retriever |
+| `same_report_rrf` | statements (or passages) retrieved from the **same report** | the system's retriever |
 | `cross_year_rrf` | retrieved from the **same company, other years** | the system's retriever |
 | `cross_year_graph` | statements reached through the claim graph | graph-rag |
 | `cross_year_fused` | graph first, BM25 over the company's other-year statements fills to k | graph-rag |
@@ -150,7 +150,7 @@ faithfulness and lenient on context relevance by a factor of about 1.7; see `res
 
 ```bash
 uv run gw-eval --publish artifacts/runs/<run_id> --name baseline/<what-it-is> --note "one line"
-uv run gw-eval --compare results/baseline/sentence-hybrid-cited results/graph/graph-arms-cited
+uv run gw-eval --compare results/baseline/statement-hybrid-cited results/graph/graph-arms-cited
 ```
 
 `--publish` copies the manifest, metrics and report (not the per-item files) into `results/<group>/<name>/`

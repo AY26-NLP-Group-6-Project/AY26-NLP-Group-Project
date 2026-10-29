@@ -96,7 +96,7 @@ def publish(run_dir: Path, results_root: Path, note: str = "", name: str | None 
 
     manifest, metrics, report and the RAG-metric summaries travel; predictions and evidence stay local
     (they are large and reproducible from the manifest). `name` is the folder the copy gets, as
-    `<group>/<what-it-is>` (for example `baseline/sentence-hybrid`): the run id stays in the manifest,
+    `<group>/<what-it-is>` (for example `baseline/statement-hybrid`): the run id stays in the manifest,
     the folder name says what the run was. A one-line note says what it was for.
     """
     out = results_root / (name or run_dir.name)

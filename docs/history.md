@@ -144,3 +144,34 @@ plain random sample of the 239).
 Notes renamed by topic, published runs grouped under `results/baseline/` and `results/graph/` with
 descriptive names, check sheets renamed by what they contain; this file replaces the lettered sections
 of the former notes index.
+
+## 2026-10-29 · One knowledge base, every statement; RQ1 re-run; chat model changed
+
+- Decision: every arm retrieves over every statement of five words or more (108,376, hash
+  `d8a62bfe40c6`, store `statements`). The sentence-shape filter is gone from the baseline chunker and
+  from the graph's candidate lists; it remains only as the gate before the aspect extractor, since the
+  graph's aspects were extracted and human-checked with it. The passage store (`passages`, 18,839,
+  `c80d0ab23191`) stays as the granularity ablation; the prose-sentence store (71,342, `b1c181dcaf1a`)
+  is retired. Run manifests now record the store the retriever read.
+- Chat model: `.env` moved to `gpt-6-luna` before these runs; everything below is on it, and the user
+  decided to keep it for the whole project from here on. The runs of 2026-09-29 to 10-04 (`gpt-5.6-luna`,
+  prose-sentence store) are removed from `results/`; they remain in git at `7731d73`.
+- RQ1, cited classifier, 331 dev items, 3 repeats, run ids `20261029T143225Z` (statements),
+  `20261029T143232Z` (graph), `20261029T143243Z` (passages):
+  - sentence only in the three runs: vote 0.7397 / 0.7498 / 0.7580 (p = 1.00 and 0.77 paired), the
+    run-to-run spread again;
+  - hybrid over statements: same report 0.7442, other years **0.7767** (+0.037 on its own sentence
+    only, p = 0.21); graph other years 0.7449, graph + BM25 fused 0.7668 (+0.017, p = 1.00);
+    best hybrid against best graph: +6 / −11 items, p = 0.33;
+  - passages against statements, paired: other years 0.7396 against 0.7767, +18 / −7, p = 0.043;
+    same report 0.7499 against 0.7442, p = 1.00; the none F1 of passage evidence 0.70 against 0.74;
+  - the classifier cites a retrieved span in 1–9 % of items; graph lookups 9 ms (fused 20 ms) p50
+    against 191–734 ms for the hybrid path, measured with three runs sharing one machine;
+    USD 0.21–0.30 per 1,000 items.
+- RQ2: the rule-based judge re-run on the trajectory evidence with the new model (three repeats,
+  USD 1.5): achieved 169, failed 56, unclear 134, disappeared 15; 58 of 374 unstable across the three
+  runs. Held-out check re-scored against it: accuracy 0.82 (0.70–0.92) on the reported classes, verdict
+  where the check says unclear 14 % (2–33) against 8 % (3–15) for the previous model's run, unclear
+  where the check has a verdict 15 % (3–29), verdicts right 85 % (74–94). The previous judge output is
+  kept locally as `outcomes.v2.trajectory.gpt-5.6-luna.jsonl`; the pair sheet's key still carries the
+  previous system labels, so `promise-pair-score` is run with `--outcomes` pointing at the new file.

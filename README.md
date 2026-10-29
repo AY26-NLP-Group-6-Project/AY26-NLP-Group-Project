@@ -25,7 +25,7 @@ are. The reference and the record are under [`docs/`](docs/README.md); the findi
 | data | where it sits | how you get it |
 |---|---|---|
 | frozen evaluation set, 1,000 sentences | `data/eval/gw1000.*.jsonl` | in git; built from `kb/annotation/eval.xlsx` |
-| chunk stores: `dev` (18,839 passages), `dev-sent` (71,342 prose sentences, the store the reference baseline retrieves over), `dev-stmt` (108,376 statements) | `artifacts/baseline/<build>/` | one `gw-kb-<build>-<hash>.zip` per store, shared inside the group, or `gw-baseline build` from the parsed corpus |
+| the knowledge base: every statement of five words or more, 108,376 chunks with vectors and a manifest (`passages`, 18,839 windows of 200 words, is the granularity ablation) | `artifacts/baseline/statements/` | `gw-kb-statements-<hash>.zip` shared inside the group, or `gw-baseline build` from the parsed corpus |
 | parsed corpus and claim graph (`graph-rag` only) | `artifacts/graph/dev/graph.duckdb` | `gw-graph build` from the raw PDFs, or a copy from a teammate |
 | raw reports | `kb/raw/` | never redistributed; `kb/README.md` |
 
@@ -34,18 +34,18 @@ are. The reference and the record are under [`docs/`](docs/README.md); the findi
 ```bash
 uv sync                                        # the workspace: src/common, src/baseline-rag, src/graph-rag, src/example-rag
 cp .env.example .env                           # fill LLM_API_KEY and EMB_API_KEY; model, effort and prices are set
-unzip gw-kb-dev-<hash>.zip -d artifacts/baseline/        # and gw-kb-dev-sent-<hash>.zip for the sentence store
-uv run gw-baseline stats                       # the manifest; hash c80d0ab23191 (dev-sent: b1c181dcaf1a)
+unzip gw-kb-statements-<hash>.zip -d artifacts/baseline/
+uv run gw-baseline stats                       # the manifest; hash d8a62bfe40c6
 uv run gw-data list                            # the versioned snapshots
 uv run pytest -q                               # no network needed
 uv run gw-eval --system example-rag --split dev --sample 20 --repeats 1     # smoke run
 ```
 
-Optional shared database (the same passages served by pgvector):
+Optional shared database (the same chunks served by pgvector):
 
 ```bash
 docker compose up -d
-uv run gw-baseline pg-import --build-id dev && uv run gw-baseline pg-check --build-id dev
+uv run gw-baseline pg-import && uv run gw-baseline pg-check
 GW_BASELINE_BACKEND=postgres uv run gw-eval --system baseline-rag --split dev --repeats 3
 ```
 
@@ -59,7 +59,7 @@ GW_LLM_CACHE=1                                  SQLite response cache; bypassed 
 GW_CLASSIFIER_STYLE=cited                       cited (label + rationale + citations) | label (one word)
 LLM_PRICE_IN_PER_MTOK / LLM_PRICE_OUT_PER_MTOK  USD per million tokens; unset = tokens reported, no dollars
 EMB_PRICE_PER_MTOK                              same, for query embeddings
-GW_BASELINE_BUILD=dev                           dev = passages, dev-sent = prose sentences, dev-stmt = every statement
+GW_BASELINE_BUILD=statements                    statements (default) | passages, the granularity ablation
 GW_BASELINE_MODE=rrf+rerank                     bm25 | dense | rrf | rrf+rerank
 GW_BASELINE_BACKEND=files                       files | postgres
 PG_DSN=postgresql://gw:gw@localhost:5432/gw
@@ -74,7 +74,7 @@ uv run gw-eval --system baseline-rag --split dev --repeats 3 \
 uv run gw-eval --system graph-rag --split dev --repeats 3 \
                --conditions sentence_only,local,cross_year_graph,cross_year_fused
 uv run gw-eval --publish artifacts/runs/<run_id> --name <group>/<what-it-is> --note "one line"
-uv run gw-eval --compare results/baseline/sentence-hybrid-cited results/graph/graph-arms-cited
+uv run gw-eval --compare results/baseline/statement-hybrid-cited results/graph/graph-arms-cited
 uv run gw-eval --ragas artifacts/runs/<run_id>                               # RAG metrics, scored afterwards
 ```
 

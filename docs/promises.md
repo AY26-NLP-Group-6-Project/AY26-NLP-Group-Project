@@ -94,7 +94,8 @@ against each and against `final`, and the two pools separately.
 ### First version, and why it missed the answers
 
 Six statements from the reports of the deadline year and the year after: BM25 over every statement,
-dense over the shared prose-sentence store, fused by reciprocal rank fusion. On the round-1 sheet the
+dense over the statements that had a vector at the time (the 71,342 sentence-shaped ones), fused by
+reciprocal rank fusion. On the round-1 sheet the
 annotator could not tell the outcome of 35 of 74 promises; the case studies then found by hand that 5 of
 the 11 `disappeared` promises were in the reports after all.
 
@@ -111,16 +112,17 @@ Ranking the hand-found answer statements under that retrieval showed the mechani
 | Tiong Woon ERP | "In FY2022, we began integrating …" | none | 58 | not ranked |
 | Indofood Agri pouch | "has been delayed" (2023 report, deadline 2025) | 1 | 1 | outside the window |
 
-The prose store holds 71,342 of 110,314 statements; result sentences mostly fail its filter (a sentence
-without one of its listed verbs, or full of figures). A statement outside the store can score in one of
-the two fused rankings only, and RRF (k = 60) puts a first place in one list (1/61) below a thirtieth
-place in both (2/90). Of the 2,244 statements shown, 37 (1.6 %) came from outside the store: the
-commitments called "unclear" were judged almost without the sentences that carry results.
+Result sentences were mostly among the statements without a vector: lines full of figures, or
+third-person sentences. A statement that scores in one of the two fused rankings only is put by RRF
+(k = 60) below one that is thirtieth in both (1/61 against 2/90). Of the 2,244 statements shown, 37
+(1.6 %) came from outside the dense index: the commitments called "unclear" were judged almost without
+the sentences that carry results. The knowledge base now carries a vector for every statement
+(`baseline.md`), which is what the next version builds on.
 
 ### Trajectory evidence (`promises/evidence.py`, mode `trajectory`)
 
-1. **Two complete rankings.** Every statement of a report is ranked by BM25 and by dense similarity;
-   vectors the store lacks are embedded on demand (23,089 statements, once, cached).
+1. **Two complete rankings.** Every statement of a report is ranked by BM25 and by dense similarity
+   over the shared statement store (statements under five words are embedded on demand, cached).
 2. **A budget per report year**, from the report after the promise up to the year after the deadline:
    6 statements from the first report at or after the deadline, 3 from the next, 2 from each earlier one.
 3. **Neighbours.** The statements before and after the two best hits of the deadline report, whatever
@@ -131,7 +133,8 @@ commitments called "unclear" were judged almost without the sentences that carry
 5. **Order and adjacency.** Statements are shown in report order; one that follows the previous one in
    the report is marked "directly follows E3", so a target cell and its result are read together.
 
-11.6 statements per promise (max 19), from 2.0 report years; 42 % of them from outside the prose store.
+11.6 statements per promise (max 19), from 2.0 report years; 42 % of them statements the first
+version's dense index did not cover.
 Checks without new labels: 6 of the 8 hand-found answers are now shown (four through the complete
 rankings, one through the wider window, one as a neighbour; the Indofood postponement sentence ranks
 8th among many ISPO statements, the Tiong Woon sentence is not reachable by similarity); 26 of the 28
@@ -187,9 +190,9 @@ decomposition (`evidence-ledger.md`).
 On the round-1 rows, which the three versions of the prompt were tuned on, judge v2 with the first
 evidence scores 0.88–0.92 raw and gives a verdict on 2–4 of the 35 unclear rows; the model's own
 outcome in the same reply reaches 0.81, so the rule adds to the questions, mostly on `revised`. The
-judge is not deterministic: about 15 % of promises do not get the same outcome three times, almost
-always a verdict against `unclear`. Cost: USD 1.5 for three runs over the 374 promises on trajectory
-evidence.
+judge is not deterministic: about 16 % of promises (58 of 374) do not get the same outcome three
+times, almost always a verdict against `unclear`. Cost: USD 1.5 for three runs over the 374 promises
+on trajectory evidence.
 
 ## 6. Results of the held-out check
 
@@ -197,17 +200,18 @@ Weighted to each sheet's pool, 95 % bootstrap intervals:
 
 | | round 1: judge v1, first evidence | round 3: judge v2, trajectory evidence, held out |
 |---|---|---|
-| raw accuracy, κ, five classes | 0.703, 0.63 | 0.667, 0.57 |
-| accuracy, reported classes (failed and revised as one) | 0.82 (0.72–0.90) | 0.83 (0.71–0.93) |
+| raw accuracy, κ, five classes | 0.703, 0.63 | 0.683, 0.59 |
+| accuracy, reported classes (failed and revised as one) | 0.82 (0.72–0.90) | 0.82 (0.70–0.92) |
 | accuracy, five classes | 0.82 (0.72–0.90) | 0.80 (0.68–0.90) |
-| verdict where the check says unclear | 31 % (20–42) | **8 % (3–15)** |
-| unclear where the check has a verdict | 0 % | 15 % (4–24) |
-| verdicts that are right | 75 % (63–86) | 84 % (71–93) |
+| verdict where the check says unclear | 31 % (20–42) | **14 % (2–33)** |
+| unclear where the check has a verdict | 0 % | 15 % (3–29) |
+| verdicts that are right | 75 % (63–86) | 85 % (74–94) |
 
-The over-commitment fix holds on rows nothing was tuned on. Overall accuracy did not move: v1 was right
-82 % of the time because it said `unclear` often and was right when it did; v2 on complete evidence says
-it less and is right 80–83 % of the time. The price is real: 15 % of the promises the check settles are
-left `unclear`.
+The over-commitment fix holds on rows nothing was tuned on, with a wide interval: 17 human-unclear rows
+carry it. Overall accuracy did not move: v1 was right 82 % of the time because it said `unclear` often
+and was right when it did; v2 on complete evidence says it less and is right 80–82 % of the time. The
+price is real: 15 % of the promises the check settles are left `unclear`. (An earlier judge run with the
+previous chat model scored 8 % (3–15) and 0.83 on the same sheet; `history.md`, 2026-10-29.)
 
 What the commitments did, human-verified:
 
@@ -261,9 +265,9 @@ failed / unclear / disappeared**. `outcome.reported()` maps `revised` to `failed
 prints the merged counts; `promise-score` returns a `reported` block and its weighted `accuracy` is on
 the merged classes (`accuracy_five_way` keeps the judge's own labels apart); the guide has one rule.
 The judge's rule is unchanged, and `revised` stays in its output as detail, for example to pick
-moved-goalpost cases. On the held-out sheet the merged class is right 21 times in 27 and misses 1 of 22.
+moved-goalpost cases. On the held-out sheet the merged class is right 18 times in 24 and misses 4 of 22.
 
-System counts over the 374 on trajectory evidence: achieved 173, failed 56, unclear 135, disappeared 10.
+System counts over the 374 on trajectory evidence: achieved 169, failed 56, unclear 134, disappeared 15.
 
 ## 8. Known limits
 

@@ -47,8 +47,9 @@ built as regex extractions; dated targets are instead extracted by an LLM with m
 kept as the promise tables under `artifacts/graph/dev/promises/` (`promises.md`).
 
 Two findings from the first build that shaped it: page furniture (GRI content-index rows repeated
-every year) produced thousands of false chains until a sentence filter dropped 23,097 candidate
-mentions; and 27–28 % of cross-year edges join two identical sentences a year apart, which is a fact
+every year) produced thousands of false chains until a sentence-shape gate on candidate mentions
+dropped 23,097 of them (the gate applies to what the aspect extractor sees, not to what the arms
+retrieve); and 27–28 % of cross-year edges join two identical sentences a year apart, which is a fact
 about templated reporting, so edges carry `same_text` and the trajectory logic can tell a progressed
 claim from a copied paragraph.
 
@@ -127,7 +128,10 @@ questions graph-only methods lose to plain vector RAG (`evidence-ledger.md`).
 | arm | how | coverage on dev | retrieval p50 |
 |---|---|---|---|
 | `cross_year_graph` | the item's aspect → its morph group → statements of the same company in other years that mention it, verbatim repeats of the target skipped | 0.40 | about 9 ms |
-| `cross_year_fused` | the graph arm first, then BM25 over the company's other-year statements fills to k = 3 | 0.89 | about 11 ms |
+| `cross_year_fused` | the graph arm first, then BM25 over the company's other-year statements fills to k = 3 | 0.89 | about 20 ms |
+
+Both arms retrieve over every statement of five words or more, the same knowledge base as the baseline
+(`baseline.md`); the sentence-shape gate decides only which statements the aspect extractor labelled.
 
 What they achieve on RQ1 against the hybrid baseline is in `results.md`: the same accuracy, at a tenth
 of the retrieval latency. For RQ2 the graph's join is the promise table's `related` link (same company

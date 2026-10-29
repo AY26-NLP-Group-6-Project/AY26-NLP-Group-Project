@@ -64,7 +64,7 @@ def eval_main(argv: list[str] | None = None) -> int:
                     help="copy manifest, metrics and reports of a run into results/ (versioned)")
     ap.add_argument("--note", default="", help="with --publish: one line on what the run was for")
     ap.add_argument("--name", help="with --publish: folder under results/, as <group>/<what-it-is>, "
-                                   "e.g. baseline/sentence-hybrid")
+                                   "e.g. baseline/statement-hybrid")
     args = ap.parse_args(argv)
 
     if args.list:
