@@ -1,0 +1,331 @@
+{
+ "a1": {
+  "n": 40,
+  "human_distribution": {
+   "achieved": 19,
+   "failed": 8,
+   "unclear": 9,
+   "disappeared": 4
+  },
+  "system_distribution": {
+   "achieved": 17,
+   "failed": 10,
+   "disappeared": 5,
+   "unclear": 8
+  },
+  "accuracy": 0.875,
+  "cohen_kappa": 0.8190045248868778,
+  "per_class": {
+   "achieved": {
+    "precision": 1.0,
+    "recall": 0.8947368421052632,
+    "support": 19
+   },
+   "failed": {
+    "precision": 0.8,
+    "recall": 1.0,
+    "support": 8
+   },
+   "unclear": {
+    "precision": 0.75,
+    "recall": 0.6666666666666666,
+    "support": 9
+   },
+   "disappeared": {
+    "precision": 0.8,
+    "recall": 1.0,
+    "support": 4
+   }
+  },
+  "confusion_human_rows_system_cols": {
+   "achieved": {
+    "achieved": 17,
+    "unclear": 2
+   },
+   "failed": {
+    "failed": 8
+   },
+   "unclear": {
+    "disappeared": 1,
+    "unclear": 6,
+    "failed": 2
+   },
+   "disappeared": {
+    "disappeared": 4
+   }
+  }
+ },
+ "a2": {
+  "n": 40,
+  "human_distribution": {
+   "achieved": 19,
+   "failed": 8,
+   "unclear": 9,
+   "disappeared": 4
+  },
+  "system_distribution": {
+   "achieved": 17,
+   "failed": 10,
+   "disappeared": 6,
+   "unclear": 7
+  },
+  "accuracy": 0.85,
+  "cohen_kappa": 0.7837837837837837,
+  "per_class": {
+   "achieved": {
+    "precision": 1.0,
+    "recall": 0.8947368421052632,
+    "support": 19
+   },
+   "failed": {
+    "precision": 0.8,
+    "recall": 1.0,
+    "support": 8
+   },
+   "unclear": {
+    "precision": 0.7142857142857143,
+    "recall": 0.5555555555555556,
+    "support": 9
+   },
+   "disappeared": {
+    "precision": 0.6666666666666666,
+    "recall": 1.0,
+    "support": 4
+   }
+  },
+  "confusion_human_rows_system_cols": {
+   "achieved": {
+    "achieved": 17,
+    "unclear": 2
+   },
+   "failed": {
+    "failed": 8
+   },
+   "unclear": {
+    "disappeared": 2,
+    "unclear": 5,
+    "failed": 2
+   },
+   "disappeared": {
+    "disappeared": 4
+   }
+  }
+ },
+ "a1_vs_a2": {
+  "n": 40,
+  "human_distribution": {
+   "achieved": 17,
+   "failed": 10,
+   "disappeared": 5,
+   "unclear": 8
+  },
+  "system_distribution": {
+   "achieved": 17,
+   "failed": 10,
+   "disappeared": 6,
+   "unclear": 7
+  },
+  "accuracy": 0.975,
+  "cohen_kappa": 0.9644444444444444,
+  "per_class": {
+   "achieved": {
+    "precision": 1.0,
+    "recall": 1.0,
+    "support": 17
+   },
+   "failed": {
+    "precision": 1.0,
+    "recall": 1.0,
+    "support": 10
+   },
+   "unclear": {
+    "precision": 1.0,
+    "recall": 0.875,
+    "support": 8
+   },
+   "disappeared": {
+    "precision": 0.8333333333333334,
+    "recall": 1.0,
+    "support": 5
+   }
+  },
+  "confusion_human_rows_system_cols": {
+   "achieved": {
+    "achieved": 17
+   },
+   "failed": {
+    "failed": 10
+   },
+   "unclear": {
+    "unclear": 7,
+    "disappeared": 1
+   },
+   "disappeared": {
+    "disappeared": 5
+   }
+  }
+ },
+ "agreed_vs_human": {
+  "n": 39,
+  "human_distribution": {
+   "achieved": 19,
+   "failed": 8,
+   "unclear": 8,
+   "disappeared": 4
+  },
+  "system_distribution": {
+   "achieved": 17,
+   "failed": 10,
+   "disappeared": 5,
+   "unclear": 7
+  },
+  "accuracy": 0.8717948717948718,
+  "cohen_kappa": 0.8128598848368522,
+  "per_class": {
+   "achieved": {
+    "precision": 1.0,
+    "recall": 0.8947368421052632,
+    "support": 19
+   },
+   "failed": {
+    "precision": 0.8,
+    "recall": 1.0,
+    "support": 8
+   },
+   "unclear": {
+    "precision": 0.7142857142857143,
+    "recall": 0.625,
+    "support": 8
+   },
+   "disappeared": {
+    "precision": 0.8,
+    "recall": 1.0,
+    "support": 4
+   }
+  },
+  "confusion_human_rows_system_cols": {
+   "achieved": {
+    "achieved": 17,
+    "unclear": 2
+   },
+   "failed": {
+    "failed": 8
+   },
+   "unclear": {
+    "disappeared": 1,
+    "unclear": 5,
+    "failed": 2
+   },
+   "disappeared": {
+    "disappeared": 4
+   }
+  }
+ },
+ "disagreements": [
+  {
+   "promise_id": "P00408",
+   "human": "unclear",
+   "a1": "disappeared",
+   "a2": "disappeared",
+   "a1_note": "E4 mentions LHN Parking's email ticketing system but says nothing about recording satisfaction ratings per ticket; E3, E5, E9, E10 report annual satisfaction surveys for Space Optimisation and Facilities Management, other segments; no 2023 or 2024 evidence refers to Parking customer satisfaction ratings",
+   "a2_note": "No FY2023 or FY2024 evidence mentions recording satisfaction ratings of LHN Parking ticket raisers. E4 describes LHN Parking's email ticketing system itself, not satisfaction ratings; E3, E5, E7, E9-E11 are annual survey scores for Space Optimisation and Facilities Management, other segments"
+  },
+  {
+   "promise_id": "P00529",
+   "human": "unclear",
+   "a1": "failed",
+   "a2": "failed",
+   "a1_note": "E5: the FY2025 performance cell for the paired carbon-intensity and energy-intensity targets says the target was not achieved on time; the 22.5% figure is non-renewable energy intensity, a related measure, not the 10% total energy-intensity target; E2/E8 identify the target as a 10% energy-intensity reduction from 2020 levels, which the extraction omits; the flattened row leaves it slightly ambiguous whether the verdict covers both targets, worth review",
+   "a2_note": "E5: the FY2025 Energy and Emission row ('Reduce energy intensity by 10% from 2020 level') is marked 'The target was not achieved on time'; the 22.5% cut it cites is non-renewable energy intensity, a different measure. Extracted metric omits intensity and the 2020 baseline (E2, E8). Worth writing up: 'the target' in E5 covers a row holding both this and the 5.2% emission target"
+  },
+  {
+   "promise_id": "P00518",
+   "human": "unclear",
+   "a1": "unclear",
+   "a2": "disappeared",
+   "a1_note": "E6-E7 (FY2021) show sludge and rubber lump waste intensity and a 'Waste Reduction Project' on process waste including sludge, but never name a sludge drying project or say it was carried out; E10-E11 (2022) report sludge-inclusive scheduled waste up 24%, not a verdict on the project. Extracted '510%' is the sentence's '5-10%'.",
+   "a2_note": "E5-E8; E10-E11: the 2021 and 2022 reports speak of sludge and rubber-lump waste intensity and a generic 'Waste Reduction Project', but never of a sludge drying project or its being carried out; E11's 24% rise in scheduled waste is a 2022 figure for sludge and rubber lumps combined, not this deliverable."
+  },
+  {
+   "promise_id": "P00552",
+   "human": "achieved",
+   "a1": "unclear",
+   "a2": "unclear",
+   "a1_note": "E5: FY2025 total waste 1,028,494 kg vs FY2024 1,035,904 kg (hazardous up, non-hazardous down), but the target is waste relative to the level of business operations and no such relative figure or denominator is given; the absolute total is a related measure, not this target. E8 restates the same aim for FY2026 without a verdict on FY2025.",
+   "a2_note": "E5: FY2025 absolute waste 1,028,494 kg vs FY2024 1,035,904 kg (hazardous up, non-hazardous down), but the target is waste relative to the level of business operations and no normalised figure is given; an absolute amount is not the intensity-type target. E8 sets the same aim for FY2026 with no verdict on FY2025."
+  },
+  {
+   "promise_id": "P00762",
+   "human": "achieved",
+   "a1": "unclear",
+   "a2": "unclear",
+   "a1_note": "E1: describes the Cybersecurity Committee tracking occurrences and reporting to the SRMC and Board; E6: FY2023 protection achievements (0% virus infected, zero data violations); neither states that the FY2023 roadmap target to strictly monitor IT security risk per policy was met, and the targets table in E6 is truncated before the 2023 performance cell; qualitative process target with no verdict",
+   "a2_note": "E1, E6: FY2023 describes tracking of cybersecurity occurrences and committee reporting and lists zero breaches and personal-data violations, but gives no verdict on the FY2023 roadmap item of strict monitoring per the IT security and PDP policies; E6's targets table is truncated before the result; E4 is a different roadmap item"
+  },
+  {
+   "promise_id": "P00326",
+   "human": "unclear",
+   "a1": "failed",
+   "a2": "failed",
+   "a1_note": "E3; E7: at end-2023 the two palm oil mills were only mid-way through ISO 50001 certification (audited as preparation), with more audits aimed for 2024; E12 (2024) still has the two mills in process; other_versions shows the deadline moved to 2024. Extracted metric omits the ISO 50001 standard. E11's 19 certified mills (2024) contradicts E12 but is after the deadline.",
+   "a2_note": "E3; E7; E12: at the end of 2023 the two palm oil mills (Sungai Dua, Sel Lakitan) were only mid-way through ISO 50001 certification, and E12 shows them still in process in 2024; the extracted metric omits that the certification is ISO 50001"
+  }
+ ],
+ "human_a1_vs_a2": {
+  "n": 40,
+  "human_distribution": {
+   "achieved": 19,
+   "failed": 9,
+   "unclear": 9,
+   "disappeared": 3
+  },
+  "system_distribution": {
+   "achieved": 17,
+   "failed": 9,
+   "unclear": 10,
+   "disappeared": 4
+  },
+  "accuracy": 0.875,
+  "cohen_kappa": 0.8171846435100548,
+  "per_class": {
+   "achieved": {
+    "precision": 1.0,
+    "recall": 0.8947368421052632,
+    "support": 19
+   },
+   "failed": {
+    "precision": 0.8888888888888888,
+    "recall": 0.8888888888888888,
+    "support": 9
+   },
+   "unclear": {
+    "precision": 0.7,
+    "recall": 0.7777777777777778,
+    "support": 9
+   },
+   "disappeared": {
+    "precision": 0.75,
+    "recall": 1.0,
+    "support": 3
+   }
+  },
+  "confusion_human_rows_system_cols": {
+   "achieved": {
+    "achieved": 17,
+    "unclear": 2
+   },
+   "failed": {
+    "failed": 8,
+    "unclear": 1
+   },
+   "unclear": {
+    "unclear": 7,
+    "failed": 1,
+    "disappeared": 1
+   },
+   "disappeared": {
+    "disappeared": 3
+   }
+  }
+ }
+}
