@@ -166,14 +166,16 @@ and writes a run dir that `--publish` and `--compare` read like an RQ1 run (`eva
 The pipeline stages above (`promise-evidence --system`, `promise-outcomes --evidence-from`,
 `promise-gold-score`) remain for judging all 374 or re-judging a stored evidence file.
 
-First result (2026-10-30, dev split of the gold, 123 promises, judge v2 × 3 on each system's evidence):
-the finder's evidence and the hybrid baseline's both put the judge at 96 of 123 right (0.780, κ 0.67);
-the two differ on 13 promises and each is right alone on 5 of them (McNemar p = 1.00). On the baseline's
-evidence the judge gives a verdict on 4 of the 22 gold-unclear promises (18 %) against 5 for the finder,
-leaves 20 of 101 settled ones unclear (20 %) against 18, and 92 % of its verdicts are right against
-90 %. Over all 374 the baseline-evidence judge says achieved 172, failed 62, unclear 125, disappeared 15
-(61 unstable across the three runs; USD 1.9). As on RQ1, the structured retrieval and plain hybrid
-retrieval are not distinguishable on this split; what the finder adds is the shorter, ordered reading.
+First result (2026-10-30, `gw-eval --task rq2`, dev split of the gold, 123 promises, judge v2 × 3 on each
+system's evidence; `results/graph/promise-window-trajectory`, `results/baseline/promise-window-hybrid`):
+the finder's evidence and the hybrid baseline's both put the vote at 97 of 123 right (0.789; κ 0.69 and
+0.68), paired +4 / −4, McNemar p = 1.00. The baseline is more cautious (a verdict on 3 of the 22
+gold-unclear promises against 5, 21 of 101 settled ones left unclear against 17, 94 % of its verdicts
+right against 90 %) and less steady (20 promises change label across repeats against 10). Judged over
+all 374 through the pipeline (`promise-outcomes --evidence-from`), the baseline's evidence gives
+achieved 172, failed 62, unclear 125, disappeared 15 (USD 1.9). As on RQ1, structured and plain hybrid
+retrieval are not distinguishable on this split; what the finder adds is the shorter, ordered reading
+(11.7 statements against 20) and the lower cost per judgement.
 
 ## 5. The judge
 

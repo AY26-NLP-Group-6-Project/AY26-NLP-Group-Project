@@ -125,11 +125,19 @@ promises (23 %), leaves 18 of the 101 settled ones unclear (18 %), and 90 % of i
 Precision / recall per class: achieved 0.94 / 0.84, failed 0.88 / 0.65, unclear 0.49 / 0.77,
 disappeared 0.67 / 1.00. The test split has not been opened.
 
-The same judge on the hybrid baseline's evidence (`promise_window`: the top 20 statements of the
-window by BM25 + dense + rerank, no per-year budget, no neighbours, no linked targets) is also right on
-96 of 123 (0.780, κ 0.67); the two retrievers differ on 13 dev promises and each is right alone on 5
-(McNemar p = 1.00). On RQ2 as on RQ1, the graph line's structured retrieval and plain hybrid retrieval
-are not distinguishable on dev; the finder reads 11.6 statements where the baseline reads 20.
+### Retrieval arms on RQ2 (`gw-eval --task rq2`, dev, 123 promises, shared judge v2, three repeats)
+
+| arm | run | accuracy mean ± sd | vote accuracy | vote κ | vote macro-F1 | verdict where gold unclear | unclear where gold settled | verdicts right | statements / promise | retrieval p50 |
+|---|---|---|---|---|---|---|---|---|---|---|
+| trajectory finder (graph) | `graph/promise-window-trajectory` | 0.791 ± 0.005 | 0.789 | 0.69 | 0.769 | 5 / 22 | 17 / 101 | 80 / 89 (0.90) | 11.7 | 261 ms |
+| hybrid, top 20 in the window | `baseline/promise-window-hybrid` | 0.783 ± 0.009 | 0.789 | 0.68 | 0.771 | 3 / 22 | 21 / 101 | 78 / 83 (0.94) | 20.0 | 641 ms |
+
+Paired on the 123 promises (majority votes, McNemar): +4 / −4, p = 1.00; the hybrid arm is unstable
+across repeats on 20 promises, the finder on 10. On RQ2 as on RQ1, the graph line's structured
+retrieval and plain hybrid retrieval are not distinguishable on dev. The finder reads 11.7 statements
+where the baseline reads 20, so its judgements cost less (USD 1.30 against 1.62 per 1,000) and are
+steadier; the baseline is more cautious (fewer verdicts, more of them right). The test split has not
+been opened.
 
 ### Case studies
 

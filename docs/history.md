@@ -208,6 +208,12 @@ of the former notes index.
   `repeats` times over identical evidence, the vote scored against the gold with accuracy, κ, macro-F1
   over the four outcomes, the three RQ2 rates and a bootstrap interval; the run dir, `--publish`, the
   results index and `--compare` (McNemar on the votes) work as for RQ1.
+- First two RQ2 runs through it, dev, three repeats (`20261030T063140Z-graph-rag-rq2`,
+  `20261030T063123Z-baseline-rag-rq2`, published as `graph/promise-window-trajectory` and
+  `baseline/promise-window-hybrid`): vote accuracy 0.789 for both (κ 0.69 / 0.68, macro-F1 0.769 /
+  0.771), mean over repeats 0.791 ± 0.005 against 0.783 ± 0.009; paired +4 / −4, p = 1.00. Finder:
+  11.7 statements per promise, verdict on 5 of 22 gold-unclear, 17 of 101 settled left unclear, 90 % of
+  verdicts right, 10 unstable, USD 0.48. Hybrid top 20: 3 of 22, 21 of 101, 94 %, 20 unstable, USD 0.60.
 - One protocol for both questions. `EvidenceCondition.PROMISE_WINDOW`: a promise becomes a `Query`
   (company, year window, metric, the record in `Query.meta`) and any system's `retrieve(query, k)`
   answers it; `promise-evidence --system <name>` writes `evidence.<name>.jsonl`, the judge runs on it
