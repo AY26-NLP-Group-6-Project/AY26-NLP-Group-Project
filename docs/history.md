@@ -198,3 +198,16 @@ of the former notes index.
   over-commitment 6 of 23, under-commitment 18 of 101, verdict precision 0.89. Test not opened.
 - Known soft spot: `unclear` against `disappeared` when the evidence touches the subject but not the
   target; P00136 / P00141 (model pair, unclear) against the group's P00144 (disappeared).
+- Revised the same day: the one row settled as `not_a_promise` (P00412) is an extraction error, not an
+  outcome, and leaves the gold: 373 rows, dev 123 / test 250, snapshot `f41388d7eb85`; the judge on dev
+  0.780, κ 0.67, over-commitment 5 of 22, under-commitment 18 of 101, verdict precision 0.90.
+- One protocol for both questions. `EvidenceCondition.PROMISE_WINDOW`: a promise becomes a `Query`
+  (company, year window, metric, the record in `Query.meta`) and any system's `retrieve(query, k)`
+  answers it; `promise-evidence --system <name>` writes `evidence.<name>.jsonl`, the judge runs on it
+  unchanged and names its output after it. The graph system serves the condition with the trajectory
+  finder, the hybrid baseline with its ranking inside the window. New `gw_common.corpus`: the corpus as
+  tools (search in four modes, get, neighbours, page, reports, companies), registered under `gw.corpora`
+  (`statements` over the chunk store, `graph` adding aspects, follow-ups and related targets), so an
+  agentic retriever plans over the same calls the fixed baseline makes.
+- First RQ2 baseline arm: `promise-evidence --system baseline-rag` (hybrid, rrf+rerank, k = 20 inside the
+  window, 2.0 report years per promise) judged with v2 × 3; scored on dev below once finished.

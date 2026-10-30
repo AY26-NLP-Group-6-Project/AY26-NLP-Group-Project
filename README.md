@@ -25,7 +25,7 @@ are. The reference and the record are under [`docs/`](docs/README.md); the findi
 | data | where it sits | how you get it |
 |---|---|---|
 | frozen evaluation set, 1,000 sentences | `data/eval/gw1000.*.jsonl` | in git; built from `kb/annotation/eval.xlsx` |
-| frozen RQ2 gold, 374 dated commitments with their outcome and split | `data/eval/rq2promises.*.jsonl` | in git; `gw-graph promise-gold` from the group's sheet and `kb/annotation/rq2-gold/` |
+| frozen RQ2 gold, 373 dated commitments with their outcome and split | `data/eval/rq2promises.*.jsonl` | in git; `gw-graph promise-gold` from the group's sheet and `kb/annotation/rq2-gold/` |
 | the knowledge base: every statement of five words or more, 108,376 chunks with vectors and a manifest (`passages`, 18,839 windows of 200 words, is the granularity ablation) | `artifacts/baseline/statements/` | `gw-kb-statements-<hash>.zip` shared inside the group, or `gw-baseline build` from the parsed corpus |
 | parsed corpus and claim graph (`graph-rag` only) | `artifacts/graph/dev/graph.duckdb` | `gw-graph build` from the raw PDFs, or a copy from a teammate |
 | raw reports | `kb/raw/` | never redistributed; `kb/README.md` |
@@ -93,7 +93,12 @@ judge with `uv run gw-graph promise-gold-score --gold-split dev`, and open test 
 
 Copy `src/example-rag` to `src/<you>-rag`, rename it, add it to the workspace members in
 `pyproject.toml`, `uv sync`. Replace the retriever; keep the shared classifier unless the classifier is
-your contribution. Develop on `--split dev`; when a configuration is worth keeping, run it with
+your contribution. A retriever may read the corpus through the shared tools
+(`gw_common.corpus.load("statements")`: search in four modes, a statement's neighbours, a page, a
+company's reports; `load("graph")` adds the claim graph's joins), so an agent plans over the same calls
+the fixed baseline makes. One `retrieve(query, k)` serves both questions: for RQ2 the query arrives
+under the `promise_window` condition with the company, the year window and the promise record in
+`query.meta`; the shared judge reads what comes back. Develop on `--split dev`; when a configuration is worth keeping, run it with
 `--repeats 3`, publish it with a descriptive name and commit `results/`. The Protocols, the field
 contract, the file-exchange path for code that is not Python and the retrieval-only evaluation are in
 [`docs/evaluation.md`](docs/evaluation.md), section 8.
@@ -101,8 +106,9 @@ contract, the file-exchange path for code that is not Python and the retrieval-o
 ## 5. Layout
 
 ```
-src/common/gw_common/        shared contract and harness: schemas, Protocols, registry, datasets,
-                             runner, metrics, report, LLM client, classifier, FastAPI app
+src/common/gw_common/        shared contract and harness: schemas, Protocols, registry, the corpus
+                             tools (search, neighbours, pages, reports), datasets, runner, metrics,
+                             report, LLM client, classifier, FastAPI app
 src/baseline-rag/            BM25 + dense + RRF + rerank over the chunk stores; Postgres backend
 src/graph-rag/               the temporal claim graph, graph and fused retrieval, the promise pipeline
 src/example-rag/             copy-me template for a new system

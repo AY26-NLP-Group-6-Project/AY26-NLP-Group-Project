@@ -144,6 +144,21 @@ on-demand vectors the bare text. Taking every vector from one store built the sa
 the evidence statements and moves the basis of 3 of 229 verdicts; left as is, because the held-out
 check was made on this evidence.
 
+### Any system's retriever (`promise_window`)
+
+The finder above is the graph system's way of answering one question: which statements of the later
+reports should the judge read for this commitment. Any registered system answers the same question
+through the RQ1 protocol: `promise-evidence --system <name>` turns each checkable promise into a
+`Query` under the `promise_window` condition (company, `year_from` = the promise's year + 1, `year_to` =
+the deadline + 1, the metric as `aspect`, the record under `meta["promise"]`), calls the system's
+`retrieve(query, k=20)` and writes `evidence.<name>.jsonl` in the same shape as the finder's, report
+order, E-tags and `follows` derived from the statement ids. The judge then runs on it unchanged
+(`promise-outcomes --evidence-from …`, output `outcomes.v2.<name>.jsonl`), and `promise-gold-score`
+compares the result with the gold. The graph system serves the condition with the trajectory finder;
+the hybrid baseline with its ordinary ranking inside the window; an agentic system with whatever it
+plans over the corpus tools (`gw_common.corpus`). The cap of 20 statements is a ceiling, not a target:
+the finder's own budgets stay under it (11.6 on average), the baseline fills it.
+
 ## 5. The judge
 
 ### Version 1, and its failure
@@ -268,8 +283,11 @@ System counts over the 374 on trajectory evidence: achieved 169, failed 56, uncl
 
 ## 8. The gold set and its split
 
-Every checkable promise carries a settled outcome: `data/eval/rq2promises.pair_gold.14b499a7a5b3.jsonl`
-(374 rows) and `rq2promises.build_report.json`. Two sources, one sheet format, one guide:
+Every checkable promise carries a settled outcome: `data/eval/rq2promises.pair_gold.f41388d7eb85.jsonl`
+(373 rows) and `rq2promises.build_report.json`. The one row settled as `not_a_promise` (P00412, a target
+horizon read as a deadline) is an extraction error, not an outcome, and the judge has no such label: it
+is listed in the build report and stays out of the gold and the split. Two sources, one sheet format,
+one guide:
 
 - **137 promises labelled by the group** on the pair sheet (section 3): two annotators, blind, an
   adjudicated `final`; agreement 0.898, κ 0.84.
@@ -278,8 +296,8 @@ Every checkable promise carries a settled outcome: `data/eval/rq2promises.pair_g
   group's rows. Annotator 1 is the project's default model (Claude Fable), annotator 2 Claude Opus; each
   reads the same eight cells the humans read and nothing else, blind to the other and to the system.
   They agreed on 221 of 237 (0.932); the 16 disagreements went to a third pass that read both notes
-  (12 settled for annotator 1, 4 for annotator 2, none to a third label). Annotator 1 chose
-  `not_a_promise` once (P00412, a horizon misread as a deadline); kept.
+  (12 settled for annotator 1, 4 for annotator 2, none to a third label), among them P00412, settled as
+  `not_a_promise` and therefore excluded; 236 model-labelled promises remain.
 - **Calibration first**, on human rows the annotators had not seen as examples, each round a fresh
   stratified 40:
 
@@ -298,20 +316,20 @@ the target, and whether a practice shown running is `achieved`. One known incons
 P00141 (Far East's refrigerant roadmap, FY2021 and FY2022) are `unclear` by the model pair, while the
 group settled the FY2023 sibling P00144 as `disappeared` on near-identical evidence.
 
-Distribution: achieved 206, failed 68, unclear 86, disappeared 13, not a promise 1.
+Distribution over the 373: achieved 206, failed 68, unclear 86, disappeared 13.
 
-**Split: dev 124 / test 250**, as for RQ1: about a third dev, stratified by outcome × label source, the
+**Split: dev 123 / test 250**, as for RQ1: about a third dev, stratified by outcome × label source, the
 75 promises the judge prompt was tuned on (the round-1 sheet) pinned to dev.
 
 | | dev | test |
 |---|---|---|
-| achieved / failed / unclear / disappeared / not a promise | 61 / 34 / 23 / 6 / 0 | 145 / 34 / 63 / 7 / 1 |
-| labelled by the group / by the model pair | 22 / 102 | 115 / 135 |
+| achieved / failed / unclear / disappeared | 61 / 34 / 22 / 6 | 145 / 34 / 64 / 7 |
+| labelled by the group / by the model pair | 22 / 101 | 115 / 135 |
 
 Tune on dev; test is opened once, for the report, and has not been. On dev the judge of section 5
-agrees with the gold on 96 of 124 (0.774, κ 0.66): precision / recall achieved 0.94 / 0.84, failed
-0.85 / 0.65, unclear 0.49 / 0.74, disappeared 0.67 / 1.00; it gives a verdict on 6 of the 23
-gold-unclear promises (26 %), leaves 18 of the 101 settled ones unclear (18 %), and 89 % of its
+agrees with the gold on 96 of 123 (0.780, κ 0.67): precision / recall achieved 0.94 / 0.84, failed
+0.88 / 0.65, unclear 0.49 / 0.77, disappeared 0.67 / 1.00; it gives a verdict on 5 of the 22
+gold-unclear promises (23 %), leaves 18 of the 101 settled ones unclear (18 %), and 90 % of its
 verdicts are right.
 
 Files: `kb/annotation/rq2-gold/<round>/` holds, per round, the brief, the reference examples, the
@@ -347,6 +365,11 @@ uv run gw-graph promise-score --sheet kb/annotation/spotchecks/promise-check-tra
 uv run gw-graph promise-gold --sheet kb/annotation/spotchecks/promise-check-pair.xlsx \
     --held-out kb/annotation/spotchecks/promise-check-first-evidence.key.json   # the gold file and split
 uv run gw-graph promise-gold-score --gold-split dev                             # a judge against the gold
+uv run gw-graph promise-evidence --system baseline-rag                          # any system's evidence (promise_window)
+uv run gw-graph promise-outcomes --judge v2 --repeats 3 \
+    --evidence-from artifacts/graph/dev/promises/evidence.baseline-rag.jsonl   # -> outcomes.v2.baseline-rag.jsonl
+uv run gw-graph promise-gold-score --gold-split dev \
+    --outcomes artifacts/graph/dev/promises/outcomes.v2.baseline-rag.jsonl
 ```
 
 `--evidence deadline` with `--evidence-from artifacts/graph/dev/promises/outcomes.jsonl` reproduces the

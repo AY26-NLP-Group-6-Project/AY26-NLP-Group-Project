@@ -49,12 +49,13 @@ uv run gw-data describe gw1000 --split dev  # counts per slice
 uv run gw-data build a3cg                   # A3CG test splits as action-classification snapshots
 ```
 
-**RQ2 gold** (`data/eval/rq2promises.pair_gold.14b499a7a5b3.jsonl`, 374 checkable promises): the outcome
-of every dated commitment, achieved / failed / unclear / disappeared (one `not_a_promise`), with who
-labelled it (`human_pair`, the group's double-annotated sheet, 137 rows; `model_pair`, two model
-annotators calibrated on those rows and adjudicated, 237 rows), both annotators' labels and notes, and
-the split: **dev 124 / test 250**, stratified by outcome × source, the 75 promises the judge prompt was
-tuned on pinned to dev. Same rule: tune on dev, open test once. `promises.md` section 8 has the protocol
+**RQ2 gold** (`data/eval/rq2promises.pair_gold.f41388d7eb85.jsonl`, 373 checkable promises): the outcome
+of every dated commitment, achieved / failed / unclear / disappeared, with who labelled it
+(`human_pair`, the group's double-annotated sheet, 137 rows; `model_pair`, two model annotators
+calibrated on those rows and adjudicated, 236 rows), both annotators' labels and notes, and the split:
+**dev 123 / test 250**, stratified by outcome × source, the 75 promises the judge prompt was tuned on
+pinned to dev. The one promise the annotators settled as not a promise is listed in the build report and
+left out. Same rule: tune on dev, open test once. `promises.md` section 8 has the protocol
 and the calibration; `gw-graph promise-gold` rebuilds the file, `gw-graph promise-gold-score
 --gold-split dev` scores a judge output against it.
 
@@ -223,6 +224,25 @@ A classifier of your own reads evidence from the `evidence` mapping (item id →
 budget (k = 3, 800 characters per span) or says so, and returns a `rationale` and the `citations` it
 rests on: a label without sources cannot be shown in the UI or scored for faithfulness.
 `gw_common.classifiers.llm_action.resolve_citations` turns cited tags into `Citation` objects.
+
+### The corpus as tools, and the RQ2 condition
+
+A retriever need not open a store of its own. `gw_common.corpus.load("statements")` returns the corpus
+as a set of calls over the shared chunk store: `search(text, company=, year_from=, year_to=,
+exclude_year=, k=, mode=bm25|dense|hybrid|hybrid+rerank)`, `get(statement_id)`,
+`neighbours(statement_id, before=, after=)` (same page, report order), `page(company, year, page)`,
+`reports(company)`, `companies()`; every result is an `EvidenceSpan`. `load("graph")` adds the claim
+graph's joins: `aspects(statement_id)`, `follow_ups(statement_id)`, `related_targets(company, metric)`.
+The hybrid baseline is one `search` call; an agentic retriever is a plan over the same calls (search,
+read around the hits, open a page, search again, stop) that ends in the same `retrieve`, so the
+evaluation does not care which.
+
+The same `retrieve` serves RQ2. Under `EvidenceCondition.PROMISE_WINDOW` the query carries the company,
+`year_from` and `year_to` (the promise's year + 1 to its deadline + 1), the metric as `aspect`, the
+promise sentence as `target_text` and the full promise record in `query.meta["promise"]` (a plain
+retriever may ignore it). Return at most k statements from inside the window; the shared judge reads
+them (`promises.md`, section 4). List the condition in `supported_conditions()` to take part; a system
+that does not is skipped on RQ2.
 
 ### File exchange
 
