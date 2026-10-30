@@ -79,15 +79,12 @@ Two rounds were filled, on two versions of the system:
 (A round-2 sheet was drawn on judge v2 with the first evidence and withdrawn unfilled when the evidence
 changed.)
 
-A third sheet, for two annotators, is in progress: `promise-check-pair.xlsx`, 150 promises, the 60
-held-out rows (the earlier labels prefilled as Annotator 1, so those rows gain a second, independent
-opinion and a human–human κ on the rows the headline numbers rest on) plus 90 drawn at random from the
-239 promises never checked (whose raw rates estimate that pool directly). Each annotator fills their
-own two columns, outcome and note, on a blind copy (`promise-pair-copy`, merged back with `promise-pair-merge`);
-disagreements are settled in `adjudicate`, the settled label goes to `final`, and a second tab shows
-the guide and the agreement as it forms. Labels on this sheet: achieved / failed / unclear /
-disappeared (section 7). `promise-pair-score` reports agreement between the annotators, the system
-against each and against `final`, and the two pools separately.
+The third sheet, for two annotators, is `promise-check-pair.xlsx`: 150 promises, the 60 held-out rows
+(the earlier labels prefilled as Annotator 1, so those rows gain a second, independent opinion) plus 90
+drawn at random from the 239 promises never checked. The group returned it with 137 rows labelled by
+both annotators and settled in `final` (13 rows left empty); the two agreed on 123 of 137 (0.898,
+κ 0.84). Labels on this sheet: achieved / failed / unclear / disappeared (section 7). Those 137 rows are
+the human part of the gold set (section 8) and the reference the model annotators were calibrated on.
 
 ## 4. Evidence
 
@@ -269,10 +266,64 @@ moved-goalpost cases. On the held-out sheet the merged class is right 18 times i
 
 System counts over the 374 on trajectory evidence: achieved 169, failed 56, unclear 134, disappeared 15.
 
-## 8. Known limits
+## 8. The gold set and its split
 
-- One annotator with an AI-drafted first pass; 4 to 15 rows per stratum, so class-level rates carry wide
-  intervals.
+Every checkable promise carries a settled outcome: `data/eval/rq2promises.pair_gold.14b499a7a5b3.jsonl`
+(374 rows) and `rq2promises.build_report.json`. Two sources, one sheet format, one guide:
+
+- **137 promises labelled by the group** on the pair sheet (section 3): two annotators, blind, an
+  adjudicated `final`; agreement 0.898, κ 0.84.
+- **237 promises labelled by model annotators** run as sub-agents under the sheet's guide, three
+  boundary clarifications drawn from the first calibration round, and 21–24 worked examples from the
+  group's rows. Annotator 1 is the project's default model (Claude Fable), annotator 2 Claude Opus; each
+  reads the same eight cells the humans read and nothing else, blind to the other and to the system.
+  They agreed on 221 of 237 (0.932); the 16 disagreements went to a third pass that read both notes
+  (12 settled for annotator 1, 4 for annotator 2, none to a third label). Annotator 1 chose
+  `not_a_promise` once (P00412, a horizon misread as a deadline); kept.
+- **Calibration first**, on human rows the annotators had not seen as examples, each round a fresh
+  stratified 40:
+
+| round | annotator 1 vs final | annotator 2 vs final | 1 vs 2 | the two humans on the same rows |
+|---|---|---|---|---|
+| 1, sheet guide only | 0.875, κ 0.82 | 0.850, κ 0.78 (same model as 1) | 0.975 | 0.875, κ 0.82 |
+| 2, guide + boundaries | 0.875, κ 0.81 | 0.875, κ 0.81 (same model as 1) | 1.000 | 0.950, κ 0.92 |
+| 2, annotator 2 = Opus | 0.875, κ 0.81 | **0.925, κ 0.88** | 0.925 | 0.950, κ 0.92 |
+
+Two instances of one model agree almost perfectly, which makes the pair worthless as a check, so the
+second annotator was moved to another model family. Where Fable and Opus agree they match the group's
+final 35 times in 37 (0.946). Against the human final the model annotators sit where the humans sit
+against each other (0.875–0.925, humans 0.90 over the 137 rows). What remains lies on two boundaries
+the humans also split on: `unclear` against `disappeared` when the evidence touches the subject but not
+the target, and whether a practice shown running is `achieved`. One known inconsistency: P00136 and
+P00141 (Far East's refrigerant roadmap, FY2021 and FY2022) are `unclear` by the model pair, while the
+group settled the FY2023 sibling P00144 as `disappeared` on near-identical evidence.
+
+Distribution: achieved 206, failed 68, unclear 86, disappeared 13, not a promise 1.
+
+**Split: dev 124 / test 250**, as for RQ1: about a third dev, stratified by outcome × label source, the
+75 promises the judge prompt was tuned on (the round-1 sheet) pinned to dev.
+
+| | dev | test |
+|---|---|---|
+| achieved / failed / unclear / disappeared / not a promise | 61 / 34 / 23 / 6 / 0 | 145 / 34 / 63 / 7 / 1 |
+| labelled by the group / by the model pair | 22 / 102 | 115 / 135 |
+
+Tune on dev; test is opened once, for the report, and has not been. On dev the judge of section 5
+agrees with the gold on 96 of 124 (0.774, κ 0.66): precision / recall achieved 0.94 / 0.84, failed
+0.85 / 0.65, unclear 0.49 / 0.74, disappeared 0.67 / 1.00; it gives a verdict on 6 of the 23
+gold-unclear promises (26 %), leaves 18 of the 101 settled ones unclear (18 %), and 89 % of its
+verdicts are right.
+
+Files: `kb/annotation/rq2-gold/<round>/` holds, per round, the brief, the reference examples, the
+batches as the annotators saw them, their label files (`NN.a1.jsonl`, `NN.a2.jsonl`), `score.json` for
+the calibration rounds and `main/adjudication/` for the third pass. `gw-graph promise-gold` rebuilds the
+snapshot from these files and the group's sheet; `gw-graph promise-gold-score --gold-split dev` scores a
+judge output against it.
+
+## 9. Known limits
+
+- Two human annotators for 137 promises, calibrated model annotators for the other 237; 4 to 15 rows per
+  stratum on the earlier check sheets, so their class-level rates carry wide intervals.
 - Flattened multi-column tables read across columns (next year's target taken for a result → a wrong
   `achieved`); a bare "this target" from another page mis-attributed. Two prompt clarifications did not
   remove these.
@@ -281,7 +332,7 @@ System counts over the 374 on trajectory evidence: achieved 169, failed 56, uncl
 - Extraction lacks scope or baseline left to context; table-only targets are missing from the pool.
 - `unclear` and `disappeared` remain upper bounds on what the reports leave open.
 
-## 9. Reproducing
+## 10. Reproducing
 
 ```bash
 uv run gw-graph targets-export                          # shards for an outside extractor
@@ -293,6 +344,9 @@ uv run gw-graph promise-sheet --judge v2 --evidence trajectory --limit 60 --seed
     --exclude-sheets kb/annotation/spotchecks/promise-check-first-evidence.xlsx \
     --out kb/annotation/spotchecks/promise-check-trajectory.xlsx
 uv run gw-graph promise-score --sheet kb/annotation/spotchecks/promise-check-trajectory.xlsx
+uv run gw-graph promise-gold --sheet kb/annotation/spotchecks/promise-check-pair.xlsx \
+    --held-out kb/annotation/spotchecks/promise-check-first-evidence.key.json   # the gold file and split
+uv run gw-graph promise-gold-score --gold-split dev                             # a judge against the gold
 ```
 
 `--evidence deadline` with `--evidence-from artifacts/graph/dev/promises/outcomes.jsonl` reproduces the

@@ -175,3 +175,26 @@ of the former notes index.
   where the check has a verdict 15 % (3–29), verdicts right 85 % (74–94). The previous judge output is
   kept locally as `outcomes.v2.trajectory.gpt-5.6-luna.jsonl`; the pair sheet's key still carries the
   previous system labels, so `promise-pair-score` is run with `--outcomes` pointing at the new file.
+
+## 2026-10-30 · RQ2 gold set: the group's sheet plus calibrated model annotators; dev/test split
+
+- The group returned the pair sheet with 137 of 150 promises labelled by two annotators and settled:
+  agreement 0.898, κ 0.84 (achieved 70, unclear 32, failed 28, disappeared 7). It replaces the master
+  at `kb/annotation/spotchecks/promise-check-pair.xlsx`; the blind copy is gone.
+- The other 237 checkable promises were labelled by model annotators run as sub-agents under the
+  sheet's guide, blind to each other and to the system, reading exactly the sheet's cells
+  (`promises/gold.py`, rounds under `kb/annotation/rq2-gold/`). Calibration on fresh stratified slices of
+  40 human rows: round 1 (guide only) 0.875 / 0.850 against the human final, the two humans 0.875 on
+  the same rows; round 2 (guide plus three boundary clarifications) 0.875, humans 0.950. Two instances
+  of one model agreed 79 times in 80, so annotator 2 became Claude Opus: 0.925 (κ 0.88) on the round-2
+  slice, pair agreement 0.925, agreed labels right 35 of 37.
+- Main round, Fable + Opus on 237 promises in 16 batches: pair agreement 221 of 237 (0.932); the 16
+  disagreements adjudicated by a third pass (12 to annotator 1, 4 to annotator 2). Gold over the 374:
+  achieved 206, failed 68, unclear 86, disappeared 13, not a promise 1.
+- Split as for RQ1: dev 124 / test 250, stratified by outcome × label source, the 75 round-1 promises
+  pinned to dev; dev holds 22 human-labelled rows, test 115
+  (`data/eval/rq2promises.pair_gold.14b499a7a5b3.jsonl`, `rq2promises.build_report.json`).
+- The judge (v2, trajectory evidence, outcomes of 2026-10-29) against the gold on dev: 0.774, κ 0.66;
+  over-commitment 6 of 23, under-commitment 18 of 101, verdict precision 0.89. Test not opened.
+- Known soft spot: `unclear` against `disappeared` when the evidence touches the subject but not the
+  target; P00136 / P00141 (model pair, unclear) against the group's P00144 (disappeared).

@@ -49,6 +49,15 @@ uv run gw-data describe gw1000 --split dev  # counts per slice
 uv run gw-data build a3cg                   # A3CG test splits as action-classification snapshots
 ```
 
+**RQ2 gold** (`data/eval/rq2promises.pair_gold.14b499a7a5b3.jsonl`, 374 checkable promises): the outcome
+of every dated commitment, achieved / failed / unclear / disappeared (one `not_a_promise`), with who
+labelled it (`human_pair`, the group's double-annotated sheet, 137 rows; `model_pair`, two model
+annotators calibrated on those rows and adjudicated, 237 rows), both annotators' labels and notes, and
+the split: **dev 124 / test 250**, stratified by outcome × source, the 75 promises the judge prompt was
+tuned on pinned to dev. Same rule: tune on dev, open test once. `promises.md` section 8 has the protocol
+and the calibration; `gw-graph promise-gold` rebuilds the file, `gw-graph promise-gold-score
+--gold-split dev` scores a judge output against it.
+
 ## 3. Evidence conditions
 
 One classifier, one prompt (`configs/prompts/action_classifier_cited.md`); systems differ only in the

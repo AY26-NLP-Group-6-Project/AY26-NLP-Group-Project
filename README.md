@@ -25,6 +25,7 @@ are. The reference and the record are under [`docs/`](docs/README.md); the findi
 | data | where it sits | how you get it |
 |---|---|---|
 | frozen evaluation set, 1,000 sentences | `data/eval/gw1000.*.jsonl` | in git; built from `kb/annotation/eval.xlsx` |
+| frozen RQ2 gold, 374 dated commitments with their outcome and split | `data/eval/rq2promises.*.jsonl` | in git; `gw-graph promise-gold` from the group's sheet and `kb/annotation/rq2-gold/` |
 | the knowledge base: every statement of five words or more, 108,376 chunks with vectors and a manifest (`passages`, 18,839 windows of 200 words, is the granularity ablation) | `artifacts/baseline/statements/` | `gw-kb-statements-<hash>.zip` shared inside the group, or `gw-baseline build` from the parsed corpus |
 | parsed corpus and claim graph (`graph-rag` only) | `artifacts/graph/dev/graph.duckdb` | `gw-graph build` from the raw PDFs, or a copy from a teammate |
 | raw reports | `kb/raw/` | never redistributed; `kb/README.md` |
@@ -85,7 +86,8 @@ difference of means, is how systems are compared. Everything about conditions, m
 outputs: [`docs/evaluation.md`](docs/evaluation.md).
 
 The promise pipeline (RQ2) has its own commands under `gw-graph promise-*`:
-[`docs/promises.md`](docs/promises.md).
+[`docs/promises.md`](docs/promises.md). Its gold set has a dev/test split like the sentence set; score a
+judge with `uv run gw-graph promise-gold-score --gold-split dev`, and open test once.
 
 ## 4. Plugging in your own system
 

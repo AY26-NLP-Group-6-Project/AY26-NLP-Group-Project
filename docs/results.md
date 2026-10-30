@@ -114,6 +114,17 @@ outside that index). With both rankings over every statement the human-verified 
 
 Counts over the 374: achieved 169, failed 56, unclear 134, disappeared 15.
 
+### Against the gold set
+
+Every checkable promise now has a settled outcome (`data/eval/rq2promises.pair_gold.14b499a7a5b3.jsonl`:
+137 double-annotated by the group, 237 by two model annotators of different families calibrated on
+those rows and adjudicated; `promises.md` section 8), split dev 124 / test 250. Gold over the 374:
+achieved 206, failed 68, unclear 86, disappeared 13, one not a promise. On dev the judge agrees with
+the gold on 96 of 124 (0.774, κ 0.66); it gives a verdict on 6 of the 23 gold-unclear promises (26 %),
+leaves 18 of the 101 settled ones unclear (18 %), and 89 % of its verdicts are right. Precision /
+recall per class: achieved 0.94 / 0.84, failed 0.85 / 0.65, unclear 0.49 / 0.74, disappeared
+0.67 / 1.00. The test split has not been opened.
+
 ### Case studies
 
 `case-studies.md`: ten commitments from eight companies as page-cited timelines, one per pattern:
@@ -132,15 +143,17 @@ admitted; one issuer both ways; partial delivery not reconciled; never mentioned
    system's verdicts are right 85 % of the time, and it over-commits on 14 % (2–33) of the commitments
    a person cannot settle.
 4. About half of dated commitments in these reports can be verified as met from the issuer's own later
-   reports; one in eight failed, by missing the deadline or moving it; a third cannot be judged from the text.
+   reports (55 % in the gold set of 374); about one in six failed, by missing the deadline or moving it;
+   a quarter cannot be judged from the text, and a few vanish from the reports.
 5. Checking outcomes needs every statement in the index, table rows and result lines included: an index
    of sentence-shaped statements alone hid most of the sentences that report results, and the
    human-verified unclear share fell from 49 % to 31 % once every statement was ranked.
 
 ## 4. Limits
 
-- One annotator with an AI-drafted first pass for the promise checks so far (a two-annotator sheet of
-  150 promises is being filled); six annotators but one per row for 950 of the 1,000 classification items.
+- The promise gold rests on two human annotators for 137 promises and on calibrated model annotators
+  (two model families, adjudicated) for the other 237; six annotators but one per row for 950 of the
+  1,000 classification items.
 - The judge is noisy: 16 % of promises do not get the same outcome in three runs; the majority is used.
   The over-commitment rate rests on 17 human-unclear rows, hence its interval.
 - Flattened multi-column tables can be read across columns and produce a wrong `achieved`; a bare
