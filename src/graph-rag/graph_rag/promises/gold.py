@@ -26,7 +26,7 @@ from pathlib import Path
 from graph_rag.config import GraphConfig
 from graph_rag.promises import sheet as single
 from graph_rag.promises.extract import out_dir
-from graph_rag.promises.outcome import REPORTED
+from graph_rag.promises.outcome import REPORTED, reported
 from graph_rag.promises.pair_sheet import LABELS, pair_guide
 
 DEV_SHARE = 0.331  # gw1000: 331 of 1,000
@@ -541,6 +541,41 @@ def build(
     )
     (eval_dir / f"{DATASET}.build_report.json").write_text(json.dumps(report, indent=2), encoding="utf-8")
     return report
+
+
+def score_system(snapshot: Path, outcomes: Path, split: str = "dev") -> dict:
+    """The judge's reported outcome against the gold on one split: dev while anything is tuned, test once.
+    `not_a_promise` rows are left out (the judge has no such label)."""
+    gold = [json.loads(line) for line in snapshot.read_text(encoding="utf-8").splitlines() if line]
+    judged = {o["promise_id"]: reported(o["outcome"]) for o in single._load(outcomes)}
+    rows = [g for g in gold if g["split"] == split and g["promise_id"] in judged]
+    scored = [g for g in rows if g["outcome"] in REPORTED]
+    human = [g["outcome"] for g in scored]
+    system = [judged[g["promise_id"]] for g in scored]
+    report = {
+        "split": split,
+        "snapshot": snapshot.name,
+        "outcomes": outcomes.name,
+        "n": len(scored),
+        "not_a_promise_left_out": len(rows) - len(scored),
+        **single.agreement(human, system, REPORTED),
+    }
+    unclear = [(h, s) for h, s in zip(human, system, strict=True) if h == "unclear"]
+    verdicts = [(h, s) for h, s in zip(human, system, strict=True) if h != "unclear"]
+    said = [(h, s) for h, s in zip(human, system, strict=True) if s != "unclear"]
+    report["over_commitment"] = _share(sum(s != "unclear" for _, s in unclear), len(unclear))
+    report["under_commitment"] = _share(sum(s == "unclear" for _, s in verdicts), len(verdicts))
+    report["verdict_precision"] = _share(sum(h == s for h, s in said), len(said))
+    report["by_source"] = {}
+    for src in SOURCES:
+        part = [(g["outcome"], judged[g["promise_id"]]) for g in scored if g["label_source"] == src]
+        if part:
+            report["by_source"][src] = single.agreement([h for h, _ in part], [s for _, s in part], REPORTED)
+    return report
+
+
+def _share(k: int, n: int) -> dict:
+    return {"k": k, "n": n, "share": round(k / n, 3) if n else None}
 
 
 __all__ = [

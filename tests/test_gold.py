@@ -220,3 +220,15 @@ def test_assemble_split_and_snapshot(world):
     first = json.loads(path.read_text(encoding="utf-8").splitlines()[0])
     assert {"promise_id", "outcome", "split", "label_source", "company", "deadline"} <= set(first)
     assert (tmp_path / "eval" / f"{G.DATASET}.build_report.json").exists()
+
+    # the judge against the gold on one split; a revised proposal counts as failed
+    judged = tmp_path / "judged.jsonl"
+    _write(judged, [_outcome(i, "revised" if i == "P010" else "achieved") for i in IDS])
+    score = G.score_system(path, judged, split="dev")
+    dev = [i for i in items if i["split"] == "dev"]
+    assert score["n"] == len(dev) and score["split"] == "dev"
+    assert score["verdict_precision"]["n"] == len(dev)  # the judge never says unclear here
+    if any(i["promise_id"] == "P010" for i in dev):
+        assert score["accuracy"] == pytest.approx(
+            sum(i["outcome"] == "achieved" or i["promise_id"] == "P010" for i in dev) / len(dev)
+        )

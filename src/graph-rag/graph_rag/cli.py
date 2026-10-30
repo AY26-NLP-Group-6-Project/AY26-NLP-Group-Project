@@ -99,6 +99,14 @@ def _promises(args, cfg: GraphConfig) -> int:
             Path(args.held_out) if args.held_out else None, Path(args.out or "data/eval"))
         print(json.dumps(result, indent=2))
         return 0
+    if args.stage == "promise-gold-score":
+        snapshots = sorted(Path(args.out or "data/eval").glob(f"{gold.DATASET}.*.jsonl"))
+        if not snapshots:
+            raise SystemExit("no rq2promises snapshot under data/eval; run promise-gold first")
+        outcomes = Path(args.outcomes) if args.outcomes else promise_outcome.outcomes_path(cfg, args.judge,
+                                                                                            args.evidence)
+        print(json.dumps(gold.score_system(snapshots[-1], outcomes, split=args.gold_split), indent=2))
+        return 0
     if args.stage == "targets":
         result = target_extract.extract(cfg, limit=args.limit)
     elif args.stage == "targets-export":
@@ -148,7 +156,7 @@ def main(argv: list[str] | None = None) -> int:
                  "export-a3cg", "targets", "targets-export", "targets-ingest", "promises",
                  "promise-evidence", "promise-outcomes", "promise-sheet", "promise-score",
                  "promise-pair-sheet", "promise-pair-copy", "promise-pair-merge", "promise-pair-score",
-                 "promise-gold"],
+                 "promise-gold", "promise-gold-score"],
     )
     ap.add_argument("--config", default="configs/graph.dev.yaml")
     ap.add_argument("--build-id")
@@ -201,6 +209,8 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--rounds-dir", default="kb/annotation/rq2-gold",
                     help="promise-gold: where the model annotators' rounds live")
     ap.add_argument("--round", default="main", help="promise-gold: the round whose labels fill the gold file")
+    ap.add_argument("--gold-split", default="dev", choices=["dev", "test"],
+                    help="promise-gold-score: which split to score the judge on (test is opened once)")
     args = ap.parse_args(argv)
 
     cfg = GraphConfig.load(args.config, build_id=args.build_id)
