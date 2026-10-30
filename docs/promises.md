@@ -159,6 +159,15 @@ the hybrid baseline with its ordinary ranking inside the window; an agentic syst
 plans over the corpus tools (`gw_common.corpus`). The cap of 20 statements is a ceiling, not a target:
 the finder's own budgets stay under it (11.6 on average), the baseline fills it.
 
+First result (2026-10-30, dev split of the gold, 123 promises, judge v2 × 3 on each system's evidence):
+the finder's evidence and the hybrid baseline's both put the judge at 96 of 123 right (0.780, κ 0.67);
+the two differ on 13 promises and each is right alone on 5 of them (McNemar p = 1.00). On the baseline's
+evidence the judge gives a verdict on 4 of the 22 gold-unclear promises (18 %) against 5 for the finder,
+leaves 20 of 101 settled ones unclear (20 %) against 18, and 92 % of its verdicts are right against
+90 %. Over all 374 the baseline-evidence judge says achieved 172, failed 62, unclear 125, disappeared 15
+(61 unstable across the three runs; USD 1.9). As on RQ1, the structured retrieval and plain hybrid
+retrieval are not distinguishable on this split; what the finder adds is the shorter, ordered reading.
+
 ## 5. The judge
 
 ### Version 1, and its failure

@@ -210,4 +210,7 @@ of the former notes index.
   (`statements` over the chunk store, `graph` adding aspects, follow-ups and related targets), so an
   agentic retriever plans over the same calls the fixed baseline makes.
 - First RQ2 baseline arm: `promise-evidence --system baseline-rag` (hybrid, rrf+rerank, k = 20 inside the
-  window, 2.0 report years per promise) judged with v2 × 3; scored on dev below once finished.
+  window, 2.0 report years per promise) judged with v2 × 3 (USD 1.9, 61 unstable): over the 374 achieved
+  172, failed 62, unclear 125, disappeared 15. On dev against the gold 96 of 123 right (0.780, κ 0.67),
+  the same count as the trajectory finder's evidence; the two differ on 13 promises, 5 right each way,
+  McNemar p = 1.00; over-commitment 4 of 22, under-commitment 20 of 101, verdict precision 0.92.

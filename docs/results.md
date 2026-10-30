@@ -125,6 +125,12 @@ promises (23 %), leaves 18 of the 101 settled ones unclear (18 %), and 90 % of i
 Precision / recall per class: achieved 0.94 / 0.84, failed 0.88 / 0.65, unclear 0.49 / 0.77,
 disappeared 0.67 / 1.00. The test split has not been opened.
 
+The same judge on the hybrid baseline's evidence (`promise_window`: the top 20 statements of the
+window by BM25 + dense + rerank, no per-year budget, no neighbours, no linked targets) is also right on
+96 of 123 (0.780, κ 0.67); the two retrievers differ on 13 dev promises and each is right alone on 5
+(McNemar p = 1.00). On RQ2 as on RQ1, the graph line's structured retrieval and plain hybrid retrieval
+are not distinguishable on dev; the finder reads 11.6 statements where the baseline reads 20.
+
 ### Case studies
 
 `case-studies.md`: ten commitments from eight companies as page-cited timelines, one per pattern:
