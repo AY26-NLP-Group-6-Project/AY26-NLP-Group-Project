@@ -342,9 +342,11 @@ def assemble(
     adjudicated: dict[str, dict],
     pilot: set[str],
     seed: int = 20261030,
-) -> list[dict]:
+) -> tuple[list[dict], list[dict]]:
     """One item per promise: the human final where the group labelled it, else the model pair's agreed
-    label or the adjudicated one. Then the split."""
+    label or the adjudicated one. Rows settled as `not_a_promise` are an extraction error, not an
+    outcome, and the judge has no such label: they are returned apart and stay out of the gold file and
+    the split. Then the split."""
     items = []
     for r in human:
         items.append(
@@ -386,8 +388,10 @@ def assemble(
                 "agreed": a1["outcome"] == a2["outcome"],
             }
         )
+    excluded = sorted((i for i in items if i["outcome"] == "not_a_promise"), key=lambda i: i["promise_id"])
+    items = [i for i in items if i["outcome"] != "not_a_promise"]
     assign_split(items, pilot, seed)
-    return sorted(items, key=lambda i: i["promise_id"])
+    return sorted(items, key=lambda i: i["promise_id"]), excluded
 
 
 def assign_split(items: list[dict], pilot: set[str], seed: int, dev_share: float = DEV_SHARE) -> None:
@@ -526,8 +530,13 @@ def build(
     pilot = set()
     if pilot_key and pilot_key.exists():
         pilot = {k for k in json.loads(pilot_key.read_text(encoding="utf-8")) if not k.startswith("_")}
-    items = assemble(human, model, adjudicated, pilot)
+    items, excluded = assemble(human, model, adjudicated, pilot)
     report = write_snapshot(items, promises_path, eval_dir)
+    report["not_a_promise_excluded"] = [
+        {"promise_id": i["promise_id"], "label_source": i["label_source"],
+         "note": i.get("adjudicate") or i["a1_note"]}
+        for i in excluded
+    ]
     report["calibration"] = {}
     for score in sorted(rounds_dir.glob("calibration*/score.json")):
         s = json.loads(score.read_text(encoding="utf-8"))

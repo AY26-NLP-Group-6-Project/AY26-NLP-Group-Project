@@ -20,7 +20,8 @@ class GraphRagSystem(BaseSystem):
 
     def supported_conditions(self) -> list[EvidenceCondition]:
         return [EvidenceCondition.SENTENCE_ONLY, EvidenceCondition.LOCAL,
-                EvidenceCondition.CROSS_YEAR_GRAPH, EvidenceCondition.CROSS_YEAR_FUSED]
+                EvidenceCondition.CROSS_YEAR_GRAPH, EvidenceCondition.CROSS_YEAR_FUSED,
+                EvidenceCondition.PROMISE_WINDOW]
 
     def retriever(self) -> Retriever | None:
         if self._retriever is None:

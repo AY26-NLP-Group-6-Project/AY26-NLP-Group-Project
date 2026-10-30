@@ -217,6 +217,8 @@ def run(cfg: GraphConfig, limit: int | None = None, workers: int = 8, client: LL
         evidence_from = evidence_store.evidence_path(cfg, evidence)
         if not evidence_from.exists():             # before the cache is switched off for the repeats
             evidence_store.build(cfg, evidence)
+    elif Path(evidence_from).stem.startswith("evidence."):
+        evidence = Path(evidence_from).stem[len("evidence."):]     # a system's evidence file names the output
     if repeats > 1 and client is None:
         os.environ["GW_LLM_CACHE"] = "0"
     client = client or LLMClient()

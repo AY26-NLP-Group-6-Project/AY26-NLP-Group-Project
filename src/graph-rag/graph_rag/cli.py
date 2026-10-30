@@ -116,7 +116,10 @@ def _promises(args, cfg: GraphConfig) -> int:
     elif args.stage == "promises":
         result = promise_build.build(cfg, source=args.source)
     elif args.stage == "promise-evidence":
-        result = promise_evidence.build(cfg, mode=args.evidence, limit=args.limit)
+        if args.system:
+            result = promise_evidence.build_from_system(cfg, args.system, k=args.window_k, limit=args.limit)
+        else:
+            result = promise_evidence.build(cfg, mode=args.evidence, limit=args.limit)
     elif args.stage == "promise-outcomes":
         result = promise_outcome.run(cfg, limit=args.limit, judge=args.judge, repeats=args.repeats,
                                      evidence=args.evidence,
@@ -211,6 +214,10 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--round", default="main", help="promise-gold: the round whose labels fill the gold file")
     ap.add_argument("--gold-split", default="dev", choices=["dev", "test"],
                     help="promise-gold-score: which split to score the judge on (test is opened once)")
+    ap.add_argument("--system", help="promise-evidence: take the evidence from this registered system's "
+                                     "retriever under the promise_window condition instead of the finder")
+    ap.add_argument("--window-k", type=int, default=20,
+                    help="promise-evidence --system: statements per promise asked of the retriever")
     args = ap.parse_args(argv)
 
     cfg = GraphConfig.load(args.config, build_id=args.build_id)

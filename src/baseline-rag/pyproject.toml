@@ -11,6 +11,9 @@ gw-baseline = "baseline_rag.cli:main"
 [project.entry-points."gw.systems"]
 baseline-rag = "baseline_rag:build_system"
 
+[project.entry-points."gw.corpora"]
+statements = "baseline_rag.corpus:ChunkCorpus"
+
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"

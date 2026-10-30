@@ -203,20 +203,22 @@ def test_assemble_split_and_snapshot(world):
     for i in IDS[6:]:
         model["a1"][i] = {"outcome": "achieved", "note": "E1"}
         model["a2"][i] = {"outcome": "achieved" if i != "P010" else "failed", "note": "E1"}
+    model["a1"]["P012"] = model["a2"]["P012"] = {"outcome": "not_a_promise", "note": "a result, not a target"}
     with pytest.raises(ValueError):
         G.assemble(human, model, {}, pilot=set())
-    items = G.assemble(
+    items, excluded = G.assemble(
         human, model, {"P010": {"outcome": "failed", "note": "deadline passed"}}, pilot={"P001", "P007"}
     )
-    assert len(items) == 12
+    assert [i["promise_id"] for i in excluded] == ["P012"]  # not an outcome: out of the gold and the split
+    assert len(items) == 11 and all(i["outcome"] != "not_a_promise" for i in items)
     by_id = {i["promise_id"]: i for i in items}
     assert by_id["P010"]["outcome"] == "failed" and by_id["P010"]["adjudicate"] == "deadline passed"
     assert by_id["P001"]["split"] == "dev" and by_id["P007"]["split"] == "dev"  # pilot pinned
-    assert sum(i["split"] == "dev" for i in items) == round(G.DEV_SHARE * 12)
+    assert sum(i["split"] == "dev" for i in items) == round(G.DEV_SHARE * 11)
     assert {i["label_source"] for i in items} == {"human_pair", "model_pair"}
     report = G.write_snapshot(items, tmp_path / "promises.jsonl", tmp_path / "eval")
     path = tmp_path / "eval" / report["snapshot"]
-    assert path.exists() and report["items"] == 12 and report["splits"]["dev"] == round(G.DEV_SHARE * 12)
+    assert path.exists() and report["items"] == 11 and report["splits"]["dev"] == round(G.DEV_SHARE * 11)
     first = json.loads(path.read_text(encoding="utf-8").splitlines()[0])
     assert {"promise_id", "outcome", "split", "label_source", "company", "deadline"} <= set(first)
     assert (tmp_path / "eval" / f"{G.DATASET}.build_report.json").exists()

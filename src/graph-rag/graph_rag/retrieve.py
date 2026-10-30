@@ -15,6 +15,7 @@ with the target sentence; BM25 scores rank the fallback.
 
 from __future__ import annotations
 
+import json
 import math
 import re
 from collections import Counter
@@ -141,8 +142,36 @@ class GraphRetriever:
                 break
         return out
 
+    # --------------------------------------------------------------- promise window (RQ2)
+    def _promise_finder(self):
+        """The trajectory finder, built on first use: it needs the promise table (for linked targets) and
+        an embedding client."""
+        if getattr(self, "_finder", None) is None:
+            from gw_common.llm import LLMClient
+
+            from graph_rag.promises.evidence import TrajectoryFinder
+            from graph_rag.promises.extract import out_dir
+
+            path = out_dir(self.cfg) / "promises.jsonl"
+            promises = {}
+            if path.exists():
+                for line in path.read_text(encoding="utf-8").splitlines():
+                    if line:
+                        p = json.loads(line)
+                        promises[p["promise_id"]] = p
+            self._finder = TrajectoryFinder(self.cfg, LLMClient(), promises)
+        return self._finder
+
+    def _promise_window(self, query: Query, k: int) -> list[EvidenceSpan]:
+        from graph_rag.promises.evidence import promise_of, spans_of
+
+        promise = promise_of(query)
+        return spans_of(self._promise_finder().find(promise), promise["company"])[:k]
+
     # --------------------------------------------------------------- protocol
     def retrieve(self, query: Query, *, k: int = 3) -> list[EvidenceSpan]:
+        if query.condition is EvidenceCondition.PROMISE_WINDOW:
+            return self._promise_window(query, k)
         anchor = query.anchor_year
         hits = self._graph_hits(query, anchor, k)
         if query.condition is EvidenceCondition.CROSS_YEAR_FUSED and len(hits) < k:

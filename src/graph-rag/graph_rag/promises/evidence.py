@@ -29,6 +29,7 @@ Statements come back in report order, so the judge and the annotator read a time
 from __future__ import annotations
 
 import json
+import re
 from collections import Counter
 from functools import lru_cache
 from pathlib import Path
@@ -38,6 +39,7 @@ from baseline_rag import chunks as chunk_store
 from baseline_rag.index import BM25, rrf
 from gw_common.evidence import normalise
 from gw_common.llm import LLMClient
+from gw_common.schemas import EvidenceCondition, EvidenceSpan, Query
 
 from graph_rag.config import GraphConfig
 from graph_rag.promises.extract import out_dir
@@ -245,6 +247,10 @@ def build(cfg: GraphConfig, mode: str = "trajectory", client: LLMClient | None =
     found = {}
     for p in sorted(todo, key=lambda p: (p["company"], p["origin"]["year"])):   # keeps the year cache warm
         found[p["promise_id"]] = finder.find(p)
+    return _write(cfg, mode, todo, found, {"embedded_on_demand": getattr(finder, "embedded", 0)})
+
+
+def _write(cfg: GraphConfig, mode: str, todo: list[dict], found: dict[str, list[dict]], extra: dict) -> dict:
     out = evidence_path(cfg, mode)
     with out.open("w", encoding="utf-8") as f:
         for p in todo:
@@ -261,8 +267,86 @@ def build(cfg: GraphConfig, mode: str = "trajectory", client: LLMClient | None =
         "by_source": dict(Counter(e.get("via", "retrieved") for ev in found.values() for e in ev)),
         "report_years_per_promise": (sum(len({e["year"] for e in found[p["promise_id"]]}) for p in todo)
                                      / max(1, len(todo))),
-        "embedded_on_demand": getattr(finder, "embedded", 0),
+        **extra,
         "out": str(out),
     }
-    (base / f"evidence_stats.{mode}.json").write_text(json.dumps(stats, indent=2), encoding="utf-8")
+    (out_dir(cfg) / f"evidence_stats.{mode}.json").write_text(json.dumps(stats, indent=2), encoding="utf-8")
     return stats
+
+
+# --------------------------------------------------------------------------- any system's retriever
+K_WINDOW = 20           # statements per promise asked of a retriever; the finder's own budgets stay under it
+_IDX = re.compile(r"p(\d+)s(\d+)$")
+
+
+def promise_query(promise: dict) -> Query:
+    """A promise as a `promise_window` query: the window on the query, the record under `meta`."""
+    o = promise["origin"]
+    return Query(text=query_of(promise), company=promise["company"], aspect=promise["metric"],
+                 year_from=o["year"] + 1, year_to=promise["target_year"] + 1, anchor_year=o["year"],
+                 target_text=o.get("text") or o.get("target_text"),
+                 condition=EvidenceCondition.PROMISE_WINDOW, meta={"promise": promise})
+
+
+def promise_of(query: Query) -> dict:
+    """The promise a `promise_window` query carries, or one rebuilt from the query's fields."""
+    carried = query.meta.get("promise") if query.meta else None
+    if isinstance(carried, dict):
+        return carried
+    origin_year = query.anchor_year if query.anchor_year is not None else (query.year_from or 1) - 1
+    return {"promise_id": None, "company": query.company, "metric": query.aspect or query.text,
+            "target_year": (query.year_to or 0) - 1, "related": [],
+            "origin": {"year": origin_year, "target_text": query.target_text or query.text}}
+
+
+def spans_of(evidence: list[dict], company: str) -> list[EvidenceSpan]:
+    """The finder's rows as evidence spans; `why` keeps how each was reached."""
+    return [EvidenceSpan(statement_id=e["stmt_id"], text=e["text"], company=company, year=e["year"],
+                         page=e.get("page"), file=e.get("file"), score=0.0,
+                         why=f"trajectory:{e.get('via', 'retrieved')}") for e in evidence]
+
+
+def _position(stmt_id: str | None) -> int:
+    m = _IDX.search(stmt_id or "")
+    return int(m.group(2)) if m else -1
+
+
+def evidence_of(spans: list[EvidenceSpan]) -> list[dict]:
+    """Spans back into the rows the judge and the sheets read: report order, E-tags, and `follows` where
+    one statement comes right after the previous one on the same page."""
+    rows = sorted(({"stmt_id": s.statement_id, "year": s.year, "page": s.page, "file": s.file,
+                    "text": s.text, "via": s.why} for s in spans),
+                  key=lambda r: (r["year"], r["file"] or "", r["page"] or 0, _position(r["stmt_id"])))
+    out = [{"ref": f"E{n}", **r} for n, r in enumerate(rows, 1)]
+    for before, after in zip(out, out[1:], strict=False):
+        if (before["year"], before["file"], before["page"]) == (after["year"], after["file"], after["page"]) \
+                and _position(after["stmt_id"]) == _position(before["stmt_id"]) + 1:
+            after["follows"] = before["ref"]
+    return out
+
+
+def build_from_system(cfg: GraphConfig, system, k: int = K_WINDOW, limit: int | None = None) -> dict:
+    """Evidence for every checkable promise from a registered system's retriever under `promise_window`,
+    written as `evidence.<system>.jsonl`, so the shared judge can be run on it like on the finder's."""
+    if isinstance(system, str):
+        from gw_common.registry import load as load_system
+
+        system = load_system(system)
+    if EvidenceCondition.PROMISE_WINDOW not in system.supported_conditions():
+        raise ValueError(f"{system.name} does not support the promise_window condition")
+    retriever = system.retriever()
+    if retriever is None:
+        raise ValueError(f"{system.name} has no retriever")
+    base = out_dir(cfg)
+    lines = (base / "promises.jsonl").read_text(encoding="utf-8").splitlines()
+    promises = [json.loads(line) for line in lines if line]
+    todo = [p for p in promises if p["checkable"]]
+    if limit:
+        todo = todo[:limit]
+    found = {}
+    for p in sorted(todo, key=lambda p: (p["company"], p["origin"]["year"])):
+        found[p["promise_id"]] = evidence_of(retriever.retrieve(promise_query(p), k=k))
+    extra = {"system": system.name, "k": k}
+    if hasattr(retriever, "describe"):
+        extra["retriever"] = retriever.describe()
+    return _write(cfg, system.name, todo, found, extra)
