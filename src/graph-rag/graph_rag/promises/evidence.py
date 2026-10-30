@@ -29,7 +29,6 @@ Statements come back in report order, so the judge and the annotator read a time
 from __future__ import annotations
 
 import json
-import re
 from collections import Counter
 from functools import lru_cache
 from pathlib import Path
@@ -37,7 +36,9 @@ from pathlib import Path
 import numpy as np
 from baseline_rag import chunks as chunk_store
 from baseline_rag.index import BM25, rrf
+from gw_common.eval.rq2 import K_WINDOW, evidence_of, promise_query
 from gw_common.evidence import normalise
+from gw_common.judges.promise import where
 from gw_common.llm import LLMClient
 from gw_common.schemas import EvidenceCondition, EvidenceSpan, Query
 
@@ -46,6 +47,9 @@ from graph_rag.promises.extract import out_dir
 from graph_rag.store.duckdb_store import DuckDBGraphStore
 
 MODES = ("deadline", "trajectory")
+__all__ = ["K_WINDOW", "MODES", "EvidenceFinder", "TrajectoryFinder", "build", "build_from_system",
+           "evidence_of", "evidence_path", "load", "promise_of", "promise_query", "query_of", "spans_of",
+           "where"]
 EVIDENCE_K = 6
 CANDIDATES = 40
 MIN_WORDS = 5
@@ -221,12 +225,6 @@ class TrajectoryFinder(EvidenceFinder):
         return evidence
 
 
-def where(e: dict) -> str:
-    """'2024 report, p.9' and, when the statement comes right after the previous one shown, that too."""
-    follows = f", directly follows {e['follows']}" if e.get("follows") else ""
-    return f"{e['year']} report, p.{e['page']}{follows}"
-
-
 def load(path: Path) -> dict[str, list[dict]]:
     """promise_id -> evidence, from an evidence file or from any outcomes file (which embeds it)."""
     rows = (json.loads(line) for line in Path(path).read_text(encoding="utf-8").splitlines() if line)
@@ -275,19 +273,6 @@ def _write(cfg: GraphConfig, mode: str, todo: list[dict], found: dict[str, list[
 
 
 # --------------------------------------------------------------------------- any system's retriever
-K_WINDOW = 20           # statements per promise asked of a retriever; the finder's own budgets stay under it
-_IDX = re.compile(r"p(\d+)s(\d+)$")
-
-
-def promise_query(promise: dict) -> Query:
-    """A promise as a `promise_window` query: the window on the query, the record under `meta`."""
-    o = promise["origin"]
-    return Query(text=query_of(promise), company=promise["company"], aspect=promise["metric"],
-                 year_from=o["year"] + 1, year_to=promise["target_year"] + 1, anchor_year=o["year"],
-                 target_text=o.get("text") or o.get("target_text"),
-                 condition=EvidenceCondition.PROMISE_WINDOW, meta={"promise": promise})
-
-
 def promise_of(query: Query) -> dict:
     """The promise a `promise_window` query carries, or one rebuilt from the query's fields."""
     carried = query.meta.get("promise") if query.meta else None
@@ -304,25 +289,6 @@ def spans_of(evidence: list[dict], company: str) -> list[EvidenceSpan]:
     return [EvidenceSpan(statement_id=e["stmt_id"], text=e["text"], company=company, year=e["year"],
                          page=e.get("page"), file=e.get("file"), score=0.0,
                          why=f"trajectory:{e.get('via', 'retrieved')}") for e in evidence]
-
-
-def _position(stmt_id: str | None) -> int:
-    m = _IDX.search(stmt_id or "")
-    return int(m.group(2)) if m else -1
-
-
-def evidence_of(spans: list[EvidenceSpan]) -> list[dict]:
-    """Spans back into the rows the judge and the sheets read: report order, E-tags, and `follows` where
-    one statement comes right after the previous one on the same page."""
-    rows = sorted(({"stmt_id": s.statement_id, "year": s.year, "page": s.page, "file": s.file,
-                    "text": s.text, "via": s.why} for s in spans),
-                  key=lambda r: (r["year"], r["file"] or "", r["page"] or 0, _position(r["stmt_id"])))
-    out = [{"ref": f"E{n}", **r} for n, r in enumerate(rows, 1)]
-    for before, after in zip(out, out[1:], strict=False):
-        if (before["year"], before["file"], before["page"]) == (after["year"], after["file"], after["page"]) \
-                and _position(after["stmt_id"]) == _position(before["stmt_id"]) + 1:
-            after["follows"] = before["ref"]
-    return out
 
 
 def build_from_system(cfg: GraphConfig, system, k: int = K_WINDOW, limit: int | None = None) -> dict:

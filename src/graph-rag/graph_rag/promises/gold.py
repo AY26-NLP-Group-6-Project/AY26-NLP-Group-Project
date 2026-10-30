@@ -436,6 +436,7 @@ def write_snapshot(items: list[dict], promises_path: Path, eval_dir: Path, sourc
         rows.append(
             {
                 **it,
+                "promise": p,
                 "company": p["company"],
                 "metric": p["metric"],
                 "deadline": p["target_year"],

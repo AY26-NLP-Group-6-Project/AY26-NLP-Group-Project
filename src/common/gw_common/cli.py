@@ -15,7 +15,7 @@ from gw_common import datasets, registry
 from gw_common.eval import retrieval as retrieval_eval
 from gw_common.eval.compare import compare, publish
 from gw_common.eval.exchange import export_queries
-from gw_common.eval.runner import REPO_ROOT, run_task
+from gw_common.eval.runner import EVIDENCE_K, REPO_ROOT, run_task
 from gw_common.eval.select import SLICERS, describe, parse_slices, select
 from gw_common.schemas import EvidenceCondition
 
@@ -25,7 +25,9 @@ RESULTS_DIR = REPO_ROOT / "results"
 def eval_main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser("gw-eval", description="Run a registered system against a frozen dataset")
     ap.add_argument("--system")
-    ap.add_argument("--task", default="rq1", choices=["rq1", "pairdet", "retrieval", "trajectory"])
+    ap.add_argument("--task", default="rq1", choices=["rq1", "rq2", "pairdet", "retrieval", "trajectory"],
+                    help="rq1: action classification under evidence conditions; rq2: promise outcomes "
+                         "from the system's promise_window evidence, read by the shared judge")
     ap.add_argument("--labels", default="human_majority", help="label source, e.g. human_majority")
     ap.add_argument("--dataset", default="gw1000")
     ap.add_argument("--conditions", help="comma-separated; default = whatever the system supports")
@@ -38,7 +40,7 @@ def eval_main(argv: list[str] | None = None) -> int:
     ap.add_argument("--repeats", type=int, default=3,
                     help="repeat each condition; mean ± sd and a majority vote are reported")
     ap.add_argument("--baseline", default="sentence_only", help="condition that deltas are measured against")
-    ap.add_argument("--k", type=int, default=3, help="evidence spans per item")
+    ap.add_argument("--k", type=int, help="evidence spans per item (default 3 for rq1, 20 for rq2)")
     ap.add_argument("--evidence", type=Path, help="score evidence produced outside this package")
     ap.add_argument("--predictions", type=Path, help="score labels produced outside this package")
     ap.add_argument("--export-queries", type=Path, metavar="OUT",
@@ -66,6 +68,8 @@ def eval_main(argv: list[str] | None = None) -> int:
     ap.add_argument("--name", help="with --publish: folder under results/, as <group>/<what-it-is>, "
                                    "e.g. baseline/statement-hybrid")
     args = ap.parse_args(argv)
+    if args.k is None:
+        args.k = 20 if args.task == "rq2" else EVIDENCE_K
 
     if args.list:
         for name, target in sorted(registry.available().items()):
@@ -98,6 +102,14 @@ def eval_main(argv: list[str] | None = None) -> int:
         ap.error("--system is required (or use --list / --compare / --export-queries)")
     if args.task == "retrieval":
         return _retrieval(ap, args)
+    if args.task == "rq2":
+        from gw_common.eval import rq2
+
+        run_dir = rq2.run_rq2(args.system, split=args.split, repeats=args.repeats, k=args.k,
+                              limit=args.limit, sample=args.sample)
+        print((run_dir / "report.md").read_text(encoding="utf-8"))
+        print(f"run dir: {run_dir}")
+        return 0
     run_dir = run_task(
         args.system,
         task=args.task,
