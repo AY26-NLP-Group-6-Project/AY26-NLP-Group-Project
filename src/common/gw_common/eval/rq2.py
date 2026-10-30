@@ -392,8 +392,9 @@ def report(manifest: RunManifest, block: dict) -> str:
         f"`{cfg.get('split')}` "
         f"· repeats: {manifest.repeats}",
         f"- judge: `{cfg.get('judge', {}).get('judge')}` · prompt `{cfg.get('judge', {}).get('prompt')}` "
-        f"@ `{cfg.get('judge', {}).get('prompt_sha')}` · model: `{manifest.llm.get('model', '?')}` · "
-        f"effort: `{manifest.llm.get('effort', manifest.llm.get('reasoning_effort', '?'))}`",
+        f"@ `{cfg.get('judge', {}).get('prompt_sha')}` · model: "
+        f"`{manifest.llm.get('chat_model') or manifest.llm.get('model', '?')}` · "
+        f"effort: `{manifest.llm.get('reasoning_effort', manifest.llm.get('effort', '?'))}`",
         f"- retriever: `{json.dumps(cfg.get('retriever') or {})}`",
         f"- git: `{manifest.git_sha[:8]}`{' (dirty)' if manifest.git_dirty else ''} · wall: "
         f"{manifest.wall_seconds:.1f}s",

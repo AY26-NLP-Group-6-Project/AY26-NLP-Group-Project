@@ -19,16 +19,21 @@ from gw_common.eval import metrics as M
 from gw_common.schemas import Label
 
 
-def _votes(run_dir: Path, labels=Label) -> dict[str, dict[str, str]]:
+def _votes(run_dir: Path, labels=Label, tie: str | None = None) -> dict[str, dict[str, str]]:
     """Per condition and item, the label most repeats agreed on. `labels` converts the stored string
-    (the RQ1 `Label` enum; RQ2 outcomes stay plain strings)."""
+    (the RQ1 `Label` enum; RQ2 outcomes stay plain strings). With `tie`, a vote without a strict
+    majority becomes that label, as the RQ2 judge's own rule has it (no reproduced verdict is no verdict)."""
     per: dict[str, dict[str, list]] = defaultdict(lambda: defaultdict(list))
     for line in (run_dir / "predictions.jsonl").read_text(encoding="utf-8").splitlines():
         if line:
             p = json.loads(line)
             per[p["condition"]][p["item_id"]].append(labels(p["label"]))
-    return {cond: {i: Counter(v).most_common(1)[0][0] for i, v in items.items()}
-            for cond, items in per.items()}
+
+    def majority(v: list) -> str:
+        top, count = Counter(v).most_common(1)[0]
+        return top if tie is None or count * 2 > len(v) else tie
+
+    return {cond: {i: majority(v) for i, v in items.items()} for cond, items in per.items()}
 
 
 def _best(metrics: dict) -> str | None:
@@ -64,7 +69,7 @@ def compare(run_a: Path, run_b: Path) -> str:
     if rq2:
         from gw_common.eval import rq2 as R
 
-        va, vb = _votes(run_a, str), _votes(run_b, str)
+        va, vb = _votes(run_a, str, tie="unclear"), _votes(run_b, str, tie="unclear")
         gold_by_id = {r["promise_id"]: r["outcome"] for r in R.load_gold()[0]}
         macro_f1 = lambda gold, pred: R.outcome_metrics(gold, pred)["macro_f1"]  # noqa: E731
     else:
