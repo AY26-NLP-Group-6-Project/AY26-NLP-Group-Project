@@ -74,6 +74,7 @@ uv run gw-eval --system baseline-rag --split dev --repeats 3 \
                --conditions sentence_only,local,same_report_rrf,cross_year_rrf
 uv run gw-eval --system graph-rag --split dev --repeats 3 \
                --conditions sentence_only,local,cross_year_graph,cross_year_fused
+uv run gw-eval --task rq2 --system baseline-rag --split dev --repeats 3     # RQ2: promise outcomes, shared judge
 uv run gw-eval --publish artifacts/runs/<run_id> --name <group>/<what-it-is> --note "one line"
 uv run gw-eval --compare results/baseline/statement-hybrid-cited results/graph/graph-arms-cited
 uv run gw-eval --ragas artifacts/runs/<run_id>                               # RAG metrics, scored afterwards
@@ -86,8 +87,8 @@ difference of means, is how systems are compared. Everything about conditions, m
 outputs: [`docs/evaluation.md`](docs/evaluation.md).
 
 The promise pipeline (RQ2) has its own commands under `gw-graph promise-*`:
-[`docs/promises.md`](docs/promises.md). Its gold set has a dev/test split like the sentence set; score a
-judge with `uv run gw-graph promise-gold-score --gold-split dev`, and open test once.
+[`docs/promises.md`](docs/promises.md). Its gold set has a dev/test split like the sentence set, and
+`gw-eval --task rq2` evaluates any system's retriever on it with the shared judge; open test once.
 
 ## 4. Plugging in your own system
 

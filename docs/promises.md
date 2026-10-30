@@ -159,6 +159,13 @@ the hybrid baseline with its ordinary ranking inside the window; an agentic syst
 plans over the corpus tools (`gw_common.corpus`). The cap of 20 statements is a ceiling, not a target:
 the finder's own budgets stay under it (11.6 on average), the baseline fills it.
 
+The same loop runs as an evaluation task: `gw-eval --task rq2 --system <name> --split dev --repeats 3`
+takes the gold split, retrieves once per promise, judges `repeats` times, scores the vote against the
+gold (accuracy, κ, macro-F1 over the four outcomes, the three rates of section 6, a bootstrap interval)
+and writes a run dir that `--publish` and `--compare` read like an RQ1 run (`evaluation.md`, section 4).
+The pipeline stages above (`promise-evidence --system`, `promise-outcomes --evidence-from`,
+`promise-gold-score`) remain for judging all 374 or re-judging a stored evidence file.
+
 First result (2026-10-30, dev split of the gold, 123 promises, judge v2 × 3 on each system's evidence):
 the finder's evidence and the hybrid baseline's both put the judge at 96 of 123 right (0.780, κ 0.67);
 the two differ on 13 promises and each is right alone on 5 of them (McNemar p = 1.00). On the baseline's
@@ -292,8 +299,9 @@ System counts over the 374 on trajectory evidence: achieved 169, failed 56, uncl
 
 ## 8. The gold set and its split
 
-Every checkable promise carries a settled outcome: `data/eval/rq2promises.pair_gold.f41388d7eb85.jsonl`
-(373 rows) and `rq2promises.build_report.json`. The one row settled as `not_a_promise` (P00412, a target
+Every checkable promise carries a settled outcome: `data/eval/rq2promises.pair_gold.a6f35618dd6e.jsonl`
+(373 rows, each with its promise record, so the file alone drives `gw-eval --task rq2`) and
+`rq2promises.build_report.json`. The one row settled as `not_a_promise` (P00412, a target
 horizon read as a deadline) is an extraction error, not an outcome, and the judge has no such label: it
 is listed in the build report and stays out of the gold and the split. Two sources, one sheet format,
 one guide:
@@ -379,6 +387,9 @@ uv run gw-graph promise-outcomes --judge v2 --repeats 3 \
     --evidence-from artifacts/graph/dev/promises/evidence.baseline-rag.jsonl   # -> outcomes.v2.baseline-rag.jsonl
 uv run gw-graph promise-gold-score --gold-split dev \
     --outcomes artifacts/graph/dev/promises/outcomes.v2.baseline-rag.jsonl
+uv run gw-eval --task rq2 --system graph-rag --split dev --repeats 3       # the same as an evaluation run
+uv run gw-eval --task rq2 --system baseline-rag --split dev --repeats 3
+uv run gw-eval --compare artifacts/runs/<graph run> artifacts/runs/<baseline run>
 ```
 
 `--evidence deadline` with `--evidence-from artifacts/graph/dev/promises/outcomes.jsonl` reproduces the

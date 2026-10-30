@@ -199,8 +199,15 @@ of the former notes index.
 - Known soft spot: `unclear` against `disappeared` when the evidence touches the subject but not the
   target; P00136 / P00141 (model pair, unclear) against the group's P00144 (disappeared).
 - Revised the same day: the one row settled as `not_a_promise` (P00412) is an extraction error, not an
-  outcome, and leaves the gold: 373 rows, dev 123 / test 250, snapshot `f41388d7eb85`; the judge on dev
-  0.780, κ 0.67, over-commitment 5 of 22, under-commitment 18 of 101, verdict precision 0.90.
+  outcome, and leaves the gold: 373 rows, dev 123 / test 250, snapshot `f41388d7eb85`, then
+  `a6f35618dd6e` once every row carried its promise record (same rows, same split) so the file alone
+  drives the evaluation task; the judge on dev 0.780, κ 0.67, over-commitment 5 of 22, under-commitment
+  18 of 101, verdict precision 0.90.
+- RQ2 became a `gw-eval` task (`--task rq2`, `gw_common/eval/rq2.py`): the system's retriever under
+  `promise_window`, the shared judge (moved to `gw_common/judges/promise.py`, v2 by default) run
+  `repeats` times over identical evidence, the vote scored against the gold with accuracy, κ, macro-F1
+  over the four outcomes, the three RQ2 rates and a bootstrap interval; the run dir, `--publish`, the
+  results index and `--compare` (McNemar on the votes) work as for RQ1.
 - One protocol for both questions. `EvidenceCondition.PROMISE_WINDOW`: a promise becomes a `Query`
   (company, year window, metric, the record in `Query.meta`) and any system's `retrieve(query, k)`
   answers it; `promise-evidence --system <name>` writes `evidence.<name>.jsonl`, the judge runs on it

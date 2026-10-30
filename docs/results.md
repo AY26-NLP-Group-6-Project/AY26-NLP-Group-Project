@@ -116,7 +116,7 @@ Counts over the 374: achieved 169, failed 56, unclear 134, disappeared 15.
 
 ### Against the gold set
 
-Every checkable promise now has a settled outcome (`data/eval/rq2promises.pair_gold.f41388d7eb85.jsonl`:
+Every checkable promise now has a settled outcome (`data/eval/rq2promises.pair_gold.a6f35618dd6e.jsonl`:
 137 double-annotated by the group, 236 by two model annotators of different families calibrated on
 those rows and adjudicated, one row dropped as not a promise; `promises.md` section 8), split dev 123 /
 test 250. Gold over the 373: achieved 206, failed 68, unclear 86, disappeared 13. On dev the judge

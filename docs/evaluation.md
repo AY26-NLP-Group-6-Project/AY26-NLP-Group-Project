@@ -49,7 +49,7 @@ uv run gw-data describe gw1000 --split dev  # counts per slice
 uv run gw-data build a3cg                   # A3CG test splits as action-classification snapshots
 ```
 
-**RQ2 gold** (`data/eval/rq2promises.pair_gold.f41388d7eb85.jsonl`, 373 checkable promises): the outcome
+**RQ2 gold** (`data/eval/rq2promises.pair_gold.a6f35618dd6e.jsonl`, 373 checkable promises): the outcome
 of every dated commitment, achieved / failed / unclear / disappeared, with who labelled it
 (`human_pair`, the group's double-annotated sheet, 137 rows; `model_pair`, two model annotators
 calibrated on those rows and adjudicated, 236 rows), both annotators' labels and notes, and the split:
@@ -73,6 +73,7 @@ evidence they hand it: at most `k = 3` spans of at most 800 characters each.
 | `cross_year_graph` | statements reached through the claim graph | graph-rag |
 | `cross_year_fused` | graph first, BM25 over the company's other-year statements fills to k | graph-rag |
 | `cross_year_agentic` | bounded plan–retrieve–stop loop | not built |
+| `promise_window` | RQ2 (`--task rq2`): at most k = 20 statements from the company's reports after the one that made the commitment, up to the year after its deadline; read by the shared judge, not the classifier | the system's retriever |
 
 The harness drops any returned span that *is* the target sentence (same company and year, text equal
 or containing it) and reports how many it dropped (`evidence.target_dropped`), so no arm can score by
@@ -88,12 +89,20 @@ uv run gw-eval --system graph-rag    --split dev --repeats 3 \
                --conditions sentence_only,local,cross_year_graph,cross_year_fused
 uv run gw-eval --system graph-rag --split dev --slice row_type=aspect,category=workplace|management
 uv run gw-eval --system graph-rag --split dev --sample 60 --repeats 1      # quick smoke test
+uv run gw-eval --task rq2 --system baseline-rag --split dev --repeats 3    # RQ2 on the promise gold
 ```
 
 Flags: `--split dev|test|all`; `--slice key=v1|v2,…` (keys: split, row_type, aspect_source, category,
 company, year, pilot, has_aspect, gold, agreement, aspect_weak); `--sample N` (seeded); `--limit N`;
 `--repeats N` (default 3; bypasses the LLM cache so each repeat re-samples the model); `--baseline`
-(default `sentence_only`); `--k`; `--labels`; `--dataset`.
+(default `sentence_only`); `--k` (evidence per item: 3 for rq1, 20 for rq2); `--labels`; `--dataset`.
+
+`--task rq2` runs the other question through the same loop: the gold promises of the split
+(`rq2promises`), one `promise_window` retrieval per promise with the system's retriever, the shared
+judge (`gw_common/judges/promise.py`, v2) `repeats` times over identical evidence, and the majority
+vote scored against the gold with accuracy, κ, macro-F1 over the four outcomes, the share of
+gold-unclear promises given a verdict, the share of settled ones left unclear, the precision of the
+verdicts, and a bootstrap interval. Slices and `--conditions` do not apply; `--k` caps the evidence.
 
 A run writes `artifacts/runs/<timestamp>-<system>-<task>/`:
 
@@ -165,7 +174,8 @@ uv run gw-eval --compare results/baseline/statement-hybrid-cited results/graph/g
 
 `--publish` copies the manifest, metrics and report (not the per-item files) into `results/<group>/<name>/`
 and regenerates `results/README.md`. `--compare` pairs the two runs' majority votes on the items both
-scored and reports flips and McNemar p per condition; it refuses runs on different snapshots.
+scored and reports flips and McNemar p per condition; it refuses runs on different snapshots, and an
+RQ2 run is only compared with another RQ2 run (same promises, the four outcomes as labels).
 
 ## 8. Plugging in a system
 
