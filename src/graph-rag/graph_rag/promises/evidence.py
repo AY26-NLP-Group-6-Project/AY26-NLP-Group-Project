@@ -2,19 +2,19 @@
 
 Two modes.
 
-`deadline` is the first version, kept so earlier results can be reproduced: hybrid top-6 over the
-reports of the deadline year and the year after. It has a structural flaw. Dense retrieval only saw the
-shared sentence store, which keeps prose sentences and leaves out 35 % of all statements, among them
-most result sentences ("... was 61 kwh per square foot (FY2020: 68 kwh per square foot)"). A statement
-outside the store can score in one of the two fused rankings only, so RRF puts it below statements that
-are mediocre in both: of eight answer statements found by hand (`docs/case-studies.md`), four ranked
-first to third on BM25 and were still cut.
+`deadline` is the first version, kept for reference: hybrid top-6 over the reports of the deadline
+year and the year after. Its recorded results were produced when the dense index covered only the
+sentence-shaped statements (65 % of all), and most result sentences ("... was 61 kwh per square foot
+(FY2020: 68 kwh per square foot)") were outside it. A statement that scores in one of the two fused
+rankings only is put by RRF below statements that are mediocre in both: of eight answer statements found
+by hand (`docs/case-studies.md`), four ranked first to third on BM25 and were still cut. The one-year
+window and the single budget remain its limits.
 
 `trajectory` (default) follows the promise through every report after the one that made it, up to the
 year after the deadline:
 
-- every statement of a report is ranked by BM25 and by dense similarity; vectors the sentence store
-  lacks are embedded on demand (cached), so RRF fuses two complete rankings;
+- every statement of a report is ranked by BM25 and by dense similarity; vectors the store lacks
+  (statements under five words) are embedded on demand (cached), so RRF fuses two complete rankings;
 - each report year has its own budget, the first report at or after the deadline the largest. A delay
   announced two years early is in an earlier report, not in the deadline one;
 - the neighbours of the best hits in that report are added: a target table is parsed into one statement
@@ -36,18 +36,24 @@ from pathlib import Path
 import numpy as np
 from baseline_rag import chunks as chunk_store
 from baseline_rag.index import BM25, rrf
+from gw_common.eval.rq2 import K_WINDOW, evidence_of, promise_query
 from gw_common.evidence import normalise
+from gw_common.judges.promise import where
 from gw_common.llm import LLMClient
+from gw_common.schemas import EvidenceCondition, EvidenceSpan, Query
 
 from graph_rag.config import GraphConfig
 from graph_rag.promises.extract import out_dir
 from graph_rag.store.duckdb_store import DuckDBGraphStore
 
 MODES = ("deadline", "trajectory")
+__all__ = ["K_WINDOW", "MODES", "EvidenceFinder", "TrajectoryFinder", "build", "build_from_system",
+           "evidence_of", "evidence_path", "load", "promise_of", "promise_query", "query_of", "spans_of",
+           "where"]
 EVIDENCE_K = 6
 CANDIDATES = 40
 MIN_WORDS = 5
-SENTENCE_STORE = "dev-sent"
+STORE = chunk_store.DEFAULT_BUILD
 K_DEADLINE = 6          # the first report at or after the deadline: where the outcome should be reported
 K_AFTER = 3             # the report after that
 K_BEFORE = 2            # each report between the promise and the deadline
@@ -67,11 +73,11 @@ def query_of(promise: dict) -> str:
 class EvidenceFinder:
     """Mode `deadline`."""
 
-    def __init__(self, cfg: GraphConfig, client: LLMClient, sentence_store: str = SENTENCE_STORE) -> None:
+    def __init__(self, cfg: GraphConfig, client: LLMClient, store: str = STORE) -> None:
         self.store = DuckDBGraphStore(cfg.db_path, read_only=True)
         self.client = client
         try:
-            chunks, self.vectors, _ = chunk_store.load(sentence_store)
+            chunks, self.vectors, _ = chunk_store.load(store)
             self.row_of = {c.chunk_id: i for i, c in enumerate(chunks)}
         except FileNotFoundError:        # dense is an improvement, not a requirement
             self.vectors, self.row_of = None, {}
@@ -118,8 +124,8 @@ class TrajectoryFinder(EvidenceFinder):
     """Mode `trajectory`."""
 
     def __init__(self, cfg: GraphConfig, client: LLMClient, promises: dict[str, dict],
-                 sentence_store: str = SENTENCE_STORE) -> None:
-        super().__init__(cfg, client, sentence_store)
+                 store: str = STORE) -> None:
+        super().__init__(cfg, client, store)
         self.promises = promises
         self.embedded = 0
 
@@ -219,12 +225,6 @@ class TrajectoryFinder(EvidenceFinder):
         return evidence
 
 
-def where(e: dict) -> str:
-    """'2024 report, p.9' and, when the statement comes right after the previous one shown, that too."""
-    follows = f", directly follows {e['follows']}" if e.get("follows") else ""
-    return f"{e['year']} report, p.{e['page']}{follows}"
-
-
 def load(path: Path) -> dict[str, list[dict]]:
     """promise_id -> evidence, from an evidence file or from any outcomes file (which embeds it)."""
     rows = (json.loads(line) for line in Path(path).read_text(encoding="utf-8").splitlines() if line)
@@ -245,6 +245,10 @@ def build(cfg: GraphConfig, mode: str = "trajectory", client: LLMClient | None =
     found = {}
     for p in sorted(todo, key=lambda p: (p["company"], p["origin"]["year"])):   # keeps the year cache warm
         found[p["promise_id"]] = finder.find(p)
+    return _write(cfg, mode, todo, found, {"embedded_on_demand": getattr(finder, "embedded", 0)})
+
+
+def _write(cfg: GraphConfig, mode: str, todo: list[dict], found: dict[str, list[dict]], extra: dict) -> dict:
     out = evidence_path(cfg, mode)
     with out.open("w", encoding="utf-8") as f:
         for p in todo:
@@ -261,8 +265,54 @@ def build(cfg: GraphConfig, mode: str = "trajectory", client: LLMClient | None =
         "by_source": dict(Counter(e.get("via", "retrieved") for ev in found.values() for e in ev)),
         "report_years_per_promise": (sum(len({e["year"] for e in found[p["promise_id"]]}) for p in todo)
                                      / max(1, len(todo))),
-        "embedded_on_demand": getattr(finder, "embedded", 0),
+        **extra,
         "out": str(out),
     }
-    (base / f"evidence_stats.{mode}.json").write_text(json.dumps(stats, indent=2), encoding="utf-8")
+    (out_dir(cfg) / f"evidence_stats.{mode}.json").write_text(json.dumps(stats, indent=2), encoding="utf-8")
     return stats
+
+
+# --------------------------------------------------------------------------- any system's retriever
+def promise_of(query: Query) -> dict:
+    """The promise a `promise_window` query carries, or one rebuilt from the query's fields."""
+    carried = query.meta.get("promise") if query.meta else None
+    if isinstance(carried, dict):
+        return carried
+    origin_year = query.anchor_year if query.anchor_year is not None else (query.year_from or 1) - 1
+    return {"promise_id": None, "company": query.company, "metric": query.aspect or query.text,
+            "target_year": (query.year_to or 0) - 1, "related": [],
+            "origin": {"year": origin_year, "target_text": query.target_text or query.text}}
+
+
+def spans_of(evidence: list[dict], company: str) -> list[EvidenceSpan]:
+    """The finder's rows as evidence spans; `why` keeps how each was reached."""
+    return [EvidenceSpan(statement_id=e["stmt_id"], text=e["text"], company=company, year=e["year"],
+                         page=e.get("page"), file=e.get("file"), score=0.0,
+                         why=f"trajectory:{e.get('via', 'retrieved')}") for e in evidence]
+
+
+def build_from_system(cfg: GraphConfig, system, k: int = K_WINDOW, limit: int | None = None) -> dict:
+    """Evidence for every checkable promise from a registered system's retriever under `promise_window`,
+    written as `evidence.<system>.jsonl`, so the shared judge can be run on it like on the finder's."""
+    if isinstance(system, str):
+        from gw_common.registry import load as load_system
+
+        system = load_system(system)
+    if EvidenceCondition.PROMISE_WINDOW not in system.supported_conditions():
+        raise ValueError(f"{system.name} does not support the promise_window condition")
+    retriever = system.retriever()
+    if retriever is None:
+        raise ValueError(f"{system.name} has no retriever")
+    base = out_dir(cfg)
+    lines = (base / "promises.jsonl").read_text(encoding="utf-8").splitlines()
+    promises = [json.loads(line) for line in lines if line]
+    todo = [p for p in promises if p["checkable"]]
+    if limit:
+        todo = todo[:limit]
+    found = {}
+    for p in sorted(todo, key=lambda p: (p["company"], p["origin"]["year"])):
+        found[p["promise_id"]] = evidence_of(retriever.retrieve(promise_query(p), k=k))
+    extra = {"system": system.name, "k": k}
+    if hasattr(retriever, "describe"):
+        extra["retriever"] = retriever.describe()
+    return _write(cfg, system.name, todo, found, extra)

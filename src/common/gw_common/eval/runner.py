@@ -231,6 +231,7 @@ def run_task(
     results: dict[str, dict] = {}
     baseline_runs: list[list[Label]] | None = None
     classifier_info: dict[str, object] = {}
+    retriever_info: dict[str, object] = {}
     with (run_dir / "predictions.jsonl").open("w", encoding="utf-8") as fp, \
          (run_dir / "evidence.jsonl").open("w", encoding="utf-8") as ev_fp:
         for cond in wanted:
@@ -255,6 +256,10 @@ def run_task(
                 embed_tokens = _embed_tokens(system) - embed_before
             if evidence_file is not None:
                 retrieval_ms, embed_tokens = {}, 0
+            elif evidence:
+                retriever = system.retriever()
+                if retriever is not None and hasattr(retriever, "describe"):
+                    retriever_info = retriever.describe()     # which store, which hash
             if clf is not None and hasattr(clf, "describe"):
                 classifier_info = clf.describe()
             for item_id, spans in evidence.items():
@@ -365,7 +370,7 @@ def run_task(
         config={"split": split, "slices": {k: sorted(v) for k, v in (slices or {}).items()},
                 "sample": sample, "limit": limit, "evidence_k": evidence_k,
                 "baseline": baseline.value, "selection": describe(items),
-                "classifier": classifier_info},
+                "classifier": classifier_info, "retriever": retriever_info},
     )
     (run_dir / "manifest.json").write_text(manifest.model_dump_json(indent=2), encoding="utf-8")
     (run_dir / "metrics.json").write_text(

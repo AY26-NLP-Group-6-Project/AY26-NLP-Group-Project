@@ -49,6 +49,16 @@ uv run gw-data describe gw1000 --split dev  # counts per slice
 uv run gw-data build a3cg                   # A3CG test splits as action-classification snapshots
 ```
 
+**RQ2 gold** (`data/eval/rq2promises.pair_gold.a6f35618dd6e.jsonl`, 373 checkable promises): the outcome
+of every dated commitment, achieved / failed / unclear / disappeared, with who labelled it
+(`human_pair`, the group's double-annotated sheet, 137 rows; `model_pair`, two model annotators
+calibrated on those rows and adjudicated, 236 rows), both annotators' labels and notes, and the split:
+**dev 123 / test 250**, stratified by outcome × source, the 75 promises the judge prompt was tuned on
+pinned to dev. The one promise the annotators settled as not a promise is listed in the build report and
+left out. Same rule: tune on dev, open test once. `promises.md` section 8 has the protocol
+and the calibration; `gw-graph promise-gold` rebuilds the file, `gw-graph promise-gold-score
+--gold-split dev` scores a judge output against it.
+
 ## 3. Evidence conditions
 
 One classifier, one prompt (`configs/prompts/action_classifier_cited.md`); systems differ only in the
@@ -58,11 +68,12 @@ evidence they hand it: at most `k = 3` spans of at most 800 characters each.
 |---|---|---|
 | `sentence_only` | nothing (the A3CG setting; every delta is measured against it) | harness |
 | `local` | the neighbouring sentences from the same page | harness |
-| `same_report_rrf` | passages or sentences retrieved from the **same report** | the system's retriever |
+| `same_report_rrf` | statements (or passages) retrieved from the **same report** | the system's retriever |
 | `cross_year_rrf` | retrieved from the **same company, other years** | the system's retriever |
 | `cross_year_graph` | statements reached through the claim graph | graph-rag |
 | `cross_year_fused` | graph first, BM25 over the company's other-year statements fills to k | graph-rag |
 | `cross_year_agentic` | bounded plan–retrieve–stop loop | not built |
+| `promise_window` | RQ2 (`--task rq2`): at most k = 20 statements from the company's reports after the one that made the commitment, up to the year after its deadline; read by the shared judge, not the classifier | the system's retriever |
 
 The harness drops any returned span that *is* the target sentence (same company and year, text equal
 or containing it) and reports how many it dropped (`evidence.target_dropped`), so no arm can score by
@@ -78,12 +89,20 @@ uv run gw-eval --system graph-rag    --split dev --repeats 3 \
                --conditions sentence_only,local,cross_year_graph,cross_year_fused
 uv run gw-eval --system graph-rag --split dev --slice row_type=aspect,category=workplace|management
 uv run gw-eval --system graph-rag --split dev --sample 60 --repeats 1      # quick smoke test
+uv run gw-eval --task rq2 --system baseline-rag --split dev --repeats 3    # RQ2 on the promise gold
 ```
 
 Flags: `--split dev|test|all`; `--slice key=v1|v2,…` (keys: split, row_type, aspect_source, category,
 company, year, pilot, has_aspect, gold, agreement, aspect_weak); `--sample N` (seeded); `--limit N`;
 `--repeats N` (default 3; bypasses the LLM cache so each repeat re-samples the model); `--baseline`
-(default `sentence_only`); `--k`; `--labels`; `--dataset`.
+(default `sentence_only`); `--k` (evidence per item: 3 for rq1, 20 for rq2); `--labels`; `--dataset`.
+
+`--task rq2` runs the other question through the same loop: the gold promises of the split
+(`rq2promises`), one `promise_window` retrieval per promise with the system's retriever, the shared
+judge (`gw_common/judges/promise.py`, v2) `repeats` times over identical evidence, and the majority
+vote scored against the gold with accuracy, κ, macro-F1 over the four outcomes, the share of
+gold-unclear promises given a verdict, the share of settled ones left unclear, the precision of the
+verdicts, and a bootstrap interval. Slices and `--conditions` do not apply; `--k` caps the evidence.
 
 A run writes `artifacts/runs/<timestamp>-<system>-<task>/`:
 
@@ -150,12 +169,13 @@ faithfulness and lenient on context relevance by a factor of about 1.7; see `res
 
 ```bash
 uv run gw-eval --publish artifacts/runs/<run_id> --name baseline/<what-it-is> --note "one line"
-uv run gw-eval --compare results/baseline/sentence-hybrid-cited results/graph/graph-arms-cited
+uv run gw-eval --compare results/baseline/statement-hybrid-cited results/graph/graph-arms-cited
 ```
 
 `--publish` copies the manifest, metrics and report (not the per-item files) into `results/<group>/<name>/`
 and regenerates `results/README.md`. `--compare` pairs the two runs' majority votes on the items both
-scored and reports flips and McNemar p per condition; it refuses runs on different snapshots.
+scored and reports flips and McNemar p per condition; it refuses runs on different snapshots, and an
+RQ2 run is only compared with another RQ2 run (same promises, the four outcomes as labels).
 
 ## 8. Plugging in a system
 
@@ -214,6 +234,25 @@ A classifier of your own reads evidence from the `evidence` mapping (item id →
 budget (k = 3, 800 characters per span) or says so, and returns a `rationale` and the `citations` it
 rests on: a label without sources cannot be shown in the UI or scored for faithfulness.
 `gw_common.classifiers.llm_action.resolve_citations` turns cited tags into `Citation` objects.
+
+### The corpus as tools, and the RQ2 condition
+
+A retriever need not open a store of its own. `gw_common.corpus.load("statements")` returns the corpus
+as a set of calls over the shared chunk store: `search(text, company=, year_from=, year_to=,
+exclude_year=, k=, mode=bm25|dense|hybrid|hybrid+rerank)`, `get(statement_id)`,
+`neighbours(statement_id, before=, after=)` (same page, report order), `page(company, year, page)`,
+`reports(company)`, `companies()`; every result is an `EvidenceSpan`. `load("graph")` adds the claim
+graph's joins: `aspects(statement_id)`, `follow_ups(statement_id)`, `related_targets(company, metric)`.
+The hybrid baseline is one `search` call; an agentic retriever is a plan over the same calls (search,
+read around the hits, open a page, search again, stop) that ends in the same `retrieve`, so the
+evaluation does not care which.
+
+The same `retrieve` serves RQ2. Under `EvidenceCondition.PROMISE_WINDOW` the query carries the company,
+`year_from` and `year_to` (the promise's year + 1 to its deadline + 1), the metric as `aspect`, the
+promise sentence as `target_text` and the full promise record in `query.meta["promise"]` (a plain
+retriever may ignore it). Return at most k statements from inside the window; the shared judge reads
+them (`promises.md`, section 4). List the condition in `supported_conditions()` to take part; a system
+that does not is skipped on RQ2.
 
 ### File exchange
 

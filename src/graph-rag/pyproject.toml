@@ -15,6 +15,9 @@ gw-graph = "graph_rag.cli:main"
 graph-rag = "graph_rag:build_system"
 agentic-graph-rag = "graph_rag.agent:build_system"
 
+[project.entry-points."gw.corpora"]
+graph = "graph_rag.corpus:GraphCorpus"
+
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"

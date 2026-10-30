@@ -17,8 +17,6 @@ import re
 from dataclasses import dataclass
 from pathlib import Path
 
-from gw_common.text import looks_like_sentence  # re-exported: the filter is shared
-
 from graph_rag.config import REPO_ROOT, GraphConfig
 from graph_rag.store.duckdb_store import DuckDBGraphStore
 
@@ -38,6 +36,33 @@ CATEGORIES = (
 
 # The gate (project thresholds):
 GATE = {"partial_f1": 0.60, "category_accuracy": 0.70, "no_aspect_false_positive_rate": 0.35}
+
+# What goes to the extractor. It labels aspect-action spans in prose, so only sentence-shaped
+# statements are sent: table rows, GRI index lines and page furniture carry no action to label, and
+# anchoring a cross-year link on them produces a chain that says nothing. This is an extraction gate
+# only; the knowledge base every arm retrieves over is every statement (`gw_common.text.is_statement`).
+_WORDY = re.compile(
+    r"\b(is|are|was|were|has|have|had|will|shall|can|may|we|our|the group|the company)\b", re.I
+)
+
+
+def looks_like_sentence(text: str) -> bool:
+    """Sentence-shaped: 8-60 words, mostly letters, few digits, no URL, not a shouty header, and one
+    of the listed verbs or pronouns. Kept exactly as the graph was built with it."""
+    words = text.split()
+    if not 8 <= len(words) <= 60:
+        return False
+    chars = [c for c in text if not c.isspace()]
+    letters = [c for c in chars if c.isalpha()]
+    if not chars or len(letters) / len(chars) < 0.75:
+        return False
+    if sum(c.isdigit() for c in chars) / len(chars) > 0.10:
+        return False
+    if sum(c.isupper() for c in letters) / max(1, len(letters)) > 0.30:
+        return False
+    if re.search(r"https?:|www\.|\.{4,}|@", text):
+        return False
+    return bool(_WORDY.search(text))
 
 # --------------------------------------------------------------------------- export
 def export_input(

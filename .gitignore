@@ -243,3 +243,4 @@ data/*
 !data/eval/
 data/eval/*
 !data/eval/gw1000.*
+!data/eval/rq2promises.*

@@ -25,7 +25,8 @@ are. The reference and the record are under [`docs/`](docs/README.md); the findi
 | data | where it sits | how you get it |
 |---|---|---|
 | frozen evaluation set, 1,000 sentences | `data/eval/gw1000.*.jsonl` | in git; built from `kb/annotation/eval.xlsx` |
-| passage store (18,839 passages, vectors, manifest) | `artifacts/baseline/dev/` | the `gw-kb-dev-<hash>.zip` package shared inside the group, or `gw-baseline build` from the parsed corpus |
+| frozen RQ2 gold, 373 dated commitments with their outcome and split | `data/eval/rq2promises.*.jsonl` | in git; `gw-graph promise-gold` from the group's sheet and `kb/annotation/rq2-gold/` |
+| the knowledge base: every statement of five words or more, 108,376 chunks with vectors and a manifest (`passages`, 18,839 windows of 200 words, is the granularity ablation) | `artifacts/baseline/statements/` | `gw-kb-statements-<hash>.zip` shared inside the group, or `gw-baseline build` from the parsed corpus |
 | parsed corpus and claim graph (`graph-rag` only) | `artifacts/graph/dev/graph.duckdb` | `gw-graph build` from the raw PDFs, or a copy from a teammate |
 | raw reports | `kb/raw/` | never redistributed; `kb/README.md` |
 
@@ -34,18 +35,18 @@ are. The reference and the record are under [`docs/`](docs/README.md); the findi
 ```bash
 uv sync                                        # the workspace: src/common, src/baseline-rag, src/graph-rag, src/example-rag
 cp .env.example .env                           # fill LLM_API_KEY and EMB_API_KEY; model, effort and prices are set
-unzip gw-kb-dev-<hash>.zip -d artifacts/baseline/
-uv run gw-baseline stats                       # the manifest; hash c80d0ab23191
+unzip gw-kb-statements-<hash>.zip -d artifacts/baseline/
+uv run gw-baseline stats                       # the manifest; hash d8a62bfe40c6
 uv run gw-data list                            # the versioned snapshots
 uv run pytest -q                               # no network needed
 uv run gw-eval --system example-rag --split dev --sample 20 --repeats 1     # smoke run
 ```
 
-Optional shared database (the same passages served by pgvector):
+Optional shared database (the same chunks served by pgvector):
 
 ```bash
 docker compose up -d
-uv run gw-baseline pg-import --build-id dev && uv run gw-baseline pg-check --build-id dev
+uv run gw-baseline pg-import && uv run gw-baseline pg-check
 GW_BASELINE_BACKEND=postgres uv run gw-eval --system baseline-rag --split dev --repeats 3
 ```
 
@@ -59,7 +60,7 @@ GW_LLM_CACHE=1                                  SQLite response cache; bypassed 
 GW_CLASSIFIER_STYLE=cited                       cited (label + rationale + citations) | label (one word)
 LLM_PRICE_IN_PER_MTOK / LLM_PRICE_OUT_PER_MTOK  USD per million tokens; unset = tokens reported, no dollars
 EMB_PRICE_PER_MTOK                              same, for query embeddings
-GW_BASELINE_BUILD=dev                           dev = passages, dev-sent = prose sentences, dev-stmt = every statement
+GW_BASELINE_BUILD=statements                    statements (default) | passages, the granularity ablation
 GW_BASELINE_MODE=rrf+rerank                     bm25 | dense | rrf | rrf+rerank
 GW_BASELINE_BACKEND=files                       files | postgres
 PG_DSN=postgresql://gw:gw@localhost:5432/gw
@@ -73,8 +74,9 @@ uv run gw-eval --system baseline-rag --split dev --repeats 3 \
                --conditions sentence_only,local,same_report_rrf,cross_year_rrf
 uv run gw-eval --system graph-rag --split dev --repeats 3 \
                --conditions sentence_only,local,cross_year_graph,cross_year_fused
+uv run gw-eval --task rq2 --system baseline-rag --split dev --repeats 3     # RQ2: promise outcomes, shared judge
 uv run gw-eval --publish artifacts/runs/<run_id> --name <group>/<what-it-is> --note "one line"
-uv run gw-eval --compare results/baseline/sentence-hybrid-cited results/graph/graph-arms-cited
+uv run gw-eval --compare results/baseline/statement-hybrid-cited results/graph/graph-arms-cited
 uv run gw-eval --ragas artifacts/runs/<run_id>                               # RAG metrics, scored afterwards
 ```
 
@@ -85,13 +87,19 @@ difference of means, is how systems are compared. Everything about conditions, m
 outputs: [`docs/evaluation.md`](docs/evaluation.md).
 
 The promise pipeline (RQ2) has its own commands under `gw-graph promise-*`:
-[`docs/promises.md`](docs/promises.md).
+[`docs/promises.md`](docs/promises.md). Its gold set has a dev/test split like the sentence set, and
+`gw-eval --task rq2` evaluates any system's retriever on it with the shared judge; open test once.
 
 ## 4. Plugging in your own system
 
 Copy `src/example-rag` to `src/<you>-rag`, rename it, add it to the workspace members in
 `pyproject.toml`, `uv sync`. Replace the retriever; keep the shared classifier unless the classifier is
-your contribution. Develop on `--split dev`; when a configuration is worth keeping, run it with
+your contribution. A retriever may read the corpus through the shared tools
+(`gw_common.corpus.load("statements")`: search in four modes, a statement's neighbours, a page, a
+company's reports; `load("graph")` adds the claim graph's joins), so an agent plans over the same calls
+the fixed baseline makes. One `retrieve(query, k)` serves both questions: for RQ2 the query arrives
+under the `promise_window` condition with the company, the year window and the promise record in
+`query.meta`; the shared judge reads what comes back. Develop on `--split dev`; when a configuration is worth keeping, run it with
 `--repeats 3`, publish it with a descriptive name and commit `results/`. The Protocols, the field
 contract, the file-exchange path for code that is not Python and the retrieval-only evaluation are in
 [`docs/evaluation.md`](docs/evaluation.md), section 8.
@@ -99,8 +107,9 @@ contract, the file-exchange path for code that is not Python and the retrieval-o
 ## 5. Layout
 
 ```
-src/common/gw_common/        shared contract and harness: schemas, Protocols, registry, datasets,
-                             runner, metrics, report, LLM client, classifier, FastAPI app
+src/common/gw_common/        shared contract and harness: schemas, Protocols, registry, the corpus
+                             tools (search, neighbours, pages, reports), datasets, runner, metrics,
+                             report, LLM client, classifier, FastAPI app
 src/baseline-rag/            BM25 + dense + RRF + rerank over the chunk stores; Postgres backend
 src/graph-rag/               the temporal claim graph, graph and fused retrieval, the promise pipeline
 src/example-rag/             copy-me template for a new system
@@ -126,6 +135,6 @@ tests/                       pytest
 5. **Never feed the gold; never return the target sentence.** The harness strips the one and drops the
    other, and counts the drops.
 6. **Provenance.** Every number in a document carries its run folder, snapshot hash and store hash.
-7. **Data.** Raw PDFs stay in `kb/raw/`; the passage package is derived text for academic use inside
-   the group; A3CG snapshots are for reference runs only and are not redistributed.
+7. **Data.** Raw PDFs stay in `kb/raw/`; the chunk-store packages are derived text for academic use
+   inside the group; A3CG snapshots are for reference runs only and are not redistributed.
 8. **Commits.** One line, prefixed (`feat:`, `fix:`, `docs:`, `test:`, `chore:`), one per finished step.

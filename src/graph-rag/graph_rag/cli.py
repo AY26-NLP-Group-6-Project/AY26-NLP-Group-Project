@@ -88,9 +88,25 @@ def _promises(args, cfg: GraphConfig) -> int:
     from graph_rag.promises import build as promise_build
     from graph_rag.promises import evidence as promise_evidence
     from graph_rag.promises import extract as target_extract
+    from graph_rag.promises import gold, pair_sheet
     from graph_rag.promises import outcome as promise_outcome
     from graph_rag.promises import sheet as promise_sheet
 
+    if args.stage == "promise-gold":
+        result = gold.build(
+            Path(args.sheet or "kb/annotation/spotchecks/promise-check-pair.xlsx"), Path(args.rounds_dir),
+            args.round, promise_evidence.out_dir(cfg) / "promises.jsonl",
+            Path(args.held_out) if args.held_out else None, Path(args.out or "data/eval"))
+        print(json.dumps(result, indent=2))
+        return 0
+    if args.stage == "promise-gold-score":
+        snapshots = sorted(Path(args.out or "data/eval").glob(f"{gold.DATASET}.*.jsonl"))
+        if not snapshots:
+            raise SystemExit("no rq2promises snapshot under data/eval; run promise-gold first")
+        outcomes = Path(args.outcomes) if args.outcomes else promise_outcome.outcomes_path(cfg, args.judge,
+                                                                                            args.evidence)
+        print(json.dumps(gold.score_system(snapshots[-1], outcomes, split=args.gold_split), indent=2))
+        return 0
     if args.stage == "targets":
         result = target_extract.extract(cfg, limit=args.limit)
     elif args.stage == "targets-export":
@@ -100,7 +116,10 @@ def _promises(args, cfg: GraphConfig) -> int:
     elif args.stage == "promises":
         result = promise_build.build(cfg, source=args.source)
     elif args.stage == "promise-evidence":
-        result = promise_evidence.build(cfg, mode=args.evidence, limit=args.limit)
+        if args.system:
+            result = promise_evidence.build_from_system(cfg, args.system, k=args.window_k, limit=args.limit)
+        else:
+            result = promise_evidence.build(cfg, mode=args.evidence, limit=args.limit)
     elif args.stage == "promise-outcomes":
         result = promise_outcome.run(cfg, limit=args.limit, judge=args.judge, repeats=args.repeats,
                                      evidence=args.evidence,
@@ -111,6 +130,19 @@ def _promises(args, cfg: GraphConfig) -> int:
             cfg, Path(args.out) if args.out else None, n=args.limit or 75, seed=args.seed or 20261003,
             outcomes=Path(args.outcomes) if args.outcomes else default,
             exclude=tuple(Path(s) for s in args.exclude_sheets))
+    elif args.stage == "promise-pair-sheet":
+        outcomes = Path(args.outcomes) if args.outcomes else promise_outcome.outcomes_path(cfg, args.judge,
+                                                                                            args.evidence)
+        result = pair_sheet.export_pair(
+            cfg, Path(args.out), outcomes, held_out=Path(args.held_out) if args.held_out else None,
+            n_random=args.n_random, seed=args.seed or 20261021,
+            exclude=tuple(Path(s) for s in args.exclude_sheets), prefill=not args.no_prefill)
+    elif args.stage == "promise-pair-copy":
+        result = {"out": str(pair_sheet.blind_copy(Path(args.sheet), Path(args.out), args.annotator))}
+    elif args.stage == "promise-pair-merge":
+        result = pair_sheet.merge(Path(args.sheet), Path(args.copy_from), args.annotator)
+    elif args.stage == "promise-pair-score":
+        result = pair_sheet.score_pair(cfg, Path(args.sheet), Path(args.outcomes) if args.outcomes else None)
     else:
         result = promise_sheet.score(cfg, Path(args.sheet) if args.sheet else None,
                                      Path(args.outcomes) if args.outcomes else None)
@@ -125,7 +157,9 @@ def main(argv: list[str] | None = None) -> int:
         choices=[*STAGES, "build", "stats", "export-extract", "export-gold", "score-extraction",
                  "canon-pools", "canon-tune", "canon-verify", "canon-spotcheck", "canon-spotcheck-score",
                  "export-a3cg", "targets", "targets-export", "targets-ingest", "promises",
-                 "promise-evidence", "promise-outcomes", "promise-sheet", "promise-score"],
+                 "promise-evidence", "promise-outcomes", "promise-sheet", "promise-score",
+                 "promise-pair-sheet", "promise-pair-copy", "promise-pair-merge", "promise-pair-score",
+                 "promise-gold", "promise-gold-score"],
     )
     ap.add_argument("--config", default="configs/graph.dev.yaml")
     ap.add_argument("--build-id")
@@ -166,7 +200,24 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--outcomes", help="promise-sheet: outcomes file to draw from (default: the judge's); "
                                        "promise-score: score this judge output instead of the sheet's key")
     ap.add_argument("--exclude-sheets", nargs="*", default=[],
-                    help="promise-sheet: earlier sheets whose promises must not be drawn again")
+                    help="promise-sheet / promise-pair-sheet: earlier sheets whose promises must not be "
+                         "drawn again")
+    ap.add_argument("--held-out", help="promise-pair-sheet: a filled single-annotator sheet whose rows are "
+                                       "included and whose labels become Annotator 1")
+    ap.add_argument("--n-random", type=int, default=90, help="promise-pair-sheet: random promises to add")
+    ap.add_argument("--no-prefill", action="store_true", help="promise-pair-sheet: leave Annotator 1 empty")
+    ap.add_argument("--annotator", type=int, choices=[1, 2], default=2,
+                    help="promise-pair-copy / -merge: whose columns")
+    ap.add_argument("--copy-from", help="promise-pair-merge: the filled blind copy to merge")
+    ap.add_argument("--rounds-dir", default="kb/annotation/rq2-gold",
+                    help="promise-gold: where the model annotators' rounds live")
+    ap.add_argument("--round", default="main", help="promise-gold: the round whose labels fill the gold file")
+    ap.add_argument("--gold-split", default="dev", choices=["dev", "test"],
+                    help="promise-gold-score: which split to score the judge on (test is opened once)")
+    ap.add_argument("--system", help="promise-evidence: take the evidence from this registered system's "
+                                     "retriever under the promise_window condition instead of the finder")
+    ap.add_argument("--window-k", type=int, default=20,
+                    help="promise-evidence --system: statements per promise asked of the retriever")
     args = ap.parse_args(argv)
 
     cfg = GraphConfig.load(args.config, build_id=args.build_id)

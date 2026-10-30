@@ -19,14 +19,21 @@ from gw_common.eval import metrics as M
 from gw_common.schemas import Label
 
 
-def _votes(run_dir: Path) -> dict[str, dict[str, Label]]:
-    per: dict[str, dict[str, list[Label]]] = defaultdict(lambda: defaultdict(list))
+def _votes(run_dir: Path, labels=Label, tie: str | None = None) -> dict[str, dict[str, str]]:
+    """Per condition and item, the label most repeats agreed on. `labels` converts the stored string
+    (the RQ1 `Label` enum; RQ2 outcomes stay plain strings). With `tie`, a vote without a strict
+    majority becomes that label, as the RQ2 judge's own rule has it (no reproduced verdict is no verdict)."""
+    per: dict[str, dict[str, list]] = defaultdict(lambda: defaultdict(list))
     for line in (run_dir / "predictions.jsonl").read_text(encoding="utf-8").splitlines():
         if line:
             p = json.loads(line)
-            per[p["condition"]][p["item_id"]].append(Label(p["label"]))
-    return {cond: {i: Counter(v).most_common(1)[0][0] for i, v in items.items()}
-            for cond, items in per.items()}
+            per[p["condition"]][p["item_id"]].append(labels(p["label"]))
+
+    def majority(v: list) -> str:
+        top, count = Counter(v).most_common(1)[0]
+        return top if tie is None or count * 2 > len(v) else tie
+
+    return {cond: {i: majority(v) for i, v in items.items()} for cond, items in per.items()}
 
 
 def _best(metrics: dict) -> str | None:
@@ -55,9 +62,21 @@ def compare(run_a: Path, run_b: Path) -> str:
             lines.append(f"> Note: classifier {key} differs (`{ca}` vs `{cb}`); "
                          "the comparison includes that change.")
 
-    va, vb = _votes(run_a), _votes(run_b)
-    items, _ = datasets.load(ma.get("dataset_id", man_a["dataset_id"]), ma["label_source"])
-    gold_by_id = {it.item_id: it.gold_label for it in items}
+    rq2 = man_a.get("task") == "rq2"
+    if rq2 != (man_b.get("task") == "rq2"):
+        lines.append("> **Refused**: one run is an RQ2 run and the other is not.")
+        return "\n".join(lines)
+    if rq2:
+        from gw_common.eval import rq2 as R
+
+        va, vb = _votes(run_a, str, tie="unclear"), _votes(run_b, str, tie="unclear")
+        gold_by_id = {r["promise_id"]: r["outcome"] for r in R.load_gold()[0]}
+        macro_f1 = lambda gold, pred: R.outcome_metrics(gold, pred)["macro_f1"]  # noqa: E731
+    else:
+        va, vb = _votes(run_a), _votes(run_b)
+        items, _ = datasets.load(ma.get("dataset_id", man_a["dataset_id"]), ma["label_source"])
+        gold_by_id = {it.item_id: it.gold_label for it in items}
+        macro_f1 = lambda gold, pred: M.action_metrics(gold, pred)["macro_f1"]  # noqa: E731
 
     def paired(ca: str, cb: str) -> tuple[str, str, str, str, str] | None:
         shared = sorted(set(va[ca]) & set(vb[cb]), key=lambda i: int(i) if i.isdigit() else i)
@@ -65,7 +84,7 @@ def compare(run_a: Path, run_b: Path) -> str:
             return None
         gold = [gold_by_id[i] for i in shared]
         la, lb = [va[ca][i] for i in shared], [vb[cb][i] for i in shared]
-        fa, fb = M.action_metrics(gold, la)["macro_f1"], M.action_metrics(gold, lb)["macro_f1"]
+        fa, fb = macro_f1(gold, la), macro_f1(gold, lb)
         flips = M.flip_analysis(gold, la, lb)
         p = M.mcnemar(gold, la, lb)["p_value"]
         return (f"{len(shared)}", f"{fa:.4f}", f"{fb:.4f}",
@@ -96,7 +115,7 @@ def publish(run_dir: Path, results_root: Path, note: str = "", name: str | None 
 
     manifest, metrics, report and the RAG-metric summaries travel; predictions and evidence stay local
     (they are large and reproducible from the manifest). `name` is the folder the copy gets, as
-    `<group>/<what-it-is>` (for example `baseline/sentence-hybrid`): the run id stays in the manifest,
+    `<group>/<what-it-is>` (for example `baseline/statement-hybrid`): the run id stays in the manifest,
     the folder name says what the run was. A one-line note says what it was for.
     """
     out = results_root / (name or run_dir.name)
@@ -133,7 +152,8 @@ def write_index(results_root: Path) -> Path:
         note = (d / "NOTE.md").read_text(encoding="utf-8").strip() if (d / "NOTE.md").exists() else ""
         rel = d.relative_to(results_root).as_posix()
         style = (man.get("config", {}).get("classifier") or {}).get("style", "label")
-        rows.append(f"| [{rel}]({rel}/report.md) | {man['system']} | {style} | {man['config'].get('split')} "
+        rows.append(f"| [{rel}]({rel}/report.md) | {man['system']} | {style} | {_store(man)} "
+                    f"| {man['config'].get('split')} "
                     f"| {man['n_items']} | {man.get('repeats', 1)} | {man['dataset_hash']} "
                     f"| {best or '—'} | {'—' if score is None else f'{score:.4f}'} | {note} "
                     f"| `{man['run_id']}` |")
@@ -145,11 +165,21 @@ def write_index(results_root: Path) -> Path:
         "what the run is. Add one with `gw-eval --publish artifacts/runs/<run_id> --name "
         "<group>/<name> --note \"...\"`; compare two with `gw-eval --compare <dir_a> <dir_b>`.\n\n"
         "The classifier column is the prompt style: `label` returns one word, `cited` a label with a "
-        "rationale and citations; numbers across the two styles are not paired. The run id is the local "
-        "directory under `artifacts/runs/`.\n\n"
-        "| run | system | classifier | split | items | repeats | snapshot | best condition "
+        "rationale and citations; numbers across the two styles are not paired. The store column is "
+        "what the retriever read (chunk store and its content hash, or the graph build). The run id is "
+        "the local directory under `artifacts/runs/`.\n\n"
+        "| run | system | classifier | store | split | items | repeats | snapshot | best condition "
         "| vote macro-F1 | note | run id |\n"
-        "|---|---|---|---|---|---|---|---|---|---|---|\n" + "\n".join(rows) + "\n",
+        "|---|---|---|---|---|---|---|---|---|---|---|---|\n" + "\n".join(rows) + "\n",
         encoding="utf-8",
     )
     return index
+
+
+def _store(manifest: dict) -> str:
+    info = manifest.get("config", {}).get("retriever") or {}
+    if info.get("store") == "graph":
+        return f"graph `{info.get('graph_build_id')}`"
+    if info.get("store"):
+        return f"`{info['store']}` {info.get('chunks_sha256', '')}".strip()
+    return "—"

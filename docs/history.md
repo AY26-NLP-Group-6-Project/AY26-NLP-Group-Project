@@ -114,19 +114,116 @@ ms against 117–326 ms for the hybrid path. The graph's case moves to RQ2.
 - Held-out check of the final system: 60 promises (`promise-check-trajectory.xlsx`), all judged the same
   day. Weighted to the 299 pool: accuracy 0.80 five-way / 0.83 with failed and revised as one, verdict
   where the check says unclear 8 % (3–15), verdicts right 84 % (71–93). Human-verified shares: achieved
-  50 %, not met 13 %, unclear 31 %, disappeared 6 %. The failed/revised boundary accounted for 8 of 20
+  50 %, failed 13 %, unclear 31 %, disappeared 6 %. The failed/revised boundary accounted for 8 of 20
   disagreements, partly a guide ambiguity of ours.
 
 ## 2026-10-04 · Reporting convention; the prose filter and RQ1
 
 - Decision: outcomes are reported on four classes, achieved / not met / unclear / disappeared
-  (`promises.md`). Scorer, run statistics and the annotator's guide follow.
+  (`promises.md`). Scorer, run statistics and the annotator's guide follow. Renamed on 2026-10-21:
+  the class is called failed, and `revised` is no longer a label on the sheets.
 - `results/baseline/all-statements-hybrid-cited`: the sentence-level hybrid over every statement, paired
   against the prose-store run: p = 1.00 (same report), 0.52 (cross year), 0.63 (sentence only). RQ1 does
   not depend on the filter; RQ2 did.
+
+## 2026-10-21 · Two-annotator sheet
+
+Teammates can annotate. Decided: the labels are achieved / failed / unclear / disappeared, with a
+re-dated commitment counted as failed (the deadline passed without the target being reported as met),
+so `revised` leaves the sheets; the judge keeps it internally and reports it as failed. New workbook
+`kb/annotation/spotchecks/promise-check-pair.xlsx`: 150 promises, the 60 held-out rows (the user's
+earlier labels prefilled as Annotator 1) plus 90 drawn at random from the 239 never checked; columns
+for Annotator 1, Annotator 2, adjudication and a final label; a second tab with the guide and live
+agreement formulas. `promise-pair-copy` gives a teammate a copy without the first annotator's columns,
+`promise-pair-merge` folds it back, `promise-pair-score` reports agreement, the system against each
+annotator and against the final label, and the two pools (the 60 weighted by their strata, the 90 as a
+plain random sample of the 239).
 
 ## 2026-10-13 · Documentation reorganised
 
 Notes renamed by topic, published runs grouped under `results/baseline/` and `results/graph/` with
 descriptive names, check sheets renamed by what they contain; this file replaces the lettered sections
 of the former notes index.
+
+## 2026-10-29 · One knowledge base, every statement; RQ1 re-run; chat model changed
+
+- Decision: every arm retrieves over every statement of five words or more (108,376, hash
+  `d8a62bfe40c6`, store `statements`). The sentence-shape filter is gone from the baseline chunker and
+  from the graph's candidate lists; it remains only as the gate before the aspect extractor, since the
+  graph's aspects were extracted and human-checked with it. The passage store (`passages`, 18,839,
+  `c80d0ab23191`) stays as the granularity ablation; the prose-sentence store (71,342, `b1c181dcaf1a`)
+  is retired. Run manifests now record the store the retriever read.
+- Chat model: `.env` moved to `gpt-5.6-luna` before these runs; everything below is on it, and the user
+  decided to keep it for the whole project from here on. The runs of 2026-09-29 to 10-04 (`gpt-5.6-luna`,
+  prose-sentence store) are removed from `results/`; they remain in git at `7731d73`.
+- RQ1, cited classifier, 331 dev items, 3 repeats, run ids `20261029T143225Z` (statements),
+  `20261029T143232Z` (graph), `20261029T143243Z` (passages):
+  - sentence only in the three runs: vote 0.7397 / 0.7498 / 0.7580 (p = 1.00 and 0.77 paired), the
+    run-to-run spread again;
+  - hybrid over statements: same report 0.7442, other years **0.7767** (+0.037 on its own sentence
+    only, p = 0.21); graph other years 0.7449, graph + BM25 fused 0.7668 (+0.017, p = 1.00);
+    best hybrid against best graph: +6 / −11 items, p = 0.33;
+  - passages against statements, paired: other years 0.7396 against 0.7767, +18 / −7, p = 0.043;
+    same report 0.7499 against 0.7442, p = 1.00; the none F1 of passage evidence 0.70 against 0.74;
+  - the classifier cites a retrieved span in 1–9 % of items; graph lookups 9 ms (fused 20 ms) p50
+    against 191–734 ms for the hybrid path, measured with three runs sharing one machine;
+    USD 0.21–0.30 per 1,000 items.
+- RQ2: the rule-based judge re-run on the trajectory evidence with the new model (three repeats,
+  USD 1.5): achieved 169, failed 56, unclear 134, disappeared 15; 58 of 374 unstable across the three
+  runs. Held-out check re-scored against it: accuracy 0.82 (0.70–0.92) on the reported classes, verdict
+  where the check says unclear 14 % (2–33) against 8 % (3–15) for the previous model's run, unclear
+  where the check has a verdict 15 % (3–29), verdicts right 85 % (74–94). The previous judge output is
+  kept locally as `outcomes.v2.trajectory.gpt-5.6-luna.jsonl`; the pair sheet's key still carries the
+  previous system labels, so `promise-pair-score` is run with `--outcomes` pointing at the new file.
+
+## 2026-10-30 · RQ2 gold set: the group's sheet plus calibrated model annotators; dev/test split
+
+- The group returned the pair sheet with 137 of 150 promises labelled by two annotators and settled:
+  agreement 0.898, κ 0.84 (achieved 70, unclear 32, failed 28, disappeared 7). It replaces the master
+  at `kb/annotation/spotchecks/promise-check-pair.xlsx`; the blind copy is gone.
+- The other 237 checkable promises were labelled by model annotators run as sub-agents under the
+  sheet's guide, blind to each other and to the system, reading exactly the sheet's cells
+  (`promises/gold.py`, rounds under `kb/annotation/rq2-gold/`). Calibration on fresh stratified slices of
+  40 human rows: round 1 (guide only) 0.875 / 0.850 against the human final, the two humans 0.875 on
+  the same rows; round 2 (guide plus three boundary clarifications) 0.875, humans 0.950. Two instances
+  of one model agreed 79 times in 80, so annotator 2 became Claude Opus: 0.925 (κ 0.88) on the round-2
+  slice, pair agreement 0.925, agreed labels right 35 of 37.
+- Main round, Fable + Opus on 237 promises in 16 batches: pair agreement 221 of 237 (0.932); the 16
+  disagreements adjudicated by a third pass (12 to annotator 1, 4 to annotator 2). Gold over the 374:
+  achieved 206, failed 68, unclear 86, disappeared 13, not a promise 1.
+- Split as for RQ1: dev 124 / test 250, stratified by outcome × label source, the 75 round-1 promises
+  pinned to dev; dev holds 22 human-labelled rows, test 115
+  (`data/eval/rq2promises.pair_gold.14b499a7a5b3.jsonl`, `rq2promises.build_report.json`).
+- The judge (v2, trajectory evidence, outcomes of 2026-10-29) against the gold on dev: 0.774, κ 0.66;
+  over-commitment 6 of 23, under-commitment 18 of 101, verdict precision 0.89. Test not opened.
+- Known soft spot: `unclear` against `disappeared` when the evidence touches the subject but not the
+  target; P00136 / P00141 (model pair, unclear) against the group's P00144 (disappeared).
+- Revised the same day: the one row settled as `not_a_promise` (P00412) is an extraction error, not an
+  outcome, and leaves the gold: 373 rows, dev 123 / test 250, snapshot `f41388d7eb85`, then
+  `a6f35618dd6e` once every row carried its promise record (same rows, same split) so the file alone
+  drives the evaluation task; the judge on dev 0.780, κ 0.67, over-commitment 5 of 22, under-commitment
+  18 of 101, verdict precision 0.90.
+- RQ2 became a `gw-eval` task (`--task rq2`, `gw_common/eval/rq2.py`): the system's retriever under
+  `promise_window`, the shared judge (moved to `gw_common/judges/promise.py`, v2 by default) run
+  `repeats` times over identical evidence, the vote scored against the gold with accuracy, κ, macro-F1
+  over the four outcomes, the three RQ2 rates and a bootstrap interval; the run dir, `--publish`, the
+  results index and `--compare` (McNemar on the votes) work as for RQ1.
+- First two RQ2 runs through it, dev, three repeats (`20261030T063140Z-graph-rag-rq2`,
+  `20261030T063123Z-baseline-rag-rq2`, published as `graph/promise-window-trajectory` and
+  `baseline/promise-window-hybrid`): vote accuracy 0.789 for both (κ 0.69 / 0.68, macro-F1 0.769 /
+  0.771), mean over repeats 0.791 ± 0.005 against 0.783 ± 0.009; paired +4 / −4, p = 1.00. Finder:
+  11.7 statements per promise, verdict on 5 of 22 gold-unclear, 17 of 101 settled left unclear, 90 % of
+  verdicts right, 10 unstable, USD 0.48. Hybrid top 20: 3 of 22, 21 of 101, 94 %, 20 unstable, USD 0.60.
+- One protocol for both questions. `EvidenceCondition.PROMISE_WINDOW`: a promise becomes a `Query`
+  (company, year window, metric, the record in `Query.meta`) and any system's `retrieve(query, k)`
+  answers it; `promise-evidence --system <name>` writes `evidence.<name>.jsonl`, the judge runs on it
+  unchanged and names its output after it. The graph system serves the condition with the trajectory
+  finder, the hybrid baseline with its ranking inside the window. New `gw_common.corpus`: the corpus as
+  tools (search in four modes, get, neighbours, page, reports, companies), registered under `gw.corpora`
+  (`statements` over the chunk store, `graph` adding aspects, follow-ups and related targets), so an
+  agentic retriever plans over the same calls the fixed baseline makes.
+- First RQ2 baseline arm: `promise-evidence --system baseline-rag` (hybrid, rrf+rerank, k = 20 inside the
+  window, 2.0 report years per promise) judged with v2 × 3 (USD 1.9, 61 unstable): over the 374 achieved
+  172, failed 62, unclear 125, disappeared 15. On dev against the gold 96 of 123 right (0.780, κ 0.67),
+  the same count as the trajectory finder's evidence; the two differ on 13 promises, 5 right each way,
+  McNemar p = 1.00; over-commitment 4 of 22, under-commitment 20 of 101, verdict precision 0.92.

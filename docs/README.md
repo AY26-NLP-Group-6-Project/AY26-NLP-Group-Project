@@ -6,7 +6,7 @@ the reference and the record.
 | file | what it is for |
 |---|---|
 | `evaluation.md` | what is evaluated and how: the data and its split, the evidence conditions, the metrics, what a run writes, the RAG metrics, publishing and comparing runs, the API |
-| `baseline.md` | the ordinary-RAG arm every other arm is measured against, and the three knowledge-base stores it retrieves from |
+| `baseline.md` | the ordinary-RAG arm every other arm is measured against, and the knowledge base it retrieves from: every statement, with the passage store as the granularity ablation |
 | `graph.md` | the temporal claim graph: why, what is in it, how it is built, what aspect extraction and canonicalisation achieved, what the graph arms retrieve |
 | `promises.md` | following dated commitments through later reports: extraction, the outcome judge, the evidence, the two human checks, the reporting convention |
 | `case-studies.md` | ten commitments followed page by page through the reports |

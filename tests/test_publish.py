@@ -8,9 +8,11 @@ from gw_common.eval.compare import publish, published_runs, write_index
 def _fake_run(tmp_path, run_id, system, style, score):
     run = tmp_path / "runs" / run_id
     run.mkdir(parents=True)
+    retriever = ({"store": "graph", "graph_build_id": "dev"} if system == "graph-rag"
+                 else {"store": "statements", "chunks_sha256": "d8a62bfe40c6"})
     (run / "manifest.json").write_text(json.dumps({
         "run_id": run_id, "system": system, "n_items": 3, "repeats": 3, "dataset_hash": "abc123",
-        "config": {"split": "dev", "classifier": {"style": style}},
+        "config": {"split": "dev", "classifier": {"style": style}, "retriever": retriever},
     }), encoding="utf-8")
     (run / "metrics.json").write_text(json.dumps({"conditions": {
         "sentence_only": {"status": "ok", "majority": {"action": {"macro_f1": 0.5}}},
@@ -35,7 +37,8 @@ def test_publish_names_the_folder_and_indexes_groups(tmp_path):
 
     index = write_index(results).read_text(encoding="utf-8")
     link = "[baseline/sentence-hybrid-cited](baseline/sentence-hybrid-cited/report.md)"
-    assert f"| {link} | baseline-rag | cited " in index
+    assert f"| {link} | baseline-rag | cited | `statements` d8a62bfe40c6 | dev " in index
+    assert "| graph-rag | cited | graph `dev` | dev " in index
     assert "| 0.7800 | the reference baseline | `20260930T083207Z-baseline-rag-rq1` |" in index
     assert "| cross_year_rrf | 0.7700 | graph arms | `20261002T053125Z-graph-rag-rq1` |" in index
 

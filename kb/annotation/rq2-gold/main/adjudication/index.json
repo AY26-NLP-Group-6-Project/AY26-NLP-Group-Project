@@ -1,0 +1,52 @@
+{
+ "round": "main",
+ "ids": [
+  "P00079",
+  "P00136",
+  "P00141",
+  "P00271",
+  "P00315",
+  "P00325",
+  "P00332",
+  "P00377",
+  "P00393",
+  "P00412",
+  "P00428",
+  "P00431",
+  "P00571",
+  "P00585",
+  "P00711",
+  "P00723"
+ ],
+ "batches": [
+  {
+   "batch": "01",
+   "file": "C:\\Users\\hanny\\Desktop\\NTU MSAI\\AI6127-NLP\\AY26-NLP-Group-Project\\kb\\annotation\\rq2-gold\\main\\adjudication\\batches\\01.md",
+   "ids": [
+    "P00079",
+    "P00136",
+    "P00141",
+    "P00271",
+    "P00315",
+    "P00325",
+    "P00332",
+    "P00377",
+    "P00393",
+    "P00412",
+    "P00428",
+    "P00431"
+   ]
+  },
+  {
+   "batch": "02",
+   "file": "C:\\Users\\hanny\\Desktop\\NTU MSAI\\AI6127-NLP\\AY26-NLP-Group-Project\\kb\\annotation\\rq2-gold\\main\\adjudication\\batches\\02.md",
+   "ids": [
+    "P00571",
+    "P00585",
+    "P00711",
+    "P00723"
+   ]
+  }
+ ],
+ "labels_dir": "C:\\Users\\hanny\\Desktop\\NTU MSAI\\AI6127-NLP\\AY26-NLP-Group-Project\\kb\\annotation\\rq2-gold\\main\\adjudication\\labels"
+}

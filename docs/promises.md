@@ -16,7 +16,7 @@ what the two human checks found; the dated record is in `history.md`, the page-c
 | promises | restatements of one commitment across years merged; same-metric commitments with another deadline or quantity linked as `related` | rule, deterministic | `gw-graph promises --source <tag>` |
 | checkable | stated before its deadline; deadline ≤ 2025 with a report for that year or the next; metric names something | rule | same |
 | evidence | statements from the company's later reports (section 4) | hybrid retrieval, per report year | `gw-graph promise-evidence` |
-| outcome | achieved / failed / revised / unclear / disappeared, reported as achieved / not met / unclear / disappeared | the model labels each statement, a rule decides (section 5); majority of three runs | `gw-graph promise-outcomes --repeats 3` |
+| outcome | achieved / failed / revised / unclear / disappeared inside the judge; reported and annotated as achieved / failed / unclear / disappeared, a re-dated commitment counting as failed | the model labels each statement, a rule decides (section 5); majority of three runs | `gw-graph promise-outcomes --repeats 3` |
 | human check | a blind sheet, scored against the system and weighted back to the pool | `gw-graph promise-sheet`, `gw-graph promise-score --sheet …` |
 
 Grounding. A *promise with verifiable timing* is ML-Promise's notion (Seki et al., EMNLP 2025),
@@ -79,12 +79,20 @@ Two rounds were filled, on two versions of the system:
 (A round-2 sheet was drawn on judge v2 with the first evidence and withdrawn unfilled when the evidence
 changed.)
 
+The third sheet, for two annotators, is `promise-check-pair.xlsx`: 150 promises, the 60 held-out rows
+(the earlier labels prefilled as Annotator 1, so those rows gain a second, independent opinion) plus 90
+drawn at random from the 239 promises never checked. The group returned it with 137 rows labelled by
+both annotators and settled in `final` (13 rows left empty); the two agreed on 123 of 137 (0.898,
+κ 0.84). Labels on this sheet: achieved / failed / unclear / disappeared (section 7). Those 137 rows are
+the human part of the gold set (section 8) and the reference the model annotators were calibrated on.
+
 ## 4. Evidence
 
 ### First version, and why it missed the answers
 
 Six statements from the reports of the deadline year and the year after: BM25 over every statement,
-dense over the shared prose-sentence store, fused by reciprocal rank fusion. On the round-1 sheet the
+dense over the statements that had a vector at the time (the 71,342 sentence-shaped ones), fused by
+reciprocal rank fusion. On the round-1 sheet the
 annotator could not tell the outcome of 35 of 74 promises; the case studies then found by hand that 5 of
 the 11 `disappeared` promises were in the reports after all.
 
@@ -101,16 +109,17 @@ Ranking the hand-found answer statements under that retrieval showed the mechani
 | Tiong Woon ERP | "In FY2022, we began integrating …" | none | 58 | not ranked |
 | Indofood Agri pouch | "has been delayed" (2023 report, deadline 2025) | 1 | 1 | outside the window |
 
-The prose store holds 71,342 of 110,314 statements; result sentences mostly fail its filter (a sentence
-without one of its listed verbs, or full of figures). A statement outside the store can score in one of
-the two fused rankings only, and RRF (k = 60) puts a first place in one list (1/61) below a thirtieth
-place in both (2/90). Of the 2,244 statements shown, 37 (1.6 %) came from outside the store: the
-commitments called "unclear" were judged almost without the sentences that carry results.
+Result sentences were mostly among the statements without a vector: lines full of figures, or
+third-person sentences. A statement that scores in one of the two fused rankings only is put by RRF
+(k = 60) below one that is thirtieth in both (1/61 against 2/90). Of the 2,244 statements shown, 37
+(1.6 %) came from outside the dense index: the commitments called "unclear" were judged almost without
+the sentences that carry results. The knowledge base now carries a vector for every statement
+(`baseline.md`), which is what the next version builds on.
 
 ### Trajectory evidence (`promises/evidence.py`, mode `trajectory`)
 
-1. **Two complete rankings.** Every statement of a report is ranked by BM25 and by dense similarity;
-   vectors the store lacks are embedded on demand (23,089 statements, once, cached).
+1. **Two complete rankings.** Every statement of a report is ranked by BM25 and by dense similarity
+   over the shared statement store (statements under five words are embedded on demand, cached).
 2. **A budget per report year**, from the report after the promise up to the year after the deadline:
    6 statements from the first report at or after the deadline, 3 from the next, 2 from each earlier one.
 3. **Neighbours.** The statements before and after the two best hits of the deadline report, whatever
@@ -121,7 +130,8 @@ commitments called "unclear" were judged almost without the sentences that carry
 5. **Order and adjacency.** Statements are shown in report order; one that follows the previous one in
    the report is marked "directly follows E3", so a target cell and its result are read together.
 
-11.6 statements per promise (max 19), from 2.0 report years; 42 % of them from outside the prose store.
+11.6 statements per promise (max 19), from 2.0 report years; 42 % of them statements the first
+version's dense index did not cover.
 Checks without new labels: 6 of the 8 hand-found answers are now shown (four through the complete
 rankings, one through the wider window, one as a neighbour; the Indofood postponement sentence ranks
 8th among many ISPO statements, the Tiong Woon sentence is not reachable by similarity); 26 of the 28
@@ -133,6 +143,39 @@ One inconsistency, measured: store vectors embed a statement with a "Company (ye
 on-demand vectors the bare text. Taking every vector from one store built the same way keeps 91.2 % of
 the evidence statements and moves the basis of 3 of 229 verdicts; left as is, because the held-out
 check was made on this evidence.
+
+### Any system's retriever (`promise_window`)
+
+The finder above is the graph system's way of answering one question: which statements of the later
+reports should the judge read for this commitment. Any registered system answers the same question
+through the RQ1 protocol: `promise-evidence --system <name>` turns each checkable promise into a
+`Query` under the `promise_window` condition (company, `year_from` = the promise's year + 1, `year_to` =
+the deadline + 1, the metric as `aspect`, the record under `meta["promise"]`), calls the system's
+`retrieve(query, k=20)` and writes `evidence.<name>.jsonl` in the same shape as the finder's, report
+order, E-tags and `follows` derived from the statement ids. The judge then runs on it unchanged
+(`promise-outcomes --evidence-from …`, output `outcomes.v2.<name>.jsonl`), and `promise-gold-score`
+compares the result with the gold. The graph system serves the condition with the trajectory finder;
+the hybrid baseline with its ordinary ranking inside the window; an agentic system with whatever it
+plans over the corpus tools (`gw_common.corpus`). The cap of 20 statements is a ceiling, not a target:
+the finder's own budgets stay under it (11.6 on average), the baseline fills it.
+
+The same loop runs as an evaluation task: `gw-eval --task rq2 --system <name> --split dev --repeats 3`
+takes the gold split, retrieves once per promise, judges `repeats` times, scores the vote against the
+gold (accuracy, κ, macro-F1 over the four outcomes, the three rates of section 6, a bootstrap interval)
+and writes a run dir that `--publish` and `--compare` read like an RQ1 run (`evaluation.md`, section 4).
+The pipeline stages above (`promise-evidence --system`, `promise-outcomes --evidence-from`,
+`promise-gold-score`) remain for judging all 374 or re-judging a stored evidence file.
+
+First result (2026-10-30, `gw-eval --task rq2`, dev split of the gold, 123 promises, judge v2 × 3 on each
+system's evidence; `results/graph/promise-window-trajectory`, `results/baseline/promise-window-hybrid`):
+the finder's evidence and the hybrid baseline's both put the vote at 97 of 123 right (0.789; κ 0.69 and
+0.68), paired +4 / −4, McNemar p = 1.00. The baseline is more cautious (a verdict on 3 of the 22
+gold-unclear promises against 5, 21 of 101 settled ones left unclear against 17, 94 % of its verdicts
+right against 90 %) and less steady (20 promises change label across repeats against 10). Judged over
+all 374 through the pipeline (`promise-outcomes --evidence-from`), the baseline's evidence gives
+achieved 172, failed 62, unclear 125, disappeared 15 (USD 1.9). As on RQ1, structured and plain hybrid
+retrieval are not distinguishable on this split; what the finder adds is the shorter, ordered reading
+(11.7 statements against 20) and the lower cost per judgement.
 
 ## 5. The judge
 
@@ -177,9 +220,9 @@ decomposition (`evidence-ledger.md`).
 On the round-1 rows, which the three versions of the prompt were tuned on, judge v2 with the first
 evidence scores 0.88–0.92 raw and gives a verdict on 2–4 of the 35 unclear rows; the model's own
 outcome in the same reply reaches 0.81, so the rule adds to the questions, mostly on `revised`. The
-judge is not deterministic: about 15 % of promises do not get the same outcome three times, almost
-always a verdict against `unclear`. Cost: USD 1.5 for three runs over the 374 promises on trajectory
-evidence.
+judge is not deterministic: about 16 % of promises (58 of 374) do not get the same outcome three
+times, almost always a verdict against `unclear`. Cost: USD 1.5 for three runs over the 374 promises
+on trajectory evidence.
 
 ## 6. Results of the held-out check
 
@@ -187,24 +230,25 @@ Weighted to each sheet's pool, 95 % bootstrap intervals:
 
 | | round 1: judge v1, first evidence | round 3: judge v2, trajectory evidence, held out |
 |---|---|---|
-| raw accuracy, κ, five classes | 0.703, 0.63 | 0.667, 0.57 |
-| accuracy, reported classes (failed and revised as one) | 0.82 (0.72–0.90) | 0.83 (0.71–0.93) |
+| raw accuracy, κ, five classes | 0.703, 0.63 | 0.683, 0.59 |
+| accuracy, reported classes (failed and revised as one) | 0.82 (0.72–0.90) | 0.82 (0.70–0.92) |
 | accuracy, five classes | 0.82 (0.72–0.90) | 0.80 (0.68–0.90) |
-| verdict where the check says unclear | 31 % (20–42) | **8 % (3–15)** |
-| unclear where the check has a verdict | 0 % | 15 % (4–24) |
-| verdicts that are right | 75 % (63–86) | 84 % (71–93) |
+| verdict where the check says unclear | 31 % (20–42) | **14 % (2–33)** |
+| unclear where the check has a verdict | 0 % | 15 % (3–29) |
+| verdicts that are right | 75 % (63–86) | 85 % (74–94) |
 
-The over-commitment fix holds on rows nothing was tuned on. Overall accuracy did not move: v1 was right
-82 % of the time because it said `unclear` often and was right when it did; v2 on complete evidence says
-it less and is right 80–83 % of the time. The price is real: 15 % of the promises the check settles are
-left `unclear`.
+The over-commitment fix holds on rows nothing was tuned on, with a wide interval: 17 human-unclear rows
+carry it. Overall accuracy did not move: v1 was right 82 % of the time because it said `unclear` often
+and was right when it did; v2 on complete evidence says it less and is right 80–82 % of the time. The
+price is real: 15 % of the promises the check settles are left `unclear`. (An earlier judge run with the
+previous chat model scored 8 % (3–15) and 0.83 on the same sheet; `history.md`, 2026-10-29.)
 
 What the commitments did, human-verified:
 
 | outcome | first evidence (round 1, pool 374) | complete evidence (round 3, pool 299) |
 |---|---|---|
 | achieved | 36.0 % (27.9–42.1) | **50.1 % (40.7–58.7)** |
-| not met | 7.6 % (4.7–10.5) | **12.8 % (7.9–20.5)** |
+| failed, including re-dated | 7.6 % (4.7–10.5) | **12.8 % (7.9–20.5)** |
 | unclear | 48.7 % (39.8–57.7) | **30.9 % (21.9–39.0)** |
 | disappeared | 5.3 % (3.8–6.7) | 6.2 % (0.7–13.9) |
 | not a promise | 2.4 % | 0 % |
@@ -235,25 +279,88 @@ evidence shows the commitment to be: 8 of the 11 misses are a scope or baseline 
 left to its context (5 of them only the later evidence supplies), 3 are misreadings ("up to 20 %" as
 20 %; "explore setting targets" as setting them; a qualifying age dropped).
 
-## 7. Reporting convention: failed and revised are one class
+## 7. Reporting convention: a re-dated commitment is a failed deadline
 
-Both say the deadline passed without the target being reached. Which of the two it is depends on
-whether a missed target that is set again counts as re-dated; the round-3 guide carried two rules that
+The judge's five labels include `revised`, a commitment given a later date or a weaker level without
+the original being reported as met. Whether such a row is `failed` or `revised` turned out to depend on
+whether a missed target that is set again counts as re-dated: the round-3 guide carried two rules that
 collided there (ours), the annotator followed one in six rows and the other elsewhere, round 1 had only
-the first, and the system follows the first. Re-deriving the outcome with the other rule moves raw
-accuracy from 0.667 to 0.700 only. So outcomes are reported on **achieved / not met / unclear /
-disappeared**: `outcome.reported()` maps the label, `promise-outcomes` prints the merged counts,
-`promise-score` returns a `reported` block and its weighted `accuracy` is on the merged classes, and the
-guide has one rule. The five-way label stays in the data as detail, for example to pick moved-goalpost
-cases. The judge's rule is unchanged: on the merged classes the order of its second and third steps no
-longer matters. As one class, "not met" is right 21 times in 27 on the held-out sheet and misses 1 of 22.
+the first, and the system follows the first. Re-deriving the outcome with the other rule moved raw
+accuracy from 0.667 to 0.700 only.
 
-System counts over the 374 on trajectory evidence: achieved 173, not met 56, unclear 135, disappeared 10.
+Decision (2026-10-04, renamed 2026-10-21): the deadline was stated; if the deadline year passed without
+the target being reported as met, the outcome is **failed**, whether the report admits the miss or
+moves the date. Outcomes are reported and, from the two-annotator sheet on, annotated on **achieved /
+failed / unclear / disappeared**. `outcome.reported()` maps `revised` to `failed`; `promise-outcomes`
+prints the merged counts; `promise-score` returns a `reported` block and its weighted `accuracy` is on
+the merged classes (`accuracy_five_way` keeps the judge's own labels apart); the guide has one rule.
+The judge's rule is unchanged, and `revised` stays in its output as detail, for example to pick
+moved-goalpost cases. On the held-out sheet the merged class is right 18 times in 24 and misses 4 of 22.
 
-## 8. Known limits
+System counts over the 374 on trajectory evidence: achieved 169, failed 56, unclear 134, disappeared 15.
 
-- One annotator with an AI-drafted first pass; 4 to 15 rows per stratum, so class-level rates carry wide
-  intervals.
+## 8. The gold set and its split
+
+Every checkable promise carries a settled outcome: `data/eval/rq2promises.pair_gold.a6f35618dd6e.jsonl`
+(373 rows, each with its promise record, so the file alone drives `gw-eval --task rq2`) and
+`rq2promises.build_report.json`. The one row settled as `not_a_promise` (P00412, a target
+horizon read as a deadline) is an extraction error, not an outcome, and the judge has no such label: it
+is listed in the build report and stays out of the gold and the split. Two sources, one sheet format,
+one guide:
+
+- **137 promises labelled by the group** on the pair sheet (section 3): two annotators, blind, an
+  adjudicated `final`; agreement 0.898, κ 0.84.
+- **237 promises labelled by model annotators** run as sub-agents under the sheet's guide, three
+  boundary clarifications drawn from the first calibration round, and 21–24 worked examples from the
+  group's rows. Annotator 1 is the project's default model (Claude Fable), annotator 2 Claude Opus; each
+  reads the same eight cells the humans read and nothing else, blind to the other and to the system.
+  They agreed on 221 of 237 (0.932); the 16 disagreements went to a third pass that read both notes
+  (12 settled for annotator 1, 4 for annotator 2, none to a third label), among them P00412, settled as
+  `not_a_promise` and therefore excluded; 236 model-labelled promises remain.
+- **Calibration first**, on human rows the annotators had not seen as examples, each round a fresh
+  stratified 40:
+
+| round | annotator 1 vs final | annotator 2 vs final | 1 vs 2 | the two humans on the same rows |
+|---|---|---|---|---|
+| 1, sheet guide only | 0.875, κ 0.82 | 0.850, κ 0.78 (same model as 1) | 0.975 | 0.875, κ 0.82 |
+| 2, guide + boundaries | 0.875, κ 0.81 | 0.875, κ 0.81 (same model as 1) | 1.000 | 0.950, κ 0.92 |
+| 2, annotator 2 = Opus | 0.875, κ 0.81 | **0.925, κ 0.88** | 0.925 | 0.950, κ 0.92 |
+
+Two instances of one model agree almost perfectly, which makes the pair worthless as a check, so the
+second annotator was moved to another model family. Where Fable and Opus agree they match the group's
+final 35 times in 37 (0.946). Against the human final the model annotators sit where the humans sit
+against each other (0.875–0.925, humans 0.90 over the 137 rows). What remains lies on two boundaries
+the humans also split on: `unclear` against `disappeared` when the evidence touches the subject but not
+the target, and whether a practice shown running is `achieved`. One known inconsistency: P00136 and
+P00141 (Far East's refrigerant roadmap, FY2021 and FY2022) are `unclear` by the model pair, while the
+group settled the FY2023 sibling P00144 as `disappeared` on near-identical evidence.
+
+Distribution over the 373: achieved 206, failed 68, unclear 86, disappeared 13.
+
+**Split: dev 123 / test 250**, as for RQ1: about a third dev, stratified by outcome × label source, the
+75 promises the judge prompt was tuned on (the round-1 sheet) pinned to dev.
+
+| | dev | test |
+|---|---|---|
+| achieved / failed / unclear / disappeared | 61 / 34 / 22 / 6 | 145 / 34 / 64 / 7 |
+| labelled by the group / by the model pair | 22 / 101 | 115 / 135 |
+
+Tune on dev; test is opened once, for the report, and has not been. On dev the judge of section 5
+agrees with the gold on 96 of 123 (0.780, κ 0.67): precision / recall achieved 0.94 / 0.84, failed
+0.88 / 0.65, unclear 0.49 / 0.77, disappeared 0.67 / 1.00; it gives a verdict on 5 of the 22
+gold-unclear promises (23 %), leaves 18 of the 101 settled ones unclear (18 %), and 90 % of its
+verdicts are right.
+
+Files: `kb/annotation/rq2-gold/<round>/` holds, per round, the brief, the reference examples, the
+batches as the annotators saw them, their label files (`NN.a1.jsonl`, `NN.a2.jsonl`), `score.json` for
+the calibration rounds and `main/adjudication/` for the third pass. `gw-graph promise-gold` rebuilds the
+snapshot from these files and the group's sheet; `gw-graph promise-gold-score --gold-split dev` scores a
+judge output against it.
+
+## 9. Known limits
+
+- Two human annotators for 137 promises, calibrated model annotators for the other 237; 4 to 15 rows per
+  stratum on the earlier check sheets, so their class-level rates carry wide intervals.
 - Flattened multi-column tables read across columns (next year's target taken for a result → a wrong
   `achieved`); a bare "this target" from another page mis-attributed. Two prompt clarifications did not
   remove these.
@@ -262,7 +369,7 @@ System counts over the 374 on trajectory evidence: achieved 173, not met 56, unc
 - Extraction lacks scope or baseline left to context; table-only targets are missing from the pool.
 - `unclear` and `disappeared` remain upper bounds on what the reports leave open.
 
-## 9. Reproducing
+## 10. Reproducing
 
 ```bash
 uv run gw-graph targets-export                          # shards for an outside extractor
@@ -274,6 +381,17 @@ uv run gw-graph promise-sheet --judge v2 --evidence trajectory --limit 60 --seed
     --exclude-sheets kb/annotation/spotchecks/promise-check-first-evidence.xlsx \
     --out kb/annotation/spotchecks/promise-check-trajectory.xlsx
 uv run gw-graph promise-score --sheet kb/annotation/spotchecks/promise-check-trajectory.xlsx
+uv run gw-graph promise-gold --sheet kb/annotation/spotchecks/promise-check-pair.xlsx \
+    --held-out kb/annotation/spotchecks/promise-check-first-evidence.key.json   # the gold file and split
+uv run gw-graph promise-gold-score --gold-split dev                             # a judge against the gold
+uv run gw-graph promise-evidence --system baseline-rag                          # any system's evidence (promise_window)
+uv run gw-graph promise-outcomes --judge v2 --repeats 3 \
+    --evidence-from artifacts/graph/dev/promises/evidence.baseline-rag.jsonl   # -> outcomes.v2.baseline-rag.jsonl
+uv run gw-graph promise-gold-score --gold-split dev \
+    --outcomes artifacts/graph/dev/promises/outcomes.v2.baseline-rag.jsonl
+uv run gw-eval --task rq2 --system graph-rag --split dev --repeats 3       # the same as an evaluation run
+uv run gw-eval --task rq2 --system baseline-rag --split dev --repeats 3
+uv run gw-eval --compare artifacts/runs/<graph run> artifacts/runs/<baseline run>
 ```
 
 `--evidence deadline` with `--evidence-from artifacts/graph/dev/promises/outcomes.jsonl` reproduces the

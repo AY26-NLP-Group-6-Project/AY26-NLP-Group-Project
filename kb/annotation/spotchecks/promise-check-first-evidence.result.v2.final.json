@@ -9,13 +9,13 @@
   "reported": {
     "n": 74,
     "human_distribution": {
-      "not_met": 14,
+      "failed": 14,
       "achieved": 14,
       "unclear": 35,
       "disappeared": 11
     },
     "system_distribution": {
-      "not_met": 14,
+      "failed": 14,
       "unclear": 36,
       "disappeared": 11,
       "achieved": 13
@@ -28,7 +28,7 @@
         "recall": 0.8571428571428571,
         "support": 14
       },
-      "not_met": {
+      "failed": {
         "precision": 0.9285714285714286,
         "recall": 0.9285714285714286,
         "support": 14
@@ -49,14 +49,14 @@
         "unclear": 2,
         "achieved": 12
       },
-      "not_met": {
-        "not_met": 13,
+      "failed": {
+        "failed": 13,
         "unclear": 1
       },
       "unclear": {
         "unclear": 33,
         "achieved": 1,
-        "not_met": 1
+        "failed": 1
       },
       "disappeared": {
         "disappeared": 11
@@ -242,10 +242,10 @@
       ]
     },
     "human_share.failed": {
-      "estimate": 0.04705882352941177,
+      "estimate": 0.07613636363636364,
       "ci95": [
-        0.023529411764705885,
-        0.07058823529411765
+        0.04672459893048128,
+        0.10451203208556151
       ]
     },
     "human_share.not_a_promise": {
@@ -255,25 +255,11 @@
         0.07165775401069517
       ]
     },
-    "human_share.revised": {
-      "estimate": 0.029077540106951873,
-      "ci95": [
-        0.009692513368983958,
-        0.048462566844919786
-      ]
-    },
     "human_share.unclear": {
       "estimate": 0.4870289024700789,
       "ci95": [
         0.39794053985230454,
         0.5774318818436465
-      ]
-    },
-    "human_share.not_met": {
-      "estimate": 0.07613636363636364,
-      "ci95": [
-        0.04672459893048128,
-        0.10451203208556151
       ]
     }
   }

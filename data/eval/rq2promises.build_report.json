@@ -1,0 +1,139 @@
+{
+  "items": 373,
+  "snapshot": "rq2promises.pair_gold.a6f35618dd6e.jsonl",
+  "splits": {
+    "test": 250,
+    "dev": 123
+  },
+  "labels": {
+    "achieved": 206,
+    "unclear": 86,
+    "failed": 68,
+    "disappeared": 13
+  },
+  "label_source": {
+    "human_pair": 137,
+    "model_pair": 236
+  },
+  "labels_by_split": {
+    "dev": {
+      "achieved": 61,
+      "failed": 34,
+      "unclear": 22,
+      "disappeared": 6
+    },
+    "test": {
+      "achieved": 145,
+      "unclear": 64,
+      "failed": 34,
+      "disappeared": 7
+    }
+  },
+  "source_by_split": {
+    "dev": {
+      "model_pair": 101,
+      "human_pair": 22
+    },
+    "test": {
+      "human_pair": 115,
+      "model_pair": 135
+    }
+  },
+  "pilot": 75,
+  "annotators_agreed": {
+    "human_pair": 123,
+    "model_pair": 221
+  },
+  "companies": 32,
+  "not_a_promise_excluded": [
+    {
+      "promise_id": "P00412",
+      "label_source": "model_pair",
+      "note": "wrong deadline: the row's FY2028 column (FY2029 in E2 the next year) is the target horizon and 'installed by FY2024' fixes the property cohort, as E2 keeps 'by FY2024' under an FY2029 label and E10 drops it once FY2024 has passed, so the extracted 2024 deadline is not the target's; if 2024 were the deadline, E8's 11% vs 15% and the E5-E6 residential cut to 5% would make it failed"
+    }
+  ],
+  "calibration": {
+    "calibration": {
+      "a1": {
+        "n": 40,
+        "accuracy": 0.875,
+        "cohen_kappa": 0.8190045248868778
+      },
+      "a2": {
+        "n": 40,
+        "accuracy": 0.85,
+        "cohen_kappa": 0.7837837837837837
+      },
+      "a1_vs_a2": {
+        "n": 40,
+        "accuracy": 0.975,
+        "cohen_kappa": 0.9644444444444444
+      },
+      "agreed_vs_human": {
+        "n": 39,
+        "accuracy": 0.872,
+        "cohen_kappa": 0.8128598848368522
+      },
+      "human_a1_vs_a2": {
+        "n": 40,
+        "accuracy": 0.875,
+        "cohen_kappa": 0.8171846435100548
+      }
+    },
+    "calibration2": {
+      "a1": {
+        "n": 40,
+        "accuracy": 0.875,
+        "cohen_kappa": 0.8052580331061344
+      },
+      "a2": {
+        "n": 40,
+        "accuracy": 0.875,
+        "cohen_kappa": 0.8052580331061344
+      },
+      "a1_vs_a2": {
+        "n": 40,
+        "accuracy": 1.0,
+        "cohen_kappa": 1.0
+      },
+      "agreed_vs_human": {
+        "n": 40,
+        "accuracy": 0.875,
+        "cohen_kappa": 0.8052580331061344
+      },
+      "human_a1_vs_a2": {
+        "n": 40,
+        "accuracy": 0.95,
+        "cohen_kappa": 0.9231508165225744
+      }
+    },
+    "calibration2-opus": {
+      "a1": {
+        "n": 40,
+        "accuracy": 0.875,
+        "cohen_kappa": 0.8052580331061344
+      },
+      "a2": {
+        "n": 40,
+        "accuracy": 0.925,
+        "cohen_kappa": 0.8838334946757019
+      },
+      "a1_vs_a2": {
+        "n": 40,
+        "accuracy": 0.925,
+        "cohen_kappa": 0.8793969849246231
+      },
+      "agreed_vs_human": {
+        "n": 37,
+        "accuracy": 0.946,
+        "cohen_kappa": 0.9132473622508792
+      },
+      "human_a1_vs_a2": {
+        "n": 40,
+        "accuracy": 0.95,
+        "cohen_kappa": 0.9231508165225744
+      }
+    }
+  },
+  "model_pair_adjudicated": 15
+}
