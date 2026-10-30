@@ -88,10 +88,17 @@ def _promises(args, cfg: GraphConfig) -> int:
     from graph_rag.promises import build as promise_build
     from graph_rag.promises import evidence as promise_evidence
     from graph_rag.promises import extract as target_extract
+    from graph_rag.promises import gold, pair_sheet
     from graph_rag.promises import outcome as promise_outcome
-    from graph_rag.promises import pair_sheet
     from graph_rag.promises import sheet as promise_sheet
 
+    if args.stage == "promise-gold":
+        result = gold.build(
+            Path(args.sheet or "kb/annotation/spotchecks/promise-check-pair.xlsx"), Path(args.rounds_dir),
+            args.round, promise_evidence.out_dir(cfg) / "promises.jsonl",
+            Path(args.held_out) if args.held_out else None, Path(args.out or "data/eval"))
+        print(json.dumps(result, indent=2))
+        return 0
     if args.stage == "targets":
         result = target_extract.extract(cfg, limit=args.limit)
     elif args.stage == "targets-export":
@@ -140,7 +147,8 @@ def main(argv: list[str] | None = None) -> int:
                  "canon-pools", "canon-tune", "canon-verify", "canon-spotcheck", "canon-spotcheck-score",
                  "export-a3cg", "targets", "targets-export", "targets-ingest", "promises",
                  "promise-evidence", "promise-outcomes", "promise-sheet", "promise-score",
-                 "promise-pair-sheet", "promise-pair-copy", "promise-pair-merge", "promise-pair-score"],
+                 "promise-pair-sheet", "promise-pair-copy", "promise-pair-merge", "promise-pair-score",
+                 "promise-gold"],
     )
     ap.add_argument("--config", default="configs/graph.dev.yaml")
     ap.add_argument("--build-id")
@@ -190,6 +198,9 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--annotator", type=int, choices=[1, 2], default=2,
                     help="promise-pair-copy / -merge: whose columns")
     ap.add_argument("--copy-from", help="promise-pair-merge: the filled blind copy to merge")
+    ap.add_argument("--rounds-dir", default="kb/annotation/rq2-gold",
+                    help="promise-gold: where the model annotators' rounds live")
+    ap.add_argument("--round", default="main", help="promise-gold: the round whose labels fill the gold file")
     args = ap.parse_args(argv)
 
     cfg = GraphConfig.load(args.config, build_id=args.build_id)
