@@ -14,7 +14,7 @@ Environment:
 
     AGENTIC_MAX_HOPS   planner calls per item at most; 0 is the fixed search, no LLM   default per question
     AGENTIC_TIMEOUT_S  no new planner call after this many seconds per item            default 90
-    AGENTIC_SELECT     rq1 only: verified | rerank (see rq1.py)                        default verified
+    AGENTIC_SELECT     rq1 only: verified | rerank | neighbours (see rq1.py)           default verified
 """
 
 from __future__ import annotations
@@ -86,8 +86,8 @@ class AgenticRetriever:
         self.max_hops = int(raw_hops) if raw_hops else None
         self.timeout_s = float(os.getenv("AGENTIC_TIMEOUT_S", "") or 90)
         self.select = os.getenv("AGENTIC_SELECT", "").strip() or "verified"
-        if self.select not in ("verified", "rerank"):
-            raise ValueError("AGENTIC_SELECT must be verified or rerank")
+        if self.select not in ("verified", "rerank", "neighbours"):
+            raise ValueError("AGENTIC_SELECT must be verified, rerank or neighbours")
         self.client = client or LLMClient()   # one client: the harness reads its embedding usage
         self.corpus = corpus or corpus_tools.load("statements", build_id=build_id, client=self.client)
         self.reranker = reranker or CrossEncoderReranker()

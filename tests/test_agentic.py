@@ -172,6 +172,13 @@ def test_rerank_selection_ignores_the_verifier_and_ranks_against_the_question(ma
     assert len(spans) == 2 and "c0" not in {s.statement_id for s in spans}
 
 
+def test_neighbours_selection_keeps_the_next_sentence_whatever_the_verifier_says(make):
+    r = make([gate(ONE_GAP), verify([], resolved=False)], select="neighbours")
+    assert [s.statement_id for s in r.retrieve(query(), k=3)] == ["c1"]
+    r = make([gate(ONE_GAP), verify([], resolved=False)], select="neighbours")
+    assert r.retrieve(query(EvidenceCondition.CROSS_YEAR_AGENTIC), k=3) == []    # its report is out of reach
+
+
 def test_a_third_hop_searches_again_and_finds_new_evidence(make):
     r = make([gate(ONE_GAP, queries=("warehouse solar",)), verify([], False, ["Green Power Programme 2026"]),
               verify(["P1"])], hops=3)

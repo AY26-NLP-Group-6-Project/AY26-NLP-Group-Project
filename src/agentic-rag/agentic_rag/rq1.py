@@ -7,10 +7,11 @@ to 0.690. So the first planner call is a gate: a sentence with no gap gets no ev
 then reads exactly what `sentence_only` reads.
 
 Where there is a gap the planner states it as a question. Hop by hop it searches, and a verifier call says
-which passages answer the question. Two ways to choose the final spans, both compared on dev:
+which passages answer the question. Three ways to choose the final spans, compared on dev:
 
-    verified  only passages the verifier says answer the question, cross-encoder order; possibly none
-    rerank    the top k of everything found, by the cross-encoder against the question, not the sentence
+    verified    only passages the verifier says answer the question, cross-encoder order; possibly none
+    rerank      the top k of everything found, by the cross-encoder against the question, not the sentence
+    neighbours  the sentences right next to the target whatever the verifier says, then the verified ones
 
 `hops` counts planner calls: 1 is the gate and one search with `rerank` selection; 2 adds the verifier;
 3 lets the verifier ask for one more search.
@@ -125,7 +126,13 @@ def run(agent, query: Query, k: int, trace, started: float) -> list[EvidenceSpan
             add(fence.search(q, k=SEARCH_K), hop)
 
     ranked = _rank(agent, question, pool)
-    if agent.select == "verified" and hops >= 2:
-        keep = set(verified or [])
-        ranked = [s for s in ranked if s.statement_id in keep]
-    return ranked[:k]
+    if agent.select == "rerank" or hops < 2:
+        return ranked[:k]
+    keep = set(verified or [])
+    chosen = [s for s in ranked if s.statement_id in keep]
+    if agent.select == "neighbours":
+        beside = fence.around_target(before=1, after=1)
+        near = [pool[s.statement_id] for s in beside if s.statement_id in pool]
+        ids = {s.statement_id for s in near}
+        chosen = near + [s for s in chosen if s.statement_id not in ids]
+    return chosen[:k]
