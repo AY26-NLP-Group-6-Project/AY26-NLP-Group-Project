@@ -156,6 +156,13 @@ not what limits RQ2 on this store**: in 14 of the 17 errors that could be checke
 in front of the judge, and doubling the evidence to 40 statements lowers the vote to 0.772 (+3 / −7, p = 0.34). The
 same hybrid configuration scored 0.789 and 0.805 on two days, which is the noise to read these against.
 
+Judge v3 on those same statements (`agentic/rq2-dev-v3-*`, `agentic.md`): adds a differently worded measure of the same
+commitment, a stated part delivery and a figure compared in code. Fixed budget 0.813 → 0.870 (+9 / −2, p = 0.065), agent
+0.789 → 0.837 (+9 / −3, p = 0.15), hybrid 0.805 → 0.813 (+6 / −5, p = 1.00). Settled promises left unclear on the fixed budget
+fall from 16 to 8 of 101, with verdicts where the gold is unclear 3 → 4 of 22. Designed on this split, so optimistic. The
+planner still adds nothing (agent against fixed budget +2 / −6, p = 0.29): of the 195 statements its own actions added, the
+judge gave a result label to 1.
+
 ### Case studies
 
 `case-studies.md`: ten commitments from eight companies as page-cited timelines, one per pattern:
@@ -181,7 +188,8 @@ admitted; one issuer both ways; partial delivery not reconciled; never mentioned
    human-verified unclear share fell from 49 % to 31 % once every statement was ranked.
 6. On dev, letting an LLM plan the retrieval improves neither question and costs more. On RQ1 what helps is narrower:
    the neighbouring sentences, for sentences that a text rule marks as depending on their context; on RQ2, a fixed
-   budget per report year does as well as anything, and the judge rather than retrieval is the limit. Test not read.
+   budget per report year does as well as anything, and the judge rather than retrieval is the limit: a judge that reads
+   more wordings as this commitment gains more than any retrieval change (fixed budget 0.813 to 0.870). Test not read.
 
 ## 4. Limits
 

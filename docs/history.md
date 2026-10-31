@@ -247,3 +247,8 @@ of the former notes index.
 - Configuration and hypotheses committed in `4a3d35f`. The test attempt stopped when the API account ran out of credit
   (HTTP 429, `credit_balance_exhausted`, chat and embeddings on one key); no metrics written, no test label read.
   Finished runs cost USD 6.20. To resume: `agentic.md`, section 6.
+- Judge v3 (`39ffb79`), written after reading the dev errors and notes, on the same statements with a new API key:
+  fixed budget `20261031T074640Z` 0.870 (v2 0.813, +9 / −2, p = 0.065), agent `T074637Z` 0.837 (0.789, +9 / −3, p = 0.15), hybrid
+  `T074643Z` 0.813 (0.805, +6 / −5, p = 1.00), agent at 500 characters `T074646Z` 0.854. Agent against fixed budget under v3 +2 /
+  −6, p = 0.29. Of the 195 statements the planner's actions added, the judge gave a result label to 1. Test still unread;
+  v3 is not in the freeze of `4a3d35f`. USD 2.4.

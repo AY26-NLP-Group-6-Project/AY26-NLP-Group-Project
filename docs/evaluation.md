@@ -180,6 +180,9 @@ RQ2 run is only compared with another RQ2 run (same promises, the four outcomes 
 votes from `predictions.jsonl`, so give it run directories (`artifacts/runs/<run_id>`): a published folder
 holds summaries only. `--pairs condA:condB,...` adds pairs of conditions, so two arms of one run can be compared.
 
+On RQ2, `--judge v1|v2|v3` picks the judge (default v2; v3 in `agentic.md`), and `--evidence <run>/evidence.jsonl` judges
+an earlier run's statements again with no retrieval, so two judges compare on one evidence.
+
 `GW_RETRIEVAL_WORKERS` (default 1) sets the threads that collect evidence. An agent mostly waits on the network, so
 its runs use 8; a retrieval latency then includes queueing, so latencies compare only between runs at one worker.
 

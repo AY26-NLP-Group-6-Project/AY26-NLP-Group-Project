@@ -97,7 +97,40 @@ held back, mostly on `this_target` strictness: "no significant fines" for a targ
 with a table's dashes, a contradiction between two statements. Doubling the evidence points the same way: phrases
 shown go from 14 to 16 of 17 while accuracy falls (+3 / −7, p = 0.34), and settled promises left unclear rise from 16
 to 20. The agent reached 15 of 17. The planner mostly stops after one call (1.30 per promise; 4 of 123 hit the cap of
-two), so more hops were not run. Any further gain on RQ2 has to come from the judge, which is shared and was not changed.
+two), so more hops were not run. Any further gain on RQ2 has to come from the judge.
+
+### Judge v3
+
+`gw_common/judges/promise.py`, `promise_outcome_v3.md`. The design stays: the model labels each statement and a rule
+names the outcome. It adds `proxy` (the company's own account of the same matter in other words, "no significant fines"
+for zero fines), `partial` (a commitment stated to be part delivered, which counts as a miss) and `figure` (the deadline
+year's number, compared with the target in code, only for a target stated as a level in the same unit), and shows 1,000
+characters of a statement instead of 500. `--judge v3` selects it; v2 stays the default. `--evidence <run>/evidence.jsonl`
+judges an earlier run's statements again, so what differs below is the judge alone (`agentic/rq2-dev-v3-*`).
+
+| evidence | v2 vote | v3 vote | flips v2 → v3 | p | verdict where gold unclear, v2 → v3 | unclear where gold settled, v2 → v3 | verdicts right, v2 → v3 | judge USD / 1k, v3 |
+|---|---|---|---|---|---|---|---|---|
+| hybrid, top 20 | 0.805 | 0.813 | +6 / −5 | 1.00 | 5 → 6 of 22 | 16 → 12 of 101 | 82/90 → 84/95 | 1.88 |
+| fixed budget | 0.813 | **0.870** | +9 / −2 | 0.065 | 3 → 4 of 22 | 16 → 8 of 101 | 81/88 → 89/97 | 1.49 |
+| agent, two hops | 0.789 | 0.837 | +9 / −3 | 0.15 | 3 → 5 of 22 | 21 → 11 of 101 | 78/83 → 86/95 | 1.62, plus 0.84 planner |
+
+**v3 reads more promises through at about the same over-commitment, and no comparison is significant at 0.05.** It was
+designed after reading the errors and the annotators' notes on this same split, so these numbers are optimistic, and
+only the test split can say how much of the gain holds. The 22 promises the group labelled itself went 0.727 → 0.818 on
+the fixed budget and 0.682 → 0.818 on the agent's evidence, so the gain is not only on the model annotators' rows.
+
+Each feature helps a little when the rule is re-run on the saved labels (`python -m agentic_rag.analyze_judge`), with
+`proxy` the largest; on the fixed budget's evidence none gives 0.789, `proxy` 0.846, all three 0.870. The longer statements
+show no gain: on the agent's evidence 500 characters gives 0.854 against 0.837 at 1,000 (9 against 11 settled left
+unclear, 6 against 5 verdicts where gold is unclear, 21 against 11 unstable), inside the noise, so 1,000 stays for its
+steadier votes and at about the same cost.
+
+**The planner still adds nothing.** Under v3, agent against fixed budget is +2 / −6 (p = 0.29), hybrid against fixed
+budget +9 / −2 (p = 0.065), hybrid against agent +6 / −3 (p = 0.51). The reason shows in the labels: of the 195
+statements the planner's own actions added, the judge gave a result label to 1, and to 6 of the 144 from the fixed search
+for a change, against 120 of 1,419 from hop 0 (first repeat). What it adds is mostly other topics, which can only move
+a verdict by accident: on P00760 two statements it found turn a correct `disappeared` into `unclear`. **On this evidence
+the pipeline to carry forward is the fixed budget with judge v3**, with the agent kept as the measured comparison.
 
 ## 4. Cost and speed
 
@@ -122,8 +155,10 @@ only roughly.
 
 ## 6. The test split
 
-Configuration frozen at commit `4a3d35f`: RQ1 `AGENTIC_MAX_HOPS=2`, `AGENTIC_SELECT=verified`; RQ2 two hops; prompts
-`agentic_rq1_gate.md`, `agentic_rq1_verify.md`, `agentic_rq2_planner.md`. Hypotheses, to be read on test once:
+Configuration frozen at commit `4a3d35f`, with judge v2: RQ1 `AGENTIC_MAX_HOPS=2`, `AGENTIC_SELECT=verified`; RQ2 two
+hops; prompts `agentic_rq1_gate.md`, `agentic_rq1_verify.md`, `agentic_rq2_planner.md`. Judge v3 came later and is not
+part of this freeze: comparisons with it must be added and committed before test is read. Hypotheses, to be read on test
+once:
 
 | # | comparison on test, majority votes, McNemar | what dev showed |
 |---|---|---|
@@ -143,8 +178,9 @@ after test is read; a configuration that loses is reported as losing.
 **Status: not run.** One attempt on 2026-10-31 stopped when the API account ran out of credit, with `sentence_only` and
 `local` sampled on RQ1 and the RQ2 arms unfinished. No metrics were written and no test label was read. Those partial
 directories (`20261031T063349Z`, `T063350Z`, `T063351Z`, `T065124Z` under `artifacts/runs/`) are to be left unread, and
-the runs repeated in full. Commits after `4a3d35f` change documents and published results only, not the agent, the
-prompts or the harness.
+the runs repeated in full. Since `4a3d35f` the agent and its prompts have not changed. Commit `39ffb79` adds judge v3,
+`--judge`, and `--evidence` for RQ2, and stores the judge's labels in predictions; with the default v2 they change no
+outcome.
 
 ```bash
 export GW_RETRIEVAL_WORKERS=8                      # PowerShell: $env:GW_RETRIEVAL_WORKERS='8'

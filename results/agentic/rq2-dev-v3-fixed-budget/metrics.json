@@ -1,0 +1,621 @@
+{
+  "run_id": "20261031T074640Z-agentic-rag-rq2",
+  "system": "agentic-rag",
+  "task": "rq2",
+  "label_source": "pair_gold",
+  "dataset_hash": "a6f35618dd6e",
+  "n_items": 123,
+  "repeats": 3,
+  "conditions": {
+    "promise_window": {
+      "status": "ok",
+      "repeats": 3,
+      "reps": [
+        {
+          "n": 123,
+          "accuracy": 0.8699186991869918,
+          "cohen_kappa": 0.8010111223458038,
+          "macro_f1": 0.8145089285714286,
+          "per_class": {
+            "achieved": {
+              "precision": 0.9661016949152542,
+              "recall": 0.9344262295081968,
+              "f1": 0.95,
+              "support": 61
+            },
+            "failed": {
+              "precision": 0.9,
+              "recall": 0.7941176470588235,
+              "f1": 0.84375,
+              "support": 34
+            },
+            "unclear": {
+              "precision": 0.6923076923076923,
+              "recall": 0.8181818181818182,
+              "f1": 0.7500000000000001,
+              "support": 22
+            },
+            "disappeared": {
+              "precision": 0.625,
+              "recall": 0.8333333333333334,
+              "f1": 0.7142857142857143,
+              "support": 6
+            }
+          },
+          "confusion": {
+            "achieved": {
+              "achieved": 57,
+              "failed": 1,
+              "unclear": 3,
+              "disappeared": 0
+            },
+            "failed": {
+              "achieved": 1,
+              "failed": 27,
+              "unclear": 4,
+              "disappeared": 2
+            },
+            "unclear": {
+              "achieved": 1,
+              "failed": 2,
+              "unclear": 18,
+              "disappeared": 1
+            },
+            "disappeared": {
+              "achieved": 0,
+              "failed": 0,
+              "unclear": 1,
+              "disappeared": 5
+            }
+          },
+          "gold_distribution": {
+            "achieved": 61,
+            "failed": 34,
+            "unclear": 22,
+            "disappeared": 6
+          },
+          "system_distribution": {
+            "achieved": 59,
+            "failed": 30,
+            "unclear": 26,
+            "disappeared": 8
+          },
+          "over_commitment": {
+            "k": 4,
+            "n": 22,
+            "share": 0.18181818181818182
+          },
+          "under_commitment": {
+            "k": 8,
+            "n": 101,
+            "share": 0.07920792079207921
+          },
+          "verdict_precision": {
+            "k": 89,
+            "n": 97,
+            "share": 0.9175257731958762
+          },
+          "parse_ok_rate": 1.0,
+          "usage": {
+            "calls": 123,
+            "input_tokens": 304315,
+            "output_tokens": 103991,
+            "cost_usd": 0.18565220000000002,
+            "wall_s": 143.04664419999972
+          }
+        },
+        {
+          "n": 123,
+          "accuracy": 0.8617886178861789,
+          "cohen_kappa": 0.7871322406596764,
+          "macro_f1": 0.819948330199781,
+          "per_class": {
+            "achieved": {
+              "precision": 0.9333333333333333,
+              "recall": 0.9180327868852459,
+              "f1": 0.9256198347107439,
+              "support": 61
+            },
+            "failed": {
+              "precision": 0.9032258064516129,
+              "recall": 0.8235294117647058,
+              "f1": 0.8615384615384616,
+              "support": 34
+            },
+            "unclear": {
+              "precision": 0.68,
+              "recall": 0.7727272727272727,
+              "f1": 0.7234042553191491,
+              "support": 22
+            },
+            "disappeared": {
+              "precision": 0.7142857142857143,
+              "recall": 0.8333333333333334,
+              "f1": 0.7692307692307692,
+              "support": 6
+            }
+          },
+          "confusion": {
+            "achieved": {
+              "achieved": 56,
+              "failed": 2,
+              "unclear": 3,
+              "disappeared": 0
+            },
+            "failed": {
+              "achieved": 1,
+              "failed": 28,
+              "unclear": 4,
+              "disappeared": 1
+            },
+            "unclear": {
+              "achieved": 3,
+              "failed": 1,
+              "unclear": 17,
+              "disappeared": 1
+            },
+            "disappeared": {
+              "achieved": 0,
+              "failed": 0,
+              "unclear": 1,
+              "disappeared": 5
+            }
+          },
+          "gold_distribution": {
+            "achieved": 61,
+            "failed": 34,
+            "unclear": 22,
+            "disappeared": 6
+          },
+          "system_distribution": {
+            "achieved": 60,
+            "failed": 31,
+            "unclear": 25,
+            "disappeared": 7
+          },
+          "over_commitment": {
+            "k": 5,
+            "n": 22,
+            "share": 0.22727272727272727
+          },
+          "under_commitment": {
+            "k": 8,
+            "n": 101,
+            "share": 0.07920792079207921
+          },
+          "verdict_precision": {
+            "k": 89,
+            "n": 98,
+            "share": 0.9081632653061225
+          },
+          "parse_ok_rate": 1.0,
+          "usage": {
+            "calls": 123,
+            "input_tokens": 304315,
+            "output_tokens": 101653,
+            "cost_usd": 0.18284659999999997,
+            "wall_s": 139.30670719999944
+          }
+        },
+        {
+          "n": 123,
+          "accuracy": 0.8455284552845529,
+          "cohen_kappa": 0.7634136464871432,
+          "macro_f1": 0.7862841945288753,
+          "per_class": {
+            "achieved": {
+              "precision": 0.9661016949152542,
+              "recall": 0.9344262295081968,
+              "f1": 0.95,
+              "support": 61
+            },
+            "failed": {
+              "precision": 0.8387096774193549,
+              "recall": 0.7647058823529411,
+              "f1": 0.7999999999999999,
+              "support": 34
+            },
+            "unclear": {
+              "precision": 0.64,
+              "recall": 0.7272727272727273,
+              "f1": 0.6808510638297872,
+              "support": 22
+            },
+            "disappeared": {
+              "precision": 0.625,
+              "recall": 0.8333333333333334,
+              "f1": 0.7142857142857143,
+              "support": 6
+            }
+          },
+          "confusion": {
+            "achieved": {
+              "achieved": 57,
+              "failed": 3,
+              "unclear": 1,
+              "disappeared": 0
+            },
+            "failed": {
+              "achieved": 0,
+              "failed": 26,
+              "unclear": 7,
+              "disappeared": 1
+            },
+            "unclear": {
+              "achieved": 2,
+              "failed": 2,
+              "unclear": 16,
+              "disappeared": 2
+            },
+            "disappeared": {
+              "achieved": 0,
+              "failed": 0,
+              "unclear": 1,
+              "disappeared": 5
+            }
+          },
+          "gold_distribution": {
+            "achieved": 61,
+            "failed": 34,
+            "unclear": 22,
+            "disappeared": 6
+          },
+          "system_distribution": {
+            "achieved": 59,
+            "failed": 31,
+            "unclear": 25,
+            "disappeared": 8
+          },
+          "over_commitment": {
+            "k": 6,
+            "n": 22,
+            "share": 0.2727272727272727
+          },
+          "under_commitment": {
+            "k": 9,
+            "n": 101,
+            "share": 0.0891089108910891
+          },
+          "verdict_precision": {
+            "k": 88,
+            "n": 98,
+            "share": 0.8979591836734694
+          },
+          "parse_ok_rate": 1.0,
+          "usage": {
+            "calls": 123,
+            "input_tokens": 304315,
+            "output_tokens": 101752,
+            "cost_usd": 0.1829654,
+            "wall_s": 137.34284359999947
+          }
+        }
+      ],
+      "aggregate": {
+        "accuracy": {
+          "mean": 0.8590785907859079,
+          "sd": 0.01241890432237351,
+          "values": [
+            0.8699,
+            0.8618,
+            0.8455
+          ]
+        },
+        "macro_f1": {
+          "mean": 0.806913817766695,
+          "sd": 0.01807160171980951,
+          "values": [
+            0.8145,
+            0.8199,
+            0.7863
+          ]
+        },
+        "cohen_kappa": {
+          "mean": 0.783852336497541,
+          "sd": 0.019012124453101957,
+          "values": [
+            0.801,
+            0.7871,
+            0.7634
+          ]
+        },
+        "unstable_items": 17,
+        "unstable_share": 0.13821138211382114
+      },
+      "majority": {
+        "action": {
+          "n": 123,
+          "accuracy": 0.8699186991869918,
+          "cohen_kappa": 0.7998983223182511,
+          "macro_f1": 0.8262823823903369,
+          "per_class": {
+            "achieved": {
+              "precision": 0.95,
+              "recall": 0.9344262295081968,
+              "f1": 0.9421487603305784,
+              "support": 61
+            },
+            "failed": {
+              "precision": 0.9,
+              "recall": 0.7941176470588235,
+              "f1": 0.84375,
+              "support": 34
+            },
+            "unclear": {
+              "precision": 0.6923076923076923,
+              "recall": 0.8181818181818182,
+              "f1": 0.7500000000000001,
+              "support": 22
+            },
+            "disappeared": {
+              "precision": 0.7142857142857143,
+              "recall": 0.8333333333333334,
+              "f1": 0.7692307692307692,
+              "support": 6
+            }
+          },
+          "confusion": {
+            "achieved": {
+              "achieved": 57,
+              "failed": 2,
+              "unclear": 2,
+              "disappeared": 0
+            },
+            "failed": {
+              "achieved": 1,
+              "failed": 27,
+              "unclear": 5,
+              "disappeared": 1
+            },
+            "unclear": {
+              "achieved": 2,
+              "failed": 1,
+              "unclear": 18,
+              "disappeared": 1
+            },
+            "disappeared": {
+              "achieved": 0,
+              "failed": 0,
+              "unclear": 1,
+              "disappeared": 5
+            }
+          },
+          "gold_distribution": {
+            "achieved": 61,
+            "failed": 34,
+            "unclear": 22,
+            "disappeared": 6
+          },
+          "system_distribution": {
+            "achieved": 60,
+            "failed": 30,
+            "unclear": 26,
+            "disappeared": 7
+          },
+          "over_commitment": {
+            "k": 4,
+            "n": 22,
+            "share": 0.18181818181818182
+          },
+          "under_commitment": {
+            "k": 8,
+            "n": 101,
+            "share": 0.07920792079207921
+          },
+          "verdict_precision": {
+            "k": 89,
+            "n": 97,
+            "share": 0.9175257731958762
+          }
+        },
+        "by_source": {
+          "human_pair": {
+            "n": 22,
+            "accuracy": 0.8181818181818182,
+            "cohen_kappa": 0.717948717948718,
+            "macro_f1": 0.8272727272727273,
+            "per_class": {
+              "achieved": {
+                "precision": 0.9090909090909091,
+                "recall": 0.9090909090909091,
+                "f1": 0.9090909090909091,
+                "support": 11
+              },
+              "failed": {
+                "precision": 0.8,
+                "recall": 0.8,
+                "f1": 0.8000000000000002,
+                "support": 5
+              },
+              "unclear": {
+                "precision": 0.6,
+                "recall": 0.6,
+                "f1": 0.6,
+                "support": 5
+              },
+              "disappeared": {
+                "precision": 1.0,
+                "recall": 1.0,
+                "f1": 1.0,
+                "support": 1
+              }
+            },
+            "confusion": {
+              "achieved": {
+                "achieved": 10,
+                "failed": 0,
+                "unclear": 1,
+                "disappeared": 0
+              },
+              "failed": {
+                "achieved": 0,
+                "failed": 4,
+                "unclear": 1,
+                "disappeared": 0
+              },
+              "unclear": {
+                "achieved": 1,
+                "failed": 1,
+                "unclear": 3,
+                "disappeared": 0
+              },
+              "disappeared": {
+                "achieved": 0,
+                "failed": 0,
+                "unclear": 0,
+                "disappeared": 1
+              }
+            },
+            "gold_distribution": {
+              "unclear": 5,
+              "failed": 5,
+              "achieved": 11,
+              "disappeared": 1
+            },
+            "system_distribution": {
+              "achieved": 11,
+              "unclear": 5,
+              "failed": 5,
+              "disappeared": 1
+            },
+            "over_commitment": {
+              "k": 2,
+              "n": 5,
+              "share": 0.4
+            },
+            "under_commitment": {
+              "k": 2,
+              "n": 17,
+              "share": 0.11764705882352941
+            },
+            "verdict_precision": {
+              "k": 15,
+              "n": 17,
+              "share": 0.8823529411764706
+            }
+          },
+          "model_pair": {
+            "n": 101,
+            "accuracy": 0.8811881188118812,
+            "cohen_kappa": 0.8174423859014912,
+            "macro_f1": 0.8295233032075138,
+            "per_class": {
+              "achieved": {
+                "precision": 0.9591836734693877,
+                "recall": 0.94,
+                "f1": 0.9494949494949495,
+                "support": 50
+              },
+              "failed": {
+                "precision": 0.92,
+                "recall": 0.7931034482758621,
+                "f1": 0.851851851851852,
+                "support": 29
+              },
+              "unclear": {
+                "precision": 0.7142857142857143,
+                "recall": 0.8823529411764706,
+                "f1": 0.7894736842105262,
+                "support": 17
+              },
+              "disappeared": {
+                "precision": 0.6666666666666666,
+                "recall": 0.8,
+                "f1": 0.7272727272727272,
+                "support": 5
+              }
+            },
+            "confusion": {
+              "achieved": {
+                "achieved": 47,
+                "failed": 2,
+                "unclear": 1,
+                "disappeared": 0
+              },
+              "failed": {
+                "achieved": 1,
+                "failed": 23,
+                "unclear": 4,
+                "disappeared": 1
+              },
+              "unclear": {
+                "achieved": 1,
+                "failed": 0,
+                "unclear": 15,
+                "disappeared": 1
+              },
+              "disappeared": {
+                "achieved": 0,
+                "failed": 0,
+                "unclear": 1,
+                "disappeared": 4
+              }
+            },
+            "gold_distribution": {
+              "achieved": 50,
+              "failed": 29,
+              "unclear": 17,
+              "disappeared": 5
+            },
+            "system_distribution": {
+              "achieved": 49,
+              "failed": 25,
+              "unclear": 21,
+              "disappeared": 6
+            },
+            "over_commitment": {
+              "k": 2,
+              "n": 17,
+              "share": 0.11764705882352941
+            },
+            "under_commitment": {
+              "k": 6,
+              "n": 84,
+              "share": 0.07142857142857142
+            },
+            "verdict_precision": {
+              "k": 74,
+              "n": 80,
+              "share": 0.925
+            }
+          }
+        }
+      },
+      "bootstrap": {
+        "accuracy": {
+          "lo": 0.8130081300813008,
+          "hi": 0.926829268292683
+        },
+        "macro_f1": {
+          "lo": 0.7204437888007867,
+          "hi": 0.9082357374768089
+        },
+        "draws": 1000
+      },
+      "evidence": {
+        "coverage": 1.0,
+        "mean_spans": 11.634146341463415,
+        "report_years_per_promise": 2.0569105691056913,
+        "by_source": {
+          "agent:hop0:retrieved": 1095,
+          "agent:hop0:neighbour": 336
+        }
+      },
+      "speed_cost": {
+        "retrieval": {
+          "p50_ms": 0.0,
+          "p95_ms": 0.0,
+          "mean_ms": 0.0,
+          "total_s": 0.0,
+          "queries_per_s": null
+        },
+        "judge_calls_per_item": 1.0,
+        "input_tokens_per_item": 2474.1056910569105,
+        "output_tokens_per_item": 833.0514905149051,
+        "cost_usd_total": 0.5514642,
+        "cost_per_1k_items_usd": 1.494482926829268,
+        "judge_wall_s_per_rep": 139.8987316666662
+      }
+    }
+  }
+}

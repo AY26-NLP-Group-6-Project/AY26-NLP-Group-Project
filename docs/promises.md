@@ -224,6 +224,12 @@ judge is not deterministic: about 16 % of promises (58 of 374) do not get the sa
 times, almost always a verdict against `unclear`. Cost: USD 1.5 for three runs over the 374 promises
 on trajectory evidence.
 
+### Version 3, on dev only
+
+A later judge keeps this design and adds labels for a differently worded measure of the same commitment, a stated part
+delivery and a figure compared in code; `--judge v3` selects it, v2 stays the default and every number in this file is
+v2. It has no human check of its own. Results and limits: `agentic.md`.
+
 ## 6. Results of the held-out check
 
 Weighted to each sheet's pool, 95 % bootstrap intervals:
