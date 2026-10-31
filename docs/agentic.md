@@ -214,7 +214,7 @@ repeats per judge, `agentic/rq2-test-*`. Cost per 1,000 promises at three judgem
 | arm | judge | vote accuracy | κ | macro-F1 | verdict where gold unclear | unclear where gold settled | verdicts right | USD per 1,000 promises |
 |---|---|---|---|---|---|---|---|---|
 | hybrid, top 20 (baseline) | v2 | 0.768 (192) | 0.62 | 0.637 | 15 / 64 | 38 / 186 | 143 / 163 | 5.02 |
-| hybrid, top 20 | v3 | 0.816 (204) | 0.68 | 0.669 | 20 / 64 | 23 / 186 | 160 / 183 | 5.70 |
+| hybrid, top 20 | v3 | 0.816 (204) | 0.68 | 0.669 | 20 / 64 | 23 / 186 | 160 / 183 | 5.71 |
 | fixed budget | v2 | 0.764 (191) | 0.61 | 0.684 | 17 / 64 | 39 / 186 | 144 / 164 | 3.98 |
 | fixed budget | v3 | 0.808 (202) | 0.68 | 0.687 | 21 / 64 | 25 / 186 | 159 / 182 | 4.52 |
 | agent, two hops | v2 | 0.784 (196) | 0.64 | 0.641 | 12 / 64 | 40 / 186 | 144 / 158 | 5.13 |
