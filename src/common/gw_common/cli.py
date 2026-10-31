@@ -41,6 +41,7 @@ def eval_main(argv: list[str] | None = None) -> int:
                     help="repeat each condition; mean ± sd and a majority vote are reported")
     ap.add_argument("--baseline", default="sentence_only", help="condition that deltas are measured against")
     ap.add_argument("--k", type=int, help="evidence spans per item (default 3 for rq1, 20 for rq2)")
+    ap.add_argument("--judge", default="v2", choices=["v1", "v2", "v3"], help="rq2: the judge's version")
     ap.add_argument("--evidence", type=Path, help="score evidence produced outside this package")
     ap.add_argument("--predictions", type=Path, help="score labels produced outside this package")
     ap.add_argument("--export-queries", type=Path, metavar="OUT",
@@ -108,7 +109,8 @@ def eval_main(argv: list[str] | None = None) -> int:
         from gw_common.eval import rq2
 
         run_dir = rq2.run_rq2(args.system, split=args.split, repeats=args.repeats, k=args.k,
-                              limit=args.limit, sample=args.sample)
+                              limit=args.limit, sample=args.sample, judge=args.judge,
+                              evidence_file=args.evidence)
         print((run_dir / "report.md").read_text(encoding="utf-8"))
         print(f"run dir: {run_dir}")
         return 0

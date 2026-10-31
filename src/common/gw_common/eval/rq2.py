@@ -26,6 +26,7 @@ from pathlib import Path
 
 from gw_common import datasets
 from gw_common.eval import ops
+from gw_common.eval.exchange import read_evidence
 from gw_common.eval.report import agent_section
 from gw_common.eval.runner import RUNS_DIR, _git, retrieval_map
 from gw_common.judges import promise as J
@@ -196,9 +197,12 @@ def run_rq2(
     judge: str = J.DEFAULT_JUDGE,
     workers: int = WORKERS,
     client=None,
+    evidence_file: Path | None = None,
 ) -> Path:
     """Retrieve the window evidence of every gold promise of `split` with the system's retriever, judge
-    it `repeats` times with the shared judge, score the votes against the gold, write the run dir."""
+    it `repeats` times with the shared judge, score the votes against the gold, write the run dir. With
+    `evidence_file` (an earlier run's `evidence.jsonl`) nothing is retrieved, so judges compare on one
+    evidence."""
     started = datetime.now(UTC)
     t0 = time.perf_counter()
     if repeats > 1 and client is None and os.environ.get("GW_LLM_CACHE", "1") != "0":
@@ -207,8 +211,8 @@ def run_rq2(
     system = load_system(system_name)
     if CONDITION not in system.supported_conditions():
         raise ValueError(f"{system_name} does not support the {CONDITION.value} condition")
-    retriever = system.retriever()
-    if retriever is None:
+    retriever = system.retriever() if evidence_file is None else None
+    if retriever is None and evidence_file is None:
         raise ValueError(f"{system_name} has no retriever")
     rows, dataset_hash = load_gold(split)
     rows = [r for r in rows if r["outcome"] in J.REPORTED]
@@ -234,7 +238,11 @@ def run_rq2(
     retrieval_ms: dict[str, float] = {}
     evidence: dict[str, list[dict]] = {}
 
+    supplied = read_evidence(evidence_file) if evidence_file is not None else None
+
     def fetch(r: dict) -> tuple[list[EvidenceSpan], float]:
+        if supplied is not None:
+            return list(supplied.get(r["promise_id"], []))[:k], 0.0
         t = time.perf_counter()
         spans = retriever.retrieve(promise_query(r["promise"]), k=k)
         return spans, (time.perf_counter() - t) * 1000
@@ -255,6 +263,8 @@ def run_rq2(
                 + "\n"
             )
     retriever_info = retriever.describe() if hasattr(retriever, "describe") else {}
+    if evidence_file is not None:
+        retriever_info = {"evidence_from": Path(evidence_file).parent.name}
 
     # the judge, `repeats` times over identical evidence
     reps, runs, usage = [], [], []
@@ -283,6 +293,8 @@ def run_rq2(
                             "parse_ok": res["parse_ok"],
                             "evidence_refs": res["evidence_refs"],
                             "rationale": res["rationale"],
+                            # what a rule can be re-run on without another call
+                            **{k_: res[k_] for k_ in ("labels", "annual", "better", "basis") if k_ in res},
                         },
                         ensure_ascii=False,
                     )
