@@ -227,3 +227,22 @@ of the former notes index.
   172, failed 62, unclear 125, disappeared 15. On dev against the gold 96 of 123 right (0.780, κ 0.67),
   the same count as the trajectory finder's evidence; the two differ on 13 promises, 5 right each way,
   McNemar p = 1.00; over-commitment 4 of 22, under-commitment 20 of 101, verdict precision 0.92.
+
+## 2026-10-31 · The agentic arm, on dev
+
+- `src/agentic-rag` rebuilt as a bounded planner over `gw_common.corpus.load("statements")` with a policy per
+  question and a fence in code (`agentic.md`). Harness: `company_agentic`, `GW_RETRIEVAL_WORKERS`, an agent block in
+  run reports, `--compare --pairs`. It does not read the graph, by decision.
+- RQ2 first, because it looked like the case for an agent. Audit of `20261031T053204Z-baseline-rag-rq2` (vote 0.805,
+  24 errors): a phrase of the answer was already shown in 14 of the 17 errors checkable by regular expression. Ceiling
+  test `20261031T053208Z` (k = 40): shown 16 of 17, vote 0.772, +3 / −7, p = 0.34. Below the stopping line set
+  beforehand (fewer than 10 errors from retrieval), so the RQ2 planner prompt was not iterated.
+- RQ2 arms: fixed budget `20261031T054118Z` 0.813 (11.6 statements), planner `20261031T054802Z` 0.789 (14.3 statements,
+  1.30 calls), p ≥ 0.45 pairwise with hybrid and each other.
+- RQ1 `20261031T054130Z`, six arms in one run: `company_agentic` 0.7645, `sentence_only` 0.7686 (+11 / −8, p = 0.65),
+  `cross_year_rrf` 0.7988 (+19 / −12, p = 0.28), `local` 0.7745. The gate gave 262 of 331 sentences no evidence. The text
+  rule committed in `c3a297f`, written before this run was read, gave `local` +9 / −0 on its 75 sentences (p = 0.004).
+  One round of ablations (`20261031T061753Z`, `T061754Z`, `T062526Z`, `T062533Z`) stayed inside the noise.
+- Configuration and hypotheses committed in `4a3d35f`. The test attempt stopped when the API account ran out of credit
+  (HTTP 429, `credit_balance_exhausted`, chat and embeddings on one key); no metrics written, no test label read.
+  Finished runs cost USD 6.20. To resume: `agentic.md`, section 6.

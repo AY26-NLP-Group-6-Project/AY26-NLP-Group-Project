@@ -72,7 +72,8 @@ evidence they hand it: at most `k = 3` spans of at most 800 characters each.
 | `cross_year_rrf` | retrieved from the **same company, other years** | the system's retriever |
 | `cross_year_graph` | statements reached through the claim graph | graph-rag |
 | `cross_year_fused` | graph first, BM25 over the company's other-year statements fills to k | graph-rag |
-| `cross_year_agentic` | bounded plan–retrieve–stop loop | not built |
+| `cross_year_agentic` | the agent, other years only: no evidence unless the sentence has a gap, then only passages verified to close it | agentic-rag (`agentic.md`) |
+| `company_agentic` | the same over every report of the company, starting next to the sentence | agentic-rag |
 | `promise_window` | RQ2 (`--task rq2`): at most k = 20 statements from the company's reports after the one that made the commitment, up to the year after its deadline; read by the shared judge, not the classifier | the system's retriever |
 
 The harness drops any returned span that *is* the target sentence (same company and year, text equal
@@ -175,7 +176,12 @@ uv run gw-eval --compare results/baseline/statement-hybrid-cited results/graph/g
 `--publish` copies the manifest, metrics and report (not the per-item files) into `results/<group>/<name>/`
 and regenerates `results/README.md`. `--compare` pairs the two runs' majority votes on the items both
 scored and reports flips and McNemar p per condition; it refuses runs on different snapshots, and an
-RQ2 run is only compared with another RQ2 run (same promises, the four outcomes as labels).
+RQ2 run is only compared with another RQ2 run (same promises, the four outcomes as labels). It reads the
+votes from `predictions.jsonl`, so give it run directories (`artifacts/runs/<run_id>`): a published folder
+holds summaries only. `--pairs condA:condB,...` adds pairs of conditions, so two arms of one run can be compared.
+
+`GW_RETRIEVAL_WORKERS` (default 1) sets the threads that collect evidence. An agent mostly waits on the network, so
+its runs use 8; a retrieval latency then includes queueing, so latencies compare only between runs at one worker.
 
 ## 8. Plugging in a system
 

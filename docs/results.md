@@ -65,6 +65,16 @@ unit.
 USD 0.21–0.30 per 1,000 items with prices of 0.20 / 1.20 per million input / output tokens; about 540
 input and 89 output tokens per item without evidence, 660–990 and 86–105 with.
 
+### The agentic arm (`agentic/rq1-dev-all-arms`, `agentic.md`)
+
+A planner that first decides whether the sentence has a gap, then searches and verifies, does not improve the
+label: `company_agentic` vote 0.7645 against 0.7686 for `sentence_only` in the same run (+11 / −8, p = 0.65),
+and against `cross_year_rrf` +10 / −14 (p = 0.54), at USD 0.445 per 1,000 items against 0.184 and 0.242. It
+hands over 0.18 spans per item against 2.66, and 18.0 % of them are cited against 0.5 %. One finding beyond the
+agent: on the 75 sentences a text rule frozen in advance marks as depending on their context, the neighbouring
+sentences go +9 / −0 against `sentence_only` (p = 0.004, macro-F1 0.663 to 0.771), and +12 / −14 on the rest.
+One of ten slice comparisons, on dev.
+
 ## 2. What became of dated commitments? (RQ2)
 
 Details in `promises.md`; the pipeline: 3,164 candidate statements → 1,273 validated targets (extracted
@@ -139,6 +149,13 @@ where the baseline reads 20, so its judgements cost less (USD 1.30 against 1.62 
 steadier; the baseline is more cautious (fewer verdicts, more of them right). The test split has not
 been opened.
 
+The agentic arm, in one later batch of runs paired among themselves (`results/agentic/`, `agentic.md`): hybrid
+top 20 vote 0.805, a fixed budget per report year with no planner 0.813 (11.6 statements, paired +7 / −6, p = 1.00), the
+planner on top of it 0.789 (14.3 statements, USD 0.84 per 1,000 more, against hybrid +4 / −6, p = 0.75). **Retrieval is
+not what limits RQ2 on this store**: in 14 of the 17 errors that could be checked, a phrase of the answer was already
+in front of the judge, and doubling the evidence to 40 statements lowers the vote to 0.772 (+3 / −7, p = 0.34). The
+same hybrid configuration scored 0.789 and 0.805 on two days, which is the noise to read these against.
+
 ### Case studies
 
 `case-studies.md`: ten commitments from eight companies as page-cited timelines, one per pattern:
@@ -162,6 +179,9 @@ admitted; one issuer both ways; partial delivery not reconciled; never mentioned
 5. Checking outcomes needs every statement in the index, table rows and result lines included: an index
    of sentence-shaped statements alone hid most of the sentences that report results, and the
    human-verified unclear share fell from 49 % to 31 % once every statement was ranked.
+6. On dev, letting an LLM plan the retrieval improves neither question and costs more. On RQ1 what helps is narrower:
+   the neighbouring sentences, for sentences that a text rule marks as depending on their context; on RQ2, a fixed
+   budget per report year does as well as anything, and the judge rather than retrieval is the limit. Test not read.
 
 ## 4. Limits
 
@@ -176,5 +196,8 @@ admitted; one issuer both ways; partial delivery not reconciled; never mentioned
   the stricter second check); targets that exist only inside tables are not extracted.
 - Aspect canonicalisation failed its gate, so cross-year aspect edges rely on exact normalised matches.
 - Retrieval latencies were measured with three runs sharing one machine.
-- Test split unopened; retrieval metrics need pooled judgements that were not collected; the agentic arm
-  and the front end were not built; the stock-price analysis is a literature screen only.
+- Test split unread (`agentic.md`, section 6: an attempt stopped when the API account ran out of credit, before any
+  metric was written); retrieval metrics need pooled judgements that were not collected; the front end was not built;
+  the stock-price analysis is a literature screen only.
+- The agentic arm reads the statement store, so it cannot see the 1,938 statements under five words, one-word result
+  cells among them; the graph arms are cited unpaired.
