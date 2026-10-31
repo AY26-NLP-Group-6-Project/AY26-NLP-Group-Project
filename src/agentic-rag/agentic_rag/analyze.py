@@ -16,6 +16,7 @@ from pathlib import Path
 
 from gw_common import datasets
 from gw_common.eval import metrics as M
+from gw_common.llm import REPO_ROOT
 from gw_common.schemas import Label
 
 _NOUNS = (
@@ -71,13 +72,56 @@ def table(run_dir: Path, base: str, conditions: list[str]) -> str:
     return "\n".join(rows)
 
 
+def routed(run_dir: Path, base: str, arm: str, *, gate_of=None) -> dict:
+    """An arm that reads `arm` where the rule (or `gate_of`, item -> bool) says so and `base` elsewhere,
+    composed from the run's own labels. Where it stays on `base` the input is exactly the base's, so no new
+    call is needed and the only differences are the routed items."""
+    manifest = json.loads((run_dir / "manifest.json").read_text(encoding="utf-8"))
+    items, _ = datasets.load(manifest["dataset_id"], manifest["label_source"])
+    by_id = {it.item_id: it for it in items}
+    v = votes(run_dir)
+    ids = sorted(v[base], key=lambda i: int(i) if i.isdigit() else i)
+    gold = [by_id[i].gold_label for i in ids]
+    chose = gate_of or (lambda it: depends_on_context(it.text))
+    a = [v[base][i] for i in ids]
+    b = [v[arm][i] if chose(by_id[i]) else v[base][i] for i in ids]
+    flips = M.flip_analysis(gold, a, b)
+    return {"routed": sum(chose(by_id[i]) for i in ids), "n": len(ids),
+            "base_macro_f1": M.action_metrics(gold, a)["macro_f1"],
+            "routed_macro_f1": M.action_metrics(gold, b)["macro_f1"],
+            "flips_right": flips["wrong_to_right"], "flips_wrong": flips["right_to_wrong"],
+            "p": M.mcnemar(gold, a, b)["p_value"]}
+
+
+def gate_opened(run_dir: Path, condition: str = "company_agentic"):
+    """item -> did the agent's gate find a gap, from the run's trace file."""
+    manifest = json.loads((run_dir / "manifest.json").read_text(encoding="utf-8"))
+    trace_file = REPO_ROOT / "artifacts" / "agentic" / manifest["config"]["retriever"]["trace_file"]
+    opened = {}
+    for line in trace_file.read_text(encoding="utf-8").splitlines():
+        t = json.loads(line)
+        if t["condition"] == condition:
+            opened[t["target"]] = bool(t["steps"] and t["steps"][0].get("gaps"))
+    return lambda it: opened.get(it.text, False)
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("run_dir", type=Path)
     ap.add_argument("--base", default="sentence_only")
     ap.add_argument("--conditions", required=True)
     args = ap.parse_args()
-    print(table(args.run_dir, args.base, [c.strip() for c in args.conditions.split(",")]))
+    conditions = [c.strip() for c in args.conditions.split(",")]
+    print(table(args.run_dir, args.base, conditions))
+    if "local" in conditions:
+        print("\nrule -> local, else base:", json.dumps(routed(args.run_dir, args.base, "local")))
+    if "company_agentic" in conditions:
+        gate = gate_opened(args.run_dir)
+        agent = routed(args.run_dir, args.base, "company_agentic", gate_of=gate)
+        print("gate -> agent, else base:", json.dumps(agent))
+        if "local" in conditions:
+            local = routed(args.run_dir, args.base, "local", gate_of=gate)
+            print("gate -> local, else base:", json.dumps(local))
     return 0
 
 
