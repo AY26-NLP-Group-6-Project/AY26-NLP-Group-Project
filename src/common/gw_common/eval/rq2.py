@@ -26,7 +26,8 @@ from pathlib import Path
 
 from gw_common import datasets
 from gw_common.eval import ops
-from gw_common.eval.runner import RUNS_DIR, _git
+from gw_common.eval.report import agent_section
+from gw_common.eval.runner import RUNS_DIR, _git, retrieval_map
 from gw_common.judges import promise as J
 from gw_common.registry import load as load_system
 from gw_common.schemas import EvidenceCondition, EvidenceSpan, Query, RunManifest
@@ -232,11 +233,16 @@ def run_rq2(
     # retrieval, once per promise, timed
     retrieval_ms: dict[str, float] = {}
     evidence: dict[str, list[dict]] = {}
+
+    def fetch(r: dict) -> tuple[list[EvidenceSpan], float]:
+        t = time.perf_counter()
+        spans = retriever.retrieve(promise_query(r["promise"]), k=k)
+        return spans, (time.perf_counter() - t) * 1000
+
+    ordered = sorted(rows, key=lambda r: (r["promise"]["company"], r["promise"]["origin"]["year"]))
     with (run_dir / "evidence.jsonl").open("w", encoding="utf-8") as ev_fp:
-        for r in sorted(rows, key=lambda r: (r["promise"]["company"], r["promise"]["origin"]["year"])):
-            t = time.perf_counter()
-            spans = retriever.retrieve(promise_query(r["promise"]), k=k)
-            retrieval_ms[r["promise_id"]] = (time.perf_counter() - t) * 1000
+        for r, (spans, ms) in zip(ordered, retrieval_map(fetch, ordered), strict=True):
+            retrieval_ms[r["promise_id"]] = ms
             evidence[r["promise_id"]] = evidence_of(spans)
             ev_fp.write(
                 json.dumps(
@@ -336,6 +342,16 @@ def run_rq2(
             "judge_wall_s_per_rep": statistics.fmean(u["wall_s"] for u in usage),
         },
     }
+    agent_stats = getattr(retriever, "stats", None)
+    if agent_stats is not None and (stats := agent_stats(CONDITION.value)):
+        # Retrieval runs once per promise and the judge `repeats` times, so per promise end to end is one
+        # planning plus one judgement.
+        block["agent"] = stats
+        price = settings.cost_usd if settings else None
+        planner = (
+            price(stats["input_tokens_per_item"], stats["output_tokens_per_item"]) if price else None
+        )
+        block["speed_cost"]["planner_cost_per_1k_items_usd"] = planner * 1000 if planner is not None else None
     results_json = {
         "run_id": run_id,
         "system": system_name,
@@ -456,6 +472,12 @@ def report(manifest: RunManifest, block: dict) -> str:
             else f"USD {sc['cost_usd_total']:.2f} in all, {sc['cost_per_1k_items_usd']:.2f} per 1,000 "
             "judgements"
         ),
+    ]
+    if sc.get("planner_cost_per_1k_items_usd") is not None:
+        lines.append(f"- planner, on top of the judge: USD {sc['planner_cost_per_1k_items_usd']:.2f} per "
+                     "1,000 promises (retrieval runs once per promise)")
+    lines += agent_section({CONDITION.value: block})
+    lines += [
         "",
         "Compare two runs with `gw-eval --compare A B`: paired on the same promises, McNemar on the votes.",
     ]

@@ -62,6 +62,7 @@ def eval_main(argv: list[str] | None = None) -> int:
     ap.add_argument("--list", action="store_true", help="list registered systems and exit")
     ap.add_argument("--compare", nargs=2, metavar=("RUN_A", "RUN_B"),
                     help="paired comparison of two runs' majority votes on the same items")
+    ap.add_argument("--pairs", help="with --compare: extra condition pairs, condA:condB,condA:condB")
     ap.add_argument("--publish", type=Path, metavar="RUN_DIR",
                     help="copy manifest, metrics and reports of a run into results/ (versioned)")
     ap.add_argument("--note", default="", help="with --publish: one line on what the run was for")
@@ -76,7 +77,8 @@ def eval_main(argv: list[str] | None = None) -> int:
             print(f"{name:22s} {target}")
         return 0
     if args.compare:
-        print(compare(Path(args.compare[0]), Path(args.compare[1])))
+        pairs = [tuple(p.split(":", 1)) for p in (args.pairs or "").split(",") if p]
+        print(compare(Path(args.compare[0]), Path(args.compare[1]), pairs))
         return 0
     if args.publish:
         out = publish(args.publish, RESULTS_DIR, args.note, args.name)
