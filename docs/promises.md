@@ -351,7 +351,7 @@ Distribution over the 373: achieved 206, failed 68, unclear 86, disappeared 13.
 | achieved / failed / unclear / disappeared | 61 / 34 / 22 / 6 | 145 / 34 / 64 / 7 |
 | labelled by the group / by the model pair | 22 / 101 | 115 / 135 |
 
-Tune on dev; test is opened once, for the report, and has not been. On dev the judge of section 5
+Tune on dev; test is opened once, for the report, and has been, for the arms in `agentic.md` section 6. On dev the judge of section 5
 agrees with the gold on 96 of 123 (0.780, κ 0.67): precision / recall achieved 0.94 / 0.84, failed
 0.88 / 0.65, unclear 0.49 / 0.77, disappeared 0.67 / 1.00; it gives a verdict on 5 of the 22
 gold-unclear promises (23 %), leaves 18 of the 101 settled ones unclear (18 %), and 90 % of its

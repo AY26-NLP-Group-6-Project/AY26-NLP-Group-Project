@@ -35,7 +35,7 @@ manifest, so a changed annotation cannot be mistaken for the same data.
 | aspect / no-aspect rows | 266 / 65 | 537 / 132 |
 | implemented / indeterminate / planning / none | 136 / 72 / 66 / 57 | 281 / 150 / 125 / 113 |
 
-Tune on dev. Test is opened once, for the report; so far nothing has been run on it.
+Tune on dev. Test is opened once, for the report; so far nothing on this set has been scored on it.
 
 Label sources: `human_majority` (the gold), `llm_pre_{claude,deepseek,gpt}` (pre-annotations, for
 label-noise analysis only; they agree with the human majority 0.79–0.80 and are never a system input),
@@ -55,7 +55,8 @@ of every dated commitment, achieved / failed / unclear / disappeared, with who l
 calibrated on those rows and adjudicated, 236 rows), both annotators' labels and notes, and the split:
 **dev 123 / test 250**, stratified by outcome × source, the 75 promises the judge prompt was tuned on
 pinned to dev. The one promise the annotators settled as not a promise is listed in the build report and
-left out. Same rule: tune on dev, open test once. `promises.md` section 8 has the protocol
+left out. Same rule: tune on dev, open test once; it has been opened for the arms in `agentic.md` section 6, so a change made
+from here on can no longer be checked on it. `promises.md` section 8 has the protocol
 and the calibration; `gw-graph promise-gold` rebuilds the file, `gw-graph promise-gold-score
 --gold-split dev` scores a judge output against it.
 

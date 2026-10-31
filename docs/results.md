@@ -1,8 +1,9 @@
 # Results
 
 The findings in one place. Every number names the published run (`results/<group>/<name>/`) or the
-check sheet (`kb/annotation/spotchecks/`) it comes from. Dev split only, 331 items; the test split has
-not been opened. Classifier `gpt-5.6-luna`, reasoning effort low, three uncached repeats per condition
+check sheet (`kb/annotation/spotchecks/`) it comes from. Dev split unless a section says test: RQ2 has been read on
+its test split once, for the hybrid, fixed-budget and agentic arms ("On the test split" below); RQ1's has not been read.
+Classifier `gpt-5.6-luna`, reasoning effort low, three uncached repeats per condition
 unless stated; "vote" is the majority over the repeats. Every arm retrieves over the same knowledge
 base: every statement of the parsed reports with five words or more (`baseline.md`).
 
@@ -133,7 +134,7 @@ test 250. Gold over the 373: achieved 206, failed 68, unclear 86, disappeared 13
 agrees with the gold on 96 of 123 (0.780, κ 0.67); it gives a verdict on 5 of the 22 gold-unclear
 promises (23 %), leaves 18 of the 101 settled ones unclear (18 %), and 90 % of its verdicts are right.
 Precision / recall per class: achieved 0.94 / 0.84, failed 0.88 / 0.65, unclear 0.49 / 0.77,
-disappeared 0.67 / 1.00. The test split has not been opened.
+disappeared 0.67 / 1.00.
 
 ### Retrieval arms on RQ2 (`gw-eval --task rq2`, dev, 123 promises, shared judge v2, three repeats)
 
@@ -146,8 +147,7 @@ Paired on the 123 promises (majority votes, McNemar): +4 / −4, p = 1.00; the h
 across repeats on 20 promises, the finder on 10. On RQ2 as on RQ1, the graph line's structured
 retrieval and plain hybrid retrieval are not distinguishable on dev. The finder reads 11.7 statements
 where the baseline reads 20, so its judgements cost less (USD 1.30 against 1.62 per 1,000) and are
-steadier; the baseline is more cautious (fewer verdicts, more of them right). The test split has not
-been opened.
+steadier; the baseline is more cautious (fewer verdicts, more of them right).
 
 The agentic arm, in one later batch of runs paired among themselves (`results/agentic/`, `agentic.md`): hybrid
 top 20 vote 0.805, a fixed budget per report year with no planner 0.813 (11.6 statements, paired +7 / −6, p = 1.00), the
@@ -163,6 +163,21 @@ fall from 16 to 8 of 101, with verdicts where the gold is unclear 3 → 4 of 22.
 planner still adds nothing (agent against fixed budget +2 / −6, p = 0.29): of the 195 statements its own actions added, the
 judge gave a result label to 1. Over eight v3 repeats on the fixed budget's evidence the mean is about 0.85, single repeats
 0.829–0.870, so 0.870 is the top of the noise.
+
+### On the test split (`agentic/rq2-test-*`, 250 promises, read once; `agentic.md` section 6)
+
+| arm | judge | vote accuracy | verdict where gold unclear | unclear where gold settled | verdicts right | USD per 1,000 promises |
+|---|---|---|---|---|---|---|
+| hybrid, top 20 (baseline) | v2 | 0.768 | 15 / 64 | 38 / 186 | 143 / 163 | 5.02 |
+| fixed budget, no planner | v3 | 0.808 | 21 / 64 | 25 / 186 | 159 / 182 | 4.52 |
+| agent, two hops | v3 | 0.840 | 18 / 64 | 20 / 186 | 164 / 184 | 5.72 |
+| chosen pipeline: agent, filter, v3 twice | v3 | 0.808 | 22 / 64 | 23 / 186 | 160 / 185 | 10.26 |
+
+No frozen comparison reaches 0.05: the chosen pipeline against the baseline is +28 / −18 (p = 0.18), against the fixed budget with v3
++5 / −5 (p = 1.00), and its filter loses to no filter +5 / −13 (p = 0.096). v3 against v2 is the one change in one direction on every
+arm (fixed budget +23 / −12, p = 0.090; hybrid +24 / −12, p = 0.065), at more verdicts where the gold is unclear. The gain lies on the
+model-labelled rows (fixed budget 99 → 111 of 135; on the group's 115 rows 92 → 91). The unfiltered agent with v3 came top, at +32 / −14
+against the baseline (p = 0.011 uncorrected), but it is a best of seven picked after the fact and test is spent.
 
 ### Case studies
 
@@ -187,10 +202,12 @@ admitted; one issuer both ways; partial delivery not reconciled; never mentioned
 5. Checking outcomes needs every statement in the index, table rows and result lines included: an index
    of sentence-shaped statements alone hid most of the sentences that report results, and the
    human-verified unclear share fell from 49 % to 31 % once every statement was ranked.
-6. On dev, letting an LLM plan the retrieval improves neither question and costs more. On RQ1 what helps is narrower:
-   the neighbouring sentences, for sentences that a text rule marks as depending on their context; on RQ2, a fixed
-   budget per report year does as well as anything, and the judge rather than retrieval is the limit: a judge that reads
-   more wordings as this commitment gains more than any retrieval change (fixed budget 0.813 to 0.870). Test not read.
+6. RQ2, on test: letting an LLM plan the retrieval is not shown to help or to hurt, and the chosen agent pipeline is not shown
+   to beat the hybrid baseline (0.808 against 0.768, p = 0.18) at twice the cost. A judge that reads more wordings as this
+   commitment moves every arm by 11 to 14 promises of 250, more than any retrieval change, short of significance and mainly on
+   model-labelled rows.
+7. RQ1, on dev only: letting an LLM plan the retrieval does not improve the label and costs more. What helps is narrower: the
+   neighbouring sentences, for sentences that a text rule marks as depending on their context. Test not read.
 
 ## 4. Limits
 
@@ -205,8 +222,8 @@ admitted; one issuer both ways; partial delivery not reconciled; never mentioned
   the stricter second check); targets that exist only inside tables are not extracted.
 - Aspect canonicalisation failed its gate, so cross-year aspect edges rely on exact normalised matches.
 - Retrieval latencies were measured with three runs sharing one machine.
-- Test split unread (`agentic.md`, section 6: an attempt stopped when the API account ran out of credit, before any
-  metric was written); retrieval metrics need pooled judgements that were not collected; the front end was not built;
+- RQ1's test split unread, RQ2's read once and now spent; graph arms not run on it, so cited unpaired and from dev. Retrieval
+  metrics need pooled judgements that were not collected; the front end was not built;
   the stock-price analysis is a literature screen only.
 - The agentic arm reads the statement store, so it cannot see the 1,938 statements under five words, one-word result
   cells among them; the graph arms are cited unpaired.

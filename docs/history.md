@@ -255,3 +255,8 @@ of the former notes index.
 - Two more on dev, then tuning stopped: the agent's evidence keeping only statements the judge's labels used
   (`20261031T081040Z`, simulated verifier) 0.862, fixed budget at five repeats (`20261031T081043Z`) 0.862, against 0.870 at three
   (p = 1.00 for both). USD 1.5.
+- RQ2 test split read once (`bfd27d6`, clean; the pipeline, a choice of the project made on those dev numbers, and comparisons T1–T5, Q1–Q3
+  committed first). Hybrid v2 `20261031T085152Z` 0.768, v3 `T091251Z` 0.816; fixed budget v2 `T085149Z` 0.764, v3 `T090719Z` 0.808; agent v2
+  `T085145Z` 0.784, v3 `T091030Z` 0.840; chosen pipeline `T092745Z` 0.808. Nothing frozen reaches 0.05: T1 +28 / −18, p = 0.18; T3 +5 / −13,
+  p = 0.096; T4 p = 0.090; T5 p = 0.065. The filter that looked useful on dev lost. USD 8.5. Cost figures in earlier notes were per judgement;
+  per promise at three judgements they are three times the judge's part (`agentic.md`, section 6). RQ1 not run on test.

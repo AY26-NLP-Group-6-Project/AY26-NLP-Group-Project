@@ -3,7 +3,8 @@
 A bounded planner over the shared corpus tools, one retriever for both research questions
 (`src/agentic-rag`). The shared classifier and judge read what it returns, unchanged and under the same
 budget as every other arm. It reads only the statement store (hash `d8a62bfe40c6`), never the claim graph.
-Everything below is on dev; **the test split has not been read** (section 6).
+Sections 2 to 5 are on dev. **RQ2 was read on the test split once, section 6, and that is the result to quote.** RQ1 was
+not run on test.
 
 ## 1. What it does
 
@@ -75,7 +76,9 @@ from one of ten slice comparisons (Bonferroni 0.04), so the test split is what w
 
 ## 3. RQ2 on dev
 
-123 promises, shared judge v2, three repeats, votes against the gold.
+123 promises, shared judge v2, three repeats, votes against the gold. USD / 1k here and in the next table is per 1,000
+judgements, as the run reports it; a promise takes three, and the planner runs once per promise (section 6 gives the cost
+per promise).
 
 | arm | run | vote accuracy | κ | macro-F1 | verdict where gold unclear | unclear where gold settled | verdicts right | statements / promise | USD / 1k |
 |---|---|---|---|---|---|---|---|---|---|
@@ -129,8 +132,8 @@ steadier votes and at about the same cost.
 budget +9 / −2 (p = 0.065), hybrid against agent +6 / −3 (p = 0.51). The reason shows in the labels: of the 195
 statements the planner's own actions added, the judge gave a result label to 1, and to 6 of the 144 from the fixed search
 for a change, against 120 of 1,419 from hop 0 (first repeat). What it adds is mostly other topics, which can only move
-a verdict by accident: on P00760 two statements it found turn a correct `disappeared` into `unclear`. **On this evidence
-the pipeline to carry forward is the fixed budget with judge v3**, with the agent kept as the measured comparison.
+a verdict by accident: on P00760 two statements it found turn a correct `disappeared` into `unclear`. On dev the fixed budget
+with judge v3 looked best; on test it did not (section 6).
 
 **Two further attempts did not beat it, and this is where tuning stopped.** Keeping only the added statements the judge's
 labels found a use for (17 of 339, on 10 promises; `analyze_judge --write-verified`, a filter that reads no gold, at the cost
@@ -203,12 +206,59 @@ project on the dev numbers above, where it does not beat the fixed budget. RQ1 i
 
 T1 is the headline. Eight RQ2 comparisons in all.
 
-**Status: not run.** One attempt on 2026-10-31 stopped when the API account ran out of credit, with `sentence_only` and
-`local` sampled on RQ1 and the RQ2 arms unfinished. No metrics were written and no test label was read. Those partial
-directories (`20261031T063349Z`, `T063350Z`, `T063351Z`, `T065124Z` under `artifacts/runs/`) are to be left unread, and
-the runs repeated in full. Since `4a3d35f` the agent and its prompts have not changed. Commit `39ffb79` adds judge v3,
-`--judge`, and `--evidence` for RQ2, and stores the judge's labels in predictions; with the default v2 they change no
-outcome.
+### RQ2 on test
+
+Read once, 2026-10-31, commit `bfd27d6`, clean. 250 promises (gold: achieved 145, failed 34, unclear 64, disappeared 7), three
+repeats per judge, `agentic/rq2-test-*`. Cost per 1,000 promises at three judgements each, with the planner once.
+
+| arm | judge | vote accuracy | κ | macro-F1 | verdict where gold unclear | unclear where gold settled | verdicts right | USD per 1,000 promises |
+|---|---|---|---|---|---|---|---|---|
+| hybrid, top 20 (baseline) | v2 | 0.768 (192) | 0.62 | 0.637 | 15 / 64 | 38 / 186 | 143 / 163 | 5.02 |
+| hybrid, top 20 | v3 | 0.816 (204) | 0.68 | 0.669 | 20 / 64 | 23 / 186 | 160 / 183 | 5.70 |
+| fixed budget | v2 | 0.764 (191) | 0.61 | 0.684 | 17 / 64 | 39 / 186 | 144 / 164 | 3.98 |
+| fixed budget | v3 | 0.808 (202) | 0.68 | 0.687 | 21 / 64 | 25 / 186 | 159 / 182 | 4.52 |
+| agent, two hops | v2 | 0.784 (196) | 0.64 | 0.641 | 12 / 64 | 40 / 186 | 144 / 158 | 5.13 |
+| agent, two hops | v3 | 0.840 (210) | 0.72 | 0.695 | 18 / 64 | 20 / 186 | 164 / 184 | 5.72 |
+| **chosen pipeline: agent, filter** | v3 twice | **0.808 (202)** | 0.67 | 0.691 | 22 / 64 | 23 / 186 | 160 / 185 | 10.26 |
+
+| # | comparison | right | flips | p |
+|---|---|---|---|---|
+| T1 | hybrid + v2 → chosen pipeline | 192 → 202 | +28 / −18 | 0.18 |
+| T2 | fixed budget + v3 → chosen pipeline | 202 → 202 | +5 / −5 | 1.00 |
+| T3 | agent + v3 → chosen pipeline | 210 → 202 | +5 / −13 | 0.096 |
+| T4 | fixed budget, v2 → v3 | 191 → 202 | +23 / −12 | 0.090 |
+| T5 | hybrid, v2 → v3 | 192 → 204 | +24 / −12 | 0.065 |
+| Q1 | hybrid → agent, v2 | 192 → 196 | +16 / −12 | 0.57 |
+| Q2 | hybrid → fixed budget, v2 | 192 → 191 | +19 / −20 | 1.00 |
+| Q3 | fixed budget → agent, v2 | 191 → 196 | +18 / −13 | 0.47 |
+
+**None of the eight frozen comparisons reaches 0.05, before any correction for making eight.** What can be said:
+
+1. **The chosen pipeline is not shown to beat the baseline** (T1), and it costs twice as much. It ties the fixed budget with v3 (T2)
+   at more than twice that cost.
+2. **The filter did not hold up.** On dev it looked as if it removed noise; on test it goes the wrong way (T3, +5 / −13), keeping
+   17 of the 660 added statements. So the added statements are not plain noise, and the dev reading of them was too strong.
+3. **Judge v3 is the one change in the same direction on every arm**, 11 to 14 more promises right of 250 (T4, T5; agent +25 / −11,
+   p = 0.029, not frozen). The price is more verdicts where the gold is unclear (15 → 20, 17 → 21, 12 → 18 of 64), and verdicts about
+   as often right (0.877 → 0.874, 0.878 → 0.874, 0.911 → 0.891).
+4. **That gain sits on the rows the model annotators labelled**, of which v3's `proxy` reading may simply share the habit. On the group's
+   own 115 rows: hybrid 87 → 88, fixed budget 92 → 91, agent 89 → 95. On the 135 model-labelled rows: 105 → 116 (p = 0.035), 99 → 111
+   (p = 0.023), 107 → 115. For the human labels v3 is not shown to help outside the agent's evidence.
+5. **Retrieval arms stay indistinguishable** under either judge (Q1–Q3; hybrid against fixed budget under v3 is 204 against 202). The
+   planner is not shown to help, or to hurt.
+6. **Dev flattered every v3 figure, as expected:** fixed budget + v3 0.870 on dev, 0.808 on test. The agent's order against the fixed budget
+   reversed too (dev +2 / −6, test +13 / −5 with v3), so that difference on either split is not to be trusted.
+
+Post hoc, and so a lead rather than a finding: the unfiltered agent + v3 is the best of the seven, 0.840, against the baseline +32 / −14,
+p = 0.011 uncorrected, and against the fixed budget + v3 +13 / −5, p = 0.096. It was not the chosen pipeline, and it was picked here because
+it came top of seven on this split. Test is now spent for RQ2, so confirming it needs new labelled promises.
+
+**Status.** RQ2: read once, above. RQ1: not run, parked by decision, so R1–R6 stay open and the RQ1 test items unread. An
+earlier attempt on 2026-10-31 stopped when the API account ran out of credit, with `sentence_only` and `local` sampled on RQ1
+and the RQ2 arms unfinished; no metrics were written and no test label was read. Those partial directories
+(`20261031T063349Z`, `T063350Z`, `T063351Z`, `T065124Z` under `artifacts/runs/`) stay unread. Since `4a3d35f` the agent and its
+prompts have not changed. Commit `39ffb79` adds judge v3, `--judge`, and `--evidence` for RQ2, and stores the judge's labels in
+predictions; with the default v2 they change no outcome. The graph arms were not run on test.
 
 ```bash
 export GW_RETRIEVAL_WORKERS=8                      # PowerShell: $env:GW_RETRIEVAL_WORKERS='8'
@@ -223,7 +273,13 @@ uv run gw-eval --compare <rq1 run> <rq1 run> --pairs \
 uv run gw-eval --compare <baseline rq2 run> <agent rq2 run>                                         # Q1, and so on
 ```
 
-About USD 8 by the dev rates.
+The RQ1 run is about USD 4 by the dev rates. The RQ2 commands above are what was run, plus for the chosen pipeline:
+
+```bash
+uv run gw-eval --task rq2 --system agentic-rag --split test --repeats 3 --judge v3 --evidence <agent run>/evidence.jsonl
+uv run python -m agentic_rag.analyze_judge <that run> --evidence-run <agent run> --write-verified <dir>/evidence.jsonl
+uv run gw-eval --task rq2 --system agentic-rag --split test --repeats 3 --judge v3 --evidence <dir>/evidence.jsonl
+```
 
 ## 7. Reproducing dev
 
