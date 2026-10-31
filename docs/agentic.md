@@ -132,6 +132,19 @@ for a change, against 120 of 1,419 from hop 0 (first repeat). What it adds is mo
 a verdict by accident: on P00760 two statements it found turn a correct `disappeared` into `unclear`. **On this evidence
 the pipeline to carry forward is the fixed budget with judge v3**, with the agent kept as the measured comparison.
 
+**Two further attempts did not beat it, and this is where tuning stopped.** Keeping only the added statements the judge's
+labels found a use for (17 of 339, on 10 promises; `analyze_judge --write-verified`, a simulated verifier and an optimistic
+one) lifts the agent's evidence from 0.837 to 0.862, level with the fixed budget at 0.870 (+2 / −3, p = 1.00) and with a planner
+still to pay for: the noise was the cost, and removing it recovers no more than what hop 0 already had
+(`agentic/rq2-dev-v3-agent-verified`). Five repeats on the fixed budget's evidence give 0.862, not better than three, at 5/3
+the cost (`agentic/rq2-dev-v3-fixed-budget-5-repeats`). That run also shows how far 0.870 is the top of the noise: single
+repeats range from 0.829 to 0.870, and the mean over the eight v3 repeats is about 0.85, the better estimate on dev.
+
+The 16 errors left split into 9 that change between repeats and 7 that do not, and many sit on boundaries the annotators
+themselves had to settle: one day past a "first half" deadline (P00811), an antecedent the promise never names (P00463). Fixes
+for single cases conflict: P00092 and P00406 both pit `met` against `missed`, and in the second the `missed` is a list number
+read as a count. More changes here would fit this split rather than the task.
+
 ## 4. Cost and speed
 
 Planner: 530–550 input and 115–120 output tokens per RQ1 item, 1.2 calls; USD 0.84 per 1,000 promises on RQ2, 1.3

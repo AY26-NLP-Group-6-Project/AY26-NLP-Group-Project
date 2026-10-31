@@ -252,3 +252,6 @@ of the former notes index.
   `T074643Z` 0.813 (0.805, +6 / −5, p = 1.00), agent at 500 characters `T074646Z` 0.854. Agent against fixed budget under v3 +2 /
   −6, p = 0.29. Of the 195 statements the planner's actions added, the judge gave a result label to 1. Test still unread;
   v3 is not in the freeze of `4a3d35f`. USD 2.4.
+- Two more on dev, then tuning stopped: the agent's evidence keeping only statements the judge's labels used
+  (`20261031T081040Z`, simulated verifier) 0.862, fixed budget at five repeats (`20261031T081043Z`) 0.862, against 0.870 at three
+  (p = 1.00 for both). USD 1.5.

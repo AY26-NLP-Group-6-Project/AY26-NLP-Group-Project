@@ -14,6 +14,7 @@ from pathlib import Path
 from gw_common.eval import metrics as M
 from gw_common.eval import rq2 as R
 from gw_common.judges import promise as J
+from gw_common.schemas import EvidenceSpan
 
 
 def rerun(run_dir: Path, features: frozenset[str]) -> dict[str, str]:
@@ -67,11 +68,50 @@ def table(run_dir: Path, against: Path | None = None) -> str:
     return "\n".join(rows)
 
 
+def write_verified(judged: Path, evidence_run: Path, out: Path) -> tuple[int, int]:
+    """Evidence with the planner's statements kept only where the judge's labels on `judged` found a use for
+    them, in any repeat: a simulation of a verifier, optimistic because the labels saw the very statements.
+    Returns (kept, dropped)."""
+    useful: dict[str, set[str]] = {}
+    for line in (judged / "predictions.jsonl").read_text(encoding="utf-8").splitlines():
+        p = json.loads(line)
+        for x in p.get("labels") or []:
+            if x["relation"] in ("this_target", "proxy") and (
+                x["deadline_result"] != "none" or x["change"] == "later" or x.get("figure")
+            ):
+                useful.setdefault(p["item_id"], set()).add(x["ref"])
+    kept = dropped = 0
+    rows = []
+    for line in (evidence_run / "evidence.jsonl").read_text(encoding="utf-8").splitlines():
+        e = json.loads(line)
+        refs = R.evidence_of([EvidenceSpan(**s) for s in e["spans"]])
+        ref_of = {r["stmt_id"]: r["ref"] for r in refs}
+        spans = []
+        for s in e["spans"]:
+            first = s["why"].startswith("agent:hop0")
+            if first or ref_of[s["statement_id"]] in useful.get(e["item_id"], set()):
+                spans.append(s)
+                kept += not first
+            else:
+                dropped += 1
+        rows.append({"condition": e["condition"], "item_id": e["item_id"], "spans": spans})
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text("\n".join(json.dumps(r) for r in rows) + "\n", encoding="utf-8")
+    return kept, dropped
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("run_dir", type=Path)
     ap.add_argument("--against", type=Path)
+    ap.add_argument("--write-verified", type=Path, metavar="OUT",
+                    help="write an evidence file from --evidence-run, keeping what these labels found a use for")
+    ap.add_argument("--evidence-run", type=Path)
     args = ap.parse_args()
+    if args.write_verified:
+        kept, dropped = write_verified(args.run_dir, args.evidence_run, args.write_verified)
+        print(f"kept {kept} added statements, dropped {dropped} -> {args.write_verified}")
+        return 0
     print(table(args.run_dir, args.against))
     return 0
 

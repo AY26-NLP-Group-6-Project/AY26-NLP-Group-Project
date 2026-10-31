@@ -161,7 +161,8 @@ commitment, a stated part delivery and a figure compared in code. Fixed budget 0
 0.789 → 0.837 (+9 / −3, p = 0.15), hybrid 0.805 → 0.813 (+6 / −5, p = 1.00). Settled promises left unclear on the fixed budget
 fall from 16 to 8 of 101, with verdicts where the gold is unclear 3 → 4 of 22. Designed on this split, so optimistic. The
 planner still adds nothing (agent against fixed budget +2 / −6, p = 0.29): of the 195 statements its own actions added, the
-judge gave a result label to 1.
+judge gave a result label to 1. Over eight v3 repeats on the fixed budget's evidence the mean is about 0.85, single repeats
+0.829–0.870, so 0.870 is the top of the noise.
 
 ### Case studies
 
