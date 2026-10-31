@@ -58,7 +58,8 @@ def table(run_dir: Path, against: Path | None = None) -> str:
         if base_votes:
             b = [base_votes[i] for i in ids]
             f = M.flip_analysis(g, b, pred)
-            flips, p = f"+{f['wrong_to_right']} / -{f['right_to_wrong']}", f"{M.mcnemar(g, b, pred)['p_value']:.3f}"
+            flips = f"+{f['wrong_to_right']} / -{f['right_to_wrong']}"
+            p = f"{M.mcnemar(g, b, pred)['p_value']:.3f}"
         over, under, right = m["over_commitment"], m["under_commitment"], m["verdict_precision"]
         rows.append(f"| {', '.join(subset) or '(none)'} | {m['accuracy']:.3f} | {m['cohen_kappa']:.2f} "
                     f"| {m['macro_f1']:.3f} | {over['k']} / {over['n']} | {under['k']} / {under['n']} "
