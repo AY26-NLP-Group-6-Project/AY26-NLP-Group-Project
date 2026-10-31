@@ -159,3 +159,45 @@ def test_a_v3_reply_reaches_the_outcome():
     evidence = [{"ref": "E1", "year": 2023, "page": 1, "text": "Intensity was 2.78 m3/m2 in FY2023."}]
     out = J.propose_v3(PROMISE, evidence, client, J.sections(J.PROMPTS["v3"]))
     assert (out["outcome"], out["basis"], out["model_outcome"]) == ("failed", ["figure"], "unclear")
+
+
+def test_the_filter_keeps_hop_zero_and_only_the_added_statements_the_labels_used(tmp_path):
+    from agentic_rag.analyze_judge import write_verified
+
+    judged, source = tmp_path / "judged", tmp_path / "source"
+    judged.mkdir()
+    source.mkdir()
+
+    def span(i, why):
+        return {
+            "statement_id": f"r2023p0001s00{i}",
+            "text": f"statement {i}",
+            "company": "Acme",
+            "year": 2023,
+            "page": 1,
+            "file": "f",
+            "score": 0.0,
+            "why": why,
+        }
+
+    spans = [
+        span(1, "agent:hop0:retrieved"),
+        span(2, "agent:probe"),
+        span(3, "agent:hop1:search"),
+        span(4, "agent:hop1:around"),
+    ]
+    (source / "evidence.jsonl").write_text(
+        json.dumps({"condition": "promise_window", "item_id": "P1", "spans": spans}) + "\n", encoding="utf-8"
+    )
+    labels = [
+        row("E1"),
+        row("E2", relation="same_metric", result="none"),
+        row("E3", result="met"),
+        row("E4", relation="other"),
+    ]
+    rep = {"item_id": "P1", "rep": 0, "labels": labels}
+    (judged / "predictions.jsonl").write_text(json.dumps(rep) + "\n", encoding="utf-8")
+    out = tmp_path / "out" / "evidence.jsonl"
+    assert write_verified(judged, source, out) == (1, 2)
+    kept = json.loads(out.read_text(encoding="utf-8"))["spans"]
+    assert [s["why"] for s in kept] == ["agent:hop0:retrieved", "agent:hop1:search"]

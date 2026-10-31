@@ -69,9 +69,9 @@ def table(run_dir: Path, against: Path | None = None) -> str:
 
 
 def write_verified(judged: Path, evidence_run: Path, out: Path) -> tuple[int, int]:
-    """Evidence with the planner's statements kept only where the judge's labels on `judged` found a use for
-    them, in any repeat: a simulation of a verifier, optimistic because the labels saw the very statements.
-    Returns (kept, dropped)."""
+    """Evidence with the planner's statements kept only where the judge's labels on `judged` used them, in any
+    repeat: a result, a change or a figure on this commitment. It reads no gold, so it can run on any split, and
+    costs a second round of judging. Returns (kept, dropped)."""
     useful: dict[str, set[str]] = {}
     for line in (judged / "predictions.jsonl").read_text(encoding="utf-8").splitlines():
         p = json.loads(line)

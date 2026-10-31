@@ -133,9 +133,9 @@ a verdict by accident: on P00760 two statements it found turn a correct `disappe
 the pipeline to carry forward is the fixed budget with judge v3**, with the agent kept as the measured comparison.
 
 **Two further attempts did not beat it, and this is where tuning stopped.** Keeping only the added statements the judge's
-labels found a use for (17 of 339, on 10 promises; `analyze_judge --write-verified`, a simulated verifier and an optimistic
-one) lifts the agent's evidence from 0.837 to 0.862, level with the fixed budget at 0.870 (+2 / −3, p = 1.00) and with a planner
-still to pay for: the noise was the cost, and removing it recovers no more than what hop 0 already had
+labels found a use for (17 of 339, on 10 promises; `analyze_judge --write-verified`, a filter that reads no gold, at the cost
+of a second round of judging) lifts the agent's evidence from 0.837 to 0.862, level with the fixed budget at 0.870 (+2 / −3, p = 1.00)
+and with a planner still to pay for: the noise was the cost, and removing it recovers no more than what hop 0 already had
 (`agentic/rq2-dev-v3-agent-verified`). Five repeats on the fixed budget's evidence give 0.862, not better than three, at 5/3
 the cost (`agentic/rq2-dev-v3-fixed-budget-5-repeats`). That run also shows how far 0.870 is the top of the noise: single
 repeats range from 0.829 to 0.870, and the mean over the eight v3 repeats is about 0.85, the better estimate on dev.
@@ -187,6 +187,21 @@ once:
 
 Six RQ1 comparisons and three RQ2 ones are made; a p-value near 0.05 is read against that number. Nothing is tuned
 after test is read; a configuration that loses is reported as losing.
+
+**The pipeline chosen for RQ2, and what is added to the freeze.** Agent, two hops; judge v3 three times over its evidence;
+the added statements kept only where those labels used them (`analyze_judge --write-verified`, which reads no gold); judge
+v3 three times over what is left, and that vote is the answer. Six judge rounds and a planner per promise, chosen by the
+project on the dev numbers above, where it does not beat the fixed budget. RQ1 is parked and not run. Added to Q1–Q3:
+
+| # | comparison on test, majority votes, McNemar | what dev showed |
+|---|---|---|
+| T1 | the chosen pipeline against hybrid + v2, the plain baseline | +11 / −4, p = 0.12 |
+| T2 | the chosen pipeline against the fixed budget + v3: what planner and filter add | +2 / −3 from the fixed budget's side, p = 1.00 |
+| T3 | the chosen pipeline against agent + v3, unfiltered: what the filter adds | +4 / −1, p = 0.38 |
+| T4 | fixed budget, v2 against v3 | +9 / −2, p = 0.065 |
+| T5 | hybrid, v2 against v3 | +6 / −5, p = 1.00 |
+
+T1 is the headline. Eight RQ2 comparisons in all.
 
 **Status: not run.** One attempt on 2026-10-31 stopped when the API account ran out of credit, with `sentence_only` and
 `local` sampled on RQ1 and the RQ2 arms unfinished. No metrics were written and no test label was read. Those partial
