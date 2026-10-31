@@ -1,6 +1,6 @@
 # Results
 
-The findings in one place. Every number names the published run (`results/<group>/<name>/`) or the
+The findings in one place; the RQ2 summary for reading is `results/rq2-final/README.md`. Every number names the published run (`results/<group>/<name>/`) or the
 check sheet (`kb/annotation/spotchecks/`) it comes from. Dev split unless a section says test: RQ2 has been read on
 its test split once, for the hybrid, fixed-budget and agentic arms ("On the test split" below); RQ1's has not been read.
 Classifier `gpt-5.6-luna`, reasoning effort low, three uncached repeats per condition

@@ -253,6 +253,9 @@ Post hoc, and so a lead rather than a finding: the unfiltered agent + v3 is the 
 p = 0.011 uncorrected, and against the fixed budget + v3 +13 / −5, p = 0.096. It was not the chosen pipeline, and it was picked here because
 it came top of seven on this split. Test is now spent for RQ2, so confirming it needs new labelled promises.
 
+**The project's final RQ2 system is this one, the unfiltered agent with judge v3**, chosen after test was read, which is how it is to be
+reported. Summary, tables and per-promise results: `results/rq2-final/`.
+
 **Status.** RQ2: read once, above. RQ1: not run, parked by decision, so R1–R6 stay open and the RQ1 test items unread. An
 earlier attempt on 2026-10-31 stopped when the API account ran out of credit, with `sentence_only` and `local` sampled on RQ1
 and the RQ2 arms unfinished; no metrics were written and no test label was read. Those partial directories
