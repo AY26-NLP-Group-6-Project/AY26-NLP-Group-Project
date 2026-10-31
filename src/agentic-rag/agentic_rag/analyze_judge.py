@@ -105,7 +105,7 @@ def main() -> int:
     ap.add_argument("run_dir", type=Path)
     ap.add_argument("--against", type=Path)
     ap.add_argument("--write-verified", type=Path, metavar="OUT",
-                    help="write an evidence file from --evidence-run, keeping what these labels found a use for")
+                    help="write an evidence file from --evidence-run, keeping what these labels used")
     ap.add_argument("--evidence-run", type=Path)
     args = ap.parse_args()
     if args.write_verified:
