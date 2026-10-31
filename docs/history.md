@@ -241,7 +241,8 @@ of the former notes index.
   1.30 calls), p ≥ 0.45 pairwise with hybrid and each other.
 - RQ1 `20261031T054130Z`, six arms in one run: `company_agentic` 0.7645, `sentence_only` 0.7686 (+11 / −8, p = 0.65),
   `cross_year_rrf` 0.7988 (+19 / −12, p = 0.28), `local` 0.7745. The gate gave 262 of 331 sentences no evidence. The text
-  rule committed in `c3a297f`, written before this run was read, gave `local` +9 / −0 on its 75 sentences (p = 0.004).
+  rule committed in `320a4f1`, before this run started and unchanged since, gave `local` +9 / −0 on its 75 sentences
+  (p = 0.004).
   One round of ablations (`20261031T061753Z`, `T061754Z`, `T062526Z`, `T062533Z`) stayed inside the noise.
 - Configuration and hypotheses committed in `4a3d35f`. The test attempt stopped when the API account ran out of credit
   (HTTP 429, `credit_balance_exhausted`, chat and embeddings on one key); no metrics written, no test label read.
