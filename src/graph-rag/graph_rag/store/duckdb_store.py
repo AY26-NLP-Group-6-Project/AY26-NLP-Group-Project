@@ -1,4 +1,4 @@
-"""DuckDB-backed graph store (decision D1).
+"""DuckDB-backed graph store.
 
 Node and edge tables live in one DuckDB file per build; multi-hop work loads a company-scoped
 subgraph into networkx, which stays small because ESG graphs are company-centred and star-shaped
@@ -41,7 +41,7 @@ CREATE TABLE IF NOT EXISTS aspects (
     aspect_id   VARCHAR PRIMARY KEY,
     canonical   VARCHAR,
     category    VARCHAR,
-    method      VARCHAR          -- gold_span (M1) | cluster (M2) | llm (M3)
+    method      VARCHAR          -- gold_span | string_match | cluster | llm
 );
 CREATE TABLE IF NOT EXISTS aspect_aliases (
     surface     VARCHAR,
@@ -59,7 +59,7 @@ CREATE TABLE IF NOT EXISTS mentions (
 );
 CREATE TABLE IF NOT EXISTS aspect_canon (
     aspect_id   VARCHAR PRIMARY KEY,
-    canon_id    VARCHAR,          -- the identity chains and edges group on (M2)
+    canon_id    VARCHAR,          -- the identity chains and edges group on
     canonical   VARCHAR,
     method      VARCHAR,          -- exact | morph | hac
     threshold   DOUBLE,
@@ -86,7 +86,7 @@ class Chain:
     statements: list[str]
 
 
-# Grouping identity for an aspect: its canonical cluster when M2 has run, the raw aspect id otherwise.
+# Grouping identity for an aspect: its canonical cluster once canonicalisation has run, else the aspect id.
 GROUP_ID = "COALESCE(c.canon_id, m.aspect_id)"
 GROUP_NAME = "COALESCE(c.canonical, a.canonical)"
 

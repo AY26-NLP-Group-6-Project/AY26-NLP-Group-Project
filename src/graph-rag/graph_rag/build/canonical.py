@@ -1,8 +1,8 @@
-"""Stage 2b (M2): aspect canonicalisation.
+"""Stage 2b: aspect canonicalisation.
 
 Three methods, all written to the same `aspect_canon` table so derive/chains/subgraph are unchanged:
 
-- `exact`: identity on the M1 aspect key (the M1 behaviour, kept as the reference arm);
+- `exact`: identity on the normalised aspect key (the first build's behaviour, kept as the reference arm);
 - `morph`: morphological normalisation within category (the CESI "Morph Norm" baseline);
 - `hac`:   morph keys, then phrase embeddings + complete-linkage HAC within category (CESI section 6).
 

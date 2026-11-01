@@ -1,4 +1,4 @@
-"""Zero-shot LLM action classifier shared by every system (03-eval-contract.md: "same classifier").
+"""Zero-shot LLM action classifier shared by every system (docs/evaluation.md: "same classifier").
 
 One classifier, one prompt; systems differ only in the evidence they hand it. That keeps the RQ1
 comparison about retrieval, not about who wrote the better prompt.

@@ -4,8 +4,8 @@ version = "0.1.0"
 description = "Temporal claim graph over SGX sustainability reports: build, traversal retrieval, trajectories"
 requires-python = ">=3.12"
 dependencies = [
-    "gw-common", "duckdb>=1.1", "networkx>=3.3", "pymupdf>=1.24", "pyyaml>=6",
-    "scipy>=1.13", "fastembed>=0.4",
+    "gw-common", "baseline-rag", "duckdb>=1.1", "networkx>=3.3", "pymupdf>=1.24", "pyyaml>=6",
+    "scipy>=1.13", "fastembed>=0.4", "openpyxl>=3.1",
 ]
 
 [project.scripts]
@@ -14,6 +14,9 @@ gw-graph = "graph_rag.cli:main"
 [project.entry-points."gw.systems"]
 graph-rag = "graph_rag:build_system"
 agentic-graph-rag = "graph_rag.agent:build_system"
+
+[project.entry-points."gw.corpora"]
+graph = "graph_rag.corpus:GraphCorpus"
 
 [build-system]
 requires = ["hatchling"]
@@ -24,3 +27,4 @@ packages = ["graph_rag"]
 
 [tool.uv.sources]
 gw-common = { workspace = true }
+baseline-rag = { workspace = true }

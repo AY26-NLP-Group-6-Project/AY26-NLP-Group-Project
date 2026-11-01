@@ -1,0 +1,266 @@
+{
+  "rows": 60,
+  "judged": 60,
+  "extraction": {
+    "promise_ok": 60,
+    "promise_precision": 1.0,
+    "fields_ok_rate": 0.8166666666666667
+  },
+  "reported": {
+    "n": 60,
+    "human_distribution": {
+      "achieved": 16,
+      "disappeared": 5,
+      "unclear": 17,
+      "failed": 22
+    },
+    "system_distribution": {
+      "unclear": 18,
+      "disappeared": 5,
+      "failed": 24,
+      "achieved": 13
+    },
+    "accuracy": 0.7833333333333333,
+    "cohen_kappa": 0.6920647453612316,
+    "per_class": {
+      "achieved": {
+        "precision": 1.0,
+        "recall": 0.8125,
+        "support": 16
+      },
+      "failed": {
+        "precision": 0.75,
+        "recall": 0.8181818181818182,
+        "support": 22
+      },
+      "unclear": {
+        "precision": 0.6666666666666666,
+        "recall": 0.7058823529411765,
+        "support": 17
+      },
+      "disappeared": {
+        "precision": 0.8,
+        "recall": 0.8,
+        "support": 5
+      }
+    },
+    "confusion_human_rows_system_cols": {
+      "achieved": {
+        "unclear": 1,
+        "failed": 2,
+        "achieved": 13
+      },
+      "failed": {
+        "unclear": 4,
+        "failed": 18
+      },
+      "unclear": {
+        "unclear": 12,
+        "failed": 4,
+        "disappeared": 1
+      },
+      "disappeared": {
+        "disappeared": 4,
+        "unclear": 1
+      }
+    }
+  },
+  "outcome": {
+    "n": 60,
+    "human_distribution": {
+      "achieved": 16,
+      "disappeared": 5,
+      "unclear": 17,
+      "revised": 15,
+      "failed": 7
+    },
+    "system_distribution": {
+      "unclear": 18,
+      "disappeared": 5,
+      "revised": 13,
+      "failed": 11,
+      "achieved": 13
+    },
+    "accuracy": 0.6833333333333333,
+    "cohen_kappa": 0.5912513445679455,
+    "per_class": {
+      "achieved": {
+        "precision": 1.0,
+        "recall": 0.8125,
+        "support": 16
+      },
+      "failed": {
+        "precision": 0.45454545454545453,
+        "recall": 0.7142857142857143,
+        "support": 7
+      },
+      "revised": {
+        "precision": 0.5384615384615384,
+        "recall": 0.4666666666666667,
+        "support": 15
+      },
+      "unclear": {
+        "precision": 0.6666666666666666,
+        "recall": 0.7058823529411765,
+        "support": 17
+      },
+      "disappeared": {
+        "precision": 0.8,
+        "recall": 0.8,
+        "support": 5
+      }
+    },
+    "confusion_human_rows_system_cols": {
+      "achieved": {
+        "unclear": 1,
+        "revised": 2,
+        "achieved": 13
+      },
+      "failed": {
+        "failed": 5,
+        "unclear": 1,
+        "revised": 1
+      },
+      "revised": {
+        "unclear": 3,
+        "failed": 5,
+        "revised": 7
+      },
+      "unclear": {
+        "unclear": 12,
+        "revised": 3,
+        "disappeared": 1,
+        "failed": 1
+      },
+      "disappeared": {
+        "disappeared": 4,
+        "unclear": 1
+      }
+    },
+    "over_commitment": {
+      "k": 5,
+      "n": 17,
+      "rate": 0.29411764705882354
+    },
+    "under_commitment": {
+      "k": 6,
+      "n": 43,
+      "rate": 0.13953488372093023
+    },
+    "verdict_precision": {
+      "k": 29,
+      "n": 42,
+      "rate": 0.6904761904761905
+    },
+    "human_by_kind": {
+      "milestone": {
+        "disappeared": 4,
+        "achieved": 1,
+        "unclear": 5,
+        "revised": 5,
+        "failed": 2
+      },
+      "qualitative": {
+        "unclear": 8,
+        "revised": 1,
+        "achieved": 4,
+        "failed": 1
+      },
+      "quantitative": {
+        "achieved": 11,
+        "unclear": 4,
+        "failed": 4,
+        "revised": 9,
+        "disappeared": 1
+      }
+    }
+  },
+  "population": {
+    "pool": 299,
+    "strata": {
+      "unclear": {
+        "pool": 116,
+        "sampled": 15
+      },
+      "disappeared": {
+        "pool": 4,
+        "sampled": 4
+      },
+      "failed": {
+        "pool": 15,
+        "sampled": 14
+      },
+      "achieved": {
+        "pool": 143,
+        "sampled": 14
+      },
+      "revised": {
+        "pool": 21,
+        "sampled": 13
+      }
+    },
+    "accuracy": {
+      "estimate": 0.8230389454469722,
+      "ci95": [
+        0.7032268734609872,
+        0.9212588971786296
+      ]
+    },
+    "accuracy_five_way": {
+      "estimate": 0.7997194555722984,
+      "ci95": [
+        0.6799073835863134,
+        0.9004753329168045
+      ]
+    },
+    "over_commitment": {
+      "estimate": 0.1409068051964507,
+      "ci95": [
+        0.01966072980985711,
+        0.33340715477403254
+      ]
+    },
+    "under_commitment": {
+      "estimate": 0.1478394147376413,
+      "ci95": [
+        0.03215187935390032,
+        0.2863557801697733
+      ]
+    },
+    "verdict_precision": {
+      "estimate": 0.8446704305170353,
+      "ci95": [
+        0.7435707194364067,
+        0.9355203477516563
+      ]
+    },
+    "human_share.achieved": {
+      "estimate": 0.5012299851764734,
+      "ci95": [
+        0.4070430127286315,
+        0.5871194580224681
+      ]
+    },
+    "human_share.disappeared": {
+      "estimate": 0.061761426978818285,
+      "ci95": [
+        0.006688963210702341,
+        0.13935340022296544
+      ]
+    },
+    "human_share.failed": {
+      "estimate": 0.12760483663493696,
+      "ci95": [
+        0.07905472453967437,
+        0.20491381528170827
+      ]
+    },
+    "human_share.unclear": {
+      "estimate": 0.30940375120977126,
+      "ci95": [
+        0.21900351599348256,
+        0.39034020605926956
+      ]
+    }
+  }
+}

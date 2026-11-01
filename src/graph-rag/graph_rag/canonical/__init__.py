@@ -1,1 +1,1 @@
-"""Aspect canonicalisation (M2): normalisation, embeddings, HAC, CESI metrics."""
+"""Aspect canonicalisation: normalisation, embeddings, HAC, CESI metrics."""

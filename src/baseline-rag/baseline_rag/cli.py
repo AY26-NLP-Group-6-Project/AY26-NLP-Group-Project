@@ -1,4 +1,4 @@
-"""gw-baseline: build and inspect the shared passage store."""
+"""gw-baseline: build, inspect, mirror and package the shared chunk store."""
 
 from __future__ import annotations
 
@@ -12,11 +12,12 @@ from baseline_rag import chunks as chunk_store
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser("gw-baseline", description="Chunk store for the hybrid baseline")
     ap.add_argument("action", choices=["build", "stats", "sample", "pg-import", "pg-check", "package"])
-    ap.add_argument("--build-id", default="dev")
+    ap.add_argument("--build-id", default=chunk_store.DEFAULT_BUILD)
     ap.add_argument("--db", type=Path, help="graph DuckDB holding the parsed statements")
-    ap.add_argument("--n", type=int, default=3, help="passages to print for `sample`")
-    ap.add_argument("--unit", choices=chunk_store.UNITS, default="passage",
-                    help="passage windows (default) or one chunk per prose sentence")
+    ap.add_argument("--n", type=int, default=3, help="chunks to print for `sample`")
+    ap.add_argument("--unit", choices=chunk_store.UNITS, default="statement",
+                    help="one chunk per statement (default), or passage windows of about 200 words")
+    ap.add_argument("--reuse", help="build: take the vectors of identical chunks from this existing store")
     ap.add_argument("--dsn", help="Postgres connection string (default PG_DSN or the compose default)")
     ap.add_argument("--out", type=Path, help="zip path for `package`")
     ap.add_argument("--with-eval", action="store_true",
@@ -37,7 +38,8 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     if args.action == "build":
-        print(json.dumps(chunk_store.build(args.build_id, args.db, unit=args.unit), indent=2))
+        print(json.dumps(chunk_store.build(args.build_id, args.db, unit=args.unit, reuse=args.reuse),
+                         indent=2))
         return 0
     chunks, vectors, manifest = chunk_store.load(args.build_id)
     if args.action == "stats":

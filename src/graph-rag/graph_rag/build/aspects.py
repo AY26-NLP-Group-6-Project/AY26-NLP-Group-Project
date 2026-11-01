@@ -1,4 +1,4 @@
-"""Stage 2 (M1 version): aspect nodes and mentions.
+"""Stage 2: aspect nodes and mentions.
 
 Two deterministic sources, both auditable:
 
@@ -9,7 +9,8 @@ Two deterministic sources, both auditable:
    This is what makes cross-year chains exist before any extractor runs. No action label is attached:
    an unlabelled mention says "this aspect is discussed here", nothing more.
 
-M2 replaces the identity function (`aspect_key`) with clustering, gated on a purity audit; M3/D3 adds
+Canonicalisation replaces the identity function (`aspect_key`) with clustering, gated on a precision
+audit; LLM extraction adds
 LLM-extracted aspects. Until then a merge only happens when two surface forms are literally the same
 words, which keeps false cross-year links out.
 """
@@ -48,7 +49,7 @@ def _match_eval_to_statements(store: DuckDBGraphStore, items: list[dict]) -> tup
 def ingest_extracted(
     store: DuckDBGraphStore, path: Path, verbose: bool = True
 ) -> dict:
-    """Add aspects and mentions produced by the external extractor (decision D3, gate A8).
+    """Add aspects and mentions produced by the external extractor (gated on the extraction scores).
 
     Everything lands with `method='llm'`, never merged into `gold_span`, so any experiment can be
     re-run with or without the extracted half. Rejected rows are counted, never silently dropped.

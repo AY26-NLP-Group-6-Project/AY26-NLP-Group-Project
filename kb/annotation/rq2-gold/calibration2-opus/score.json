@@ -1,0 +1,314 @@
+{
+ "a1": {
+  "n": 40,
+  "human_distribution": {
+   "disappeared": 3,
+   "failed": 8,
+   "achieved": 20,
+   "unclear": 9
+  },
+  "system_distribution": {
+   "unclear": 13,
+   "achieved": 20,
+   "failed": 7
+  },
+  "accuracy": 0.875,
+  "cohen_kappa": 0.8052580331061344,
+  "per_class": {
+   "achieved": {
+    "precision": 0.95,
+    "recall": 0.95,
+    "support": 20
+   },
+   "failed": {
+    "precision": 1.0,
+    "recall": 0.875,
+    "support": 8
+   },
+   "unclear": {
+    "precision": 0.6923076923076923,
+    "recall": 1.0,
+    "support": 9
+   },
+   "disappeared": {
+    "precision": 0.0,
+    "recall": 0.0,
+    "support": 3
+   }
+  },
+  "confusion_human_rows_system_cols": {
+   "achieved": {
+    "achieved": 19,
+    "unclear": 1
+   },
+   "failed": {
+    "unclear": 1,
+    "failed": 7
+   },
+   "unclear": {
+    "unclear": 9
+   },
+   "disappeared": {
+    "unclear": 2,
+    "achieved": 1
+   }
+  }
+ },
+ "a2": {
+  "n": 40,
+  "human_distribution": {
+   "disappeared": 3,
+   "failed": 8,
+   "achieved": 20,
+   "unclear": 9
+  },
+  "system_distribution": {
+   "unclear": 12,
+   "achieved": 20,
+   "failed": 7,
+   "disappeared": 1
+  },
+  "accuracy": 0.925,
+  "cohen_kappa": 0.8838334946757019,
+  "per_class": {
+   "achieved": {
+    "precision": 1.0,
+    "recall": 1.0,
+    "support": 20
+   },
+   "failed": {
+    "precision": 1.0,
+    "recall": 0.875,
+    "support": 8
+   },
+   "unclear": {
+    "precision": 0.75,
+    "recall": 1.0,
+    "support": 9
+   },
+   "disappeared": {
+    "precision": 1.0,
+    "recall": 0.3333333333333333,
+    "support": 3
+   }
+  },
+  "confusion_human_rows_system_cols": {
+   "achieved": {
+    "achieved": 20
+   },
+   "failed": {
+    "unclear": 1,
+    "failed": 7
+   },
+   "unclear": {
+    "unclear": 9
+   },
+   "disappeared": {
+    "unclear": 2,
+    "disappeared": 1
+   }
+  }
+ },
+ "a1_vs_a2": {
+  "n": 40,
+  "human_distribution": {
+   "unclear": 13,
+   "achieved": 20,
+   "failed": 7
+  },
+  "system_distribution": {
+   "unclear": 12,
+   "achieved": 20,
+   "failed": 7,
+   "disappeared": 1
+  },
+  "accuracy": 0.925,
+  "cohen_kappa": 0.8793969849246231,
+  "per_class": {
+   "achieved": {
+    "precision": 0.95,
+    "recall": 0.95,
+    "support": 20
+   },
+   "failed": {
+    "precision": 1.0,
+    "recall": 1.0,
+    "support": 7
+   },
+   "unclear": {
+    "precision": 0.9166666666666666,
+    "recall": 0.8461538461538461,
+    "support": 13
+   },
+   "disappeared": {
+    "precision": 0.0,
+    "recall": 0.0,
+    "support": 0
+   }
+  },
+  "confusion_human_rows_system_cols": {
+   "achieved": {
+    "achieved": 19,
+    "unclear": 1
+   },
+   "failed": {
+    "failed": 7
+   },
+   "unclear": {
+    "unclear": 11,
+    "disappeared": 1,
+    "achieved": 1
+   }
+  }
+ },
+ "agreed_vs_human": {
+  "n": 37,
+  "human_distribution": {
+   "disappeared": 1,
+   "failed": 8,
+   "achieved": 19,
+   "unclear": 9
+  },
+  "system_distribution": {
+   "unclear": 11,
+   "achieved": 19,
+   "failed": 7
+  },
+  "accuracy": 0.9459459459459459,
+  "cohen_kappa": 0.9132473622508792,
+  "per_class": {
+   "achieved": {
+    "precision": 1.0,
+    "recall": 1.0,
+    "support": 19
+   },
+   "failed": {
+    "precision": 1.0,
+    "recall": 0.875,
+    "support": 8
+   },
+   "unclear": {
+    "precision": 0.8181818181818182,
+    "recall": 1.0,
+    "support": 9
+   },
+   "disappeared": {
+    "precision": 0.0,
+    "recall": 0.0,
+    "support": 1
+   }
+  },
+  "confusion_human_rows_system_cols": {
+   "achieved": {
+    "achieved": 19
+   },
+   "failed": {
+    "unclear": 1,
+    "failed": 7
+   },
+   "unclear": {
+    "unclear": 9
+   },
+   "disappeared": {
+    "unclear": 1
+   }
+  }
+ },
+ "disagreements": [
+  {
+   "promise_id": "P00285",
+   "human": "disappeared",
+   "a1": "unclear",
+   "a2": "unclear",
+   "a1_note": "E2 (2024) identifies the installation as the Bintan 4.0 MWp ground-mounted solar system due 2H 2025; no 2025 evidence reports its completion; E6 and E9 speak of solar capacity expansion and renewable energy investments without naming it; the promise sentence lacks the antecedent of 'the installation'",
+   "a2_note": "E2; E6; E9: the 2025 evidence talks about solar capacity expansion and renewable energy investments, but nothing names the Bintan installation or says whether it was finished in 2H 2025"
+  },
+  {
+   "promise_id": "P00574",
+   "human": "failed",
+   "a1": "unclear",
+   "a2": "unclear",
+   "a1_note": "E5; E8: absolute water consumption rose from 138,267.5 to 152,552.4 Cu M in FY2022 while the consumption rate held at 0.8 per S$'000 revenue, and the company's own performance cell answers in intensity terms ('No material changes in water consumption intensity') though the target is worded 'water consumption'; the extraction does not say whether the target is absolute or intensity, so neither the rise nor the flat rate can be read as this target's verdict.",
+   "a2_note": "E5; E8: the target says 'water consumption' but the reported verdict is 'no material changes in water consumption intensity' (0.8 both years), while absolute consumption rose from 138,268 to 152,552 m3; the extraction does not say absolute or intensity, so the verdict cannot be assigned."
+  },
+  {
+   "promise_id": "P00449",
+   "human": "disappeared",
+   "a1": "unclear",
+   "a2": "disappeared",
+   "a1_note": "E1: the FY2024 report points to pp.9-12 for 'commitments and strategies' on the key focus areas, which may be the calibrated targets and roadmap, but the evidence shown never names them; E2-E11 are page headers with no content.",
+   "a2_note": "E1-E11: the deadline-year and later evidence is page headers and generic cross-references; nothing mentions calibrated targets or a sustainability roadmap developed with the Sponsor."
+  },
+  {
+   "promise_id": "P00144",
+   "human": "disappeared",
+   "a1": "achieved",
+   "a2": "unclear",
+   "a1_note": "E3-E6: FY2023 evidence shows the phase-out roadmap in operation (no CFC refrigerants sold, a phased plan to meet local phase-out requirements, R448/R449A and natural gases usable in equipment as at end FY2023); E7 shows the roadmap is HCFC phase-out by 2030 under the Montreal Protocol, a qualifier the extraction omits.",
+   "a2_note": "E2-E7; E11: the evidence describes the phased plan for ozone-depleting gases and restates the commitment to the HCFC roadmap, but reports no verdict on whether the roadmap was met in FY2023; the extraction drops the HCFC-by-2030 qualifier."
+  },
+  {
+   "promise_id": "P00374",
+   "human": "achieved",
+   "a1": "unclear",
+   "a2": "achieved",
+   "a1_note": "E3; E7; E5; E11-E12: a qualitative scenario analysis was conducted (reported 2024 and 2025), but the company still 'remains committed to scenario analysis' and defers the quantitative analysis to coming years. The promise and extraction carry neither qualifier, so I cannot tell whether the qualitative exercise is the promised analysis or a partial step; case worth writing up.",
+   "a2_note": "E3; E7: a qualitative climate scenario analysis was incorporated (2024) and reported as conducted in the 2025 report; a deliverable finished before the deadline counts. E5/E12 plan a further quantitative analysis, which the promise did not specify."
+  }
+ ],
+ "human_a1_vs_a2": {
+  "n": 40,
+  "human_distribution": {
+   "disappeared": 3,
+   "failed": 8,
+   "achieved": 20,
+   "unclear": 9
+  },
+  "system_distribution": {
+   "disappeared": 2,
+   "failed": 9,
+   "achieved": 20,
+   "unclear": 9
+  },
+  "accuracy": 0.95,
+  "cohen_kappa": 0.9231508165225744,
+  "per_class": {
+   "achieved": {
+    "precision": 1.0,
+    "recall": 1.0,
+    "support": 20
+   },
+   "failed": {
+    "precision": 0.8888888888888888,
+    "recall": 1.0,
+    "support": 8
+   },
+   "unclear": {
+    "precision": 0.8888888888888888,
+    "recall": 0.8888888888888888,
+    "support": 9
+   },
+   "disappeared": {
+    "precision": 1.0,
+    "recall": 0.6666666666666666,
+    "support": 3
+   }
+  },
+  "confusion_human_rows_system_cols": {
+   "achieved": {
+    "achieved": 20
+   },
+   "failed": {
+    "failed": 8
+   },
+   "unclear": {
+    "unclear": 8,
+    "failed": 1
+   },
+   "disappeared": {
+    "disappeared": 2,
+    "unclear": 1
+   }
+  }
+ }
+}

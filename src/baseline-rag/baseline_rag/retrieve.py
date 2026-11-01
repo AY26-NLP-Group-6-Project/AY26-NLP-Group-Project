@@ -26,15 +26,15 @@ BACKENDS = ("files", "postgres")
 
 
 class HybridRetriever:
-    def __init__(self, build_id: str = "dev", mode: str = "rrf+rerank",
+    def __init__(self, build_id: str = chunk_store.DEFAULT_BUILD, mode: str = "rrf+rerank",
                  client: LLMClient | None = None, backend: str = "files") -> None:
         if mode not in MODES:
             raise ValueError(f"mode must be one of {MODES}")
         if backend not in BACKENDS:
             raise ValueError(f"backend must be one of {BACKENDS}")
-        self.mode, self.backend = mode, backend
+        self.mode, self.backend, self.build_id = mode, backend, build_id
         if backend == "postgres":
-            # Same passages, served by pgvector: chunk text and metadata come from the database,
+            # Same chunks, served by pgvector: chunk text and metadata come from the database,
             # BM25 is rebuilt in-process over those rows, dense candidates come from the HNSW index.
             from baseline_rag.pg import PgChunkSource
 
@@ -52,21 +52,31 @@ class HybridRetriever:
         for i, c in enumerate(self.chunks):
             self._by_company[c.company].append(i)
 
+    def describe(self) -> dict:
+        """What the run retrieved over; the runner writes it into the manifest."""
+        return {"store": self.build_id, "chunks_sha256": self.manifest.get("chunks_sha256"),
+                "unit": self.manifest.get("unit"), "chunks": self.manifest.get("chunks"),
+                "mode": self.mode, "backend": self.backend}
+
     # ------------------------------------------------------------------ filters
     def _allowed(self, query: Query) -> set[int] | None:
-        if not query.company:
-            return None
-        idx = self._by_company.get(query.company, [])
-        anchor = query.anchor_year
         cross_year = query.condition.value.startswith("cross_year")
+        return self.allowed_ids(query.company, query.year_from, query.year_to,
+                                exclude_year=query.anchor_year if cross_year else None)
+
+    def allowed_ids(self, company: str | None, year_from: int | None = None, year_to: int | None = None,
+                    exclude_year: int | None = None) -> set[int] | None:
+        """Chunk positions inside the company and year filters; None means no filter at all."""
+        if not company:
+            return None
         keep = set()
-        for i in idx:
+        for i in self._by_company.get(company, []):
             year = self.chunks[i].year
-            if cross_year and anchor is not None and year == anchor:
+            if exclude_year is not None and year == exclude_year:
                 continue            # cross-year evidence must come from another report
-            if query.year_from is not None and year < query.year_from:
+            if year_from is not None and year < year_from:
                 continue
-            if query.year_to is not None and year > query.year_to:
+            if year_to is not None and year > year_to:
                 continue
             keep.add(i)
         return keep
@@ -81,26 +91,31 @@ class HybridRetriever:
             return self._pg.dense_search(vector, allowed, CANDIDATES)
         return self.dense.search(vector, allowed, CANDIDATES)
 
-    # ------------------------------------------------------------------ protocol
-    def retrieve(self, query: Query, *, k: int = 3) -> list[EvidenceSpan]:
-        allowed = self._allowed(query)
-        if allowed is not None and not allowed:
-            return []
-        text = f"{query.aspect}. {query.text}" if query.aspect else query.text
+    def _reranker(self) -> CrossEncoderReranker:
+        if self.reranker is None:
+            self.reranker = CrossEncoderReranker()
+        return self.reranker
 
-        if self.mode == "bm25":
+    def rank(self, text: str, allowed: set[int] | None, mode: str | None = None) -> list[tuple[int, float]]:
+        """Candidate chunk positions with scores, by one of MODES; the retriever's own mode by default."""
+        mode = mode or self.mode
+        if mode not in MODES:
+            raise ValueError(f"mode must be one of {MODES}")
+        if mode == "bm25":
             ranked = self.bm25.search(text, allowed, CANDIDATES)
-        elif self.mode == "dense":
+        elif mode == "dense":
             ranked = self._dense_search(text, allowed)
         else:
             ranked = rrf(self.bm25.search(text, allowed, CANDIDATES), self._dense_search(text, allowed))
-
-        if self.reranker is not None and ranked:
+        if mode.endswith("rerank") and ranked:
             head = ranked[:RERANK_DEPTH]
-            scores = self.reranker.rerank(text, [self.chunks[i].text for i, _ in head])
+            scores = self._reranker().rerank(text, [self.chunks[i].text for i, _ in head])
             ranked = sorted(zip([i for i, _ in head], scores, strict=True),
                             key=lambda kv: -kv[1]) + ranked[RERANK_DEPTH:]
+        return ranked
 
+    def spans(self, ranked: list[tuple[int, float]], k: int, why: str) -> list[EvidenceSpan]:
+        """The top k as evidence spans, verbatim repeats across years collapsed."""
         out, seen = [], set()
         for i, score in ranked:
             c = self.chunks[i]
@@ -110,10 +125,18 @@ class HybridRetriever:
             seen.add(key)
             out.append(EvidenceSpan(statement_id=c.chunk_id, text=c.text, company=c.company,
                                     year=c.year, page=c.page, file=c.file, score=round(float(score), 4),
-                                    why=self.mode))
+                                    why=why))
             if len(out) >= k:
                 break
         return out
+
+    # ------------------------------------------------------------------ protocol
+    def retrieve(self, query: Query, *, k: int = 3) -> list[EvidenceSpan]:
+        allowed = self._allowed(query)
+        if allowed is not None and not allowed:
+            return []
+        text = f"{query.aspect}. {query.text}" if query.aspect else query.text
+        return self.spans(self.rank(text, allowed), k, self.mode)
 
 
 def supported_conditions() -> list[EvidenceCondition]:
@@ -122,4 +145,5 @@ def supported_conditions() -> list[EvidenceCondition]:
         EvidenceCondition.LOCAL,
         EvidenceCondition.SAME_REPORT_RRF,
         EvidenceCondition.CROSS_YEAR_RRF,
+        EvidenceCondition.PROMISE_WINDOW,     # the query carries the window; nothing else to do
     ]

@@ -1,258 +1,184 @@
-"""Bounded plan-retrieve-stop retriever for the `cross_year_agentic` condition.
+"""A bounded planner over the corpus tools, one retriever for both research questions.
 
-Hop 0 is the ordinary search with the sentence itself (no LLM). Each later hop asks the planner
-(`configs/prompts/agentic_planner.md`) whether the evidence gathered so far resolves the sentence's
-references and actor; if not, it proposes keyword queries, optionally restricted to earlier or later
-reports, which run through the same search. The agent plans and rewrites; it does not pick the final
-spans. Those come from reciprocal rank fusion over every ranked list it produced (or, with
-`AGENTIC_SELECT=rerank`, from the cross-encoder against the original sentence), because arXiv
-2601.07711 finds agents worse than a reranker at final document selection.
+What the loop owns: the budget (`AGENTIC_MAX_HOPS`, `AGENTIC_TIMEOUT_S`), the planner calls and their
+accounting, the per-item trace. What each question owns is in `rq1.py` and `rq2.py`: when to search, what
+the planner is asked, and how the final evidence is chosen. The agent only gathers evidence; the shared
+classifier and the shared judge read what comes back, unchanged, under the same budget as every other arm.
 
-Every knob that sets the budget is read from the environment, so a budget sweep is a loop over env
-values with the same code:
+Why the first version was replaced: over the passage store it spent 3.2× the plain search and 95 % of the
+evidence it handed over was what hop 0 had found anyway (839 of 879 spans,
+`results/agent-rag/passage-hybrid` on the branch `dev/luyuanzhi`), because rank fusion gave the first
+search's list the three slots. Evidence found by a later query now has room of its own.
 
-    AGENTIC_MAX_HOPS        planner calls per item at most (0 = plain search, no LLM)    default 2
-    AGENTIC_QUERIES_PER_HOP rewritten queries run per hop                                 default 2
-    AGENTIC_TIMEOUT_S       no new hop starts after this many seconds per item            default 60
-    AGENTIC_BASE_MODE       bm25 | bm25+rerank | rrf | rrf+rerank (rrf needs EMB_API_KEY) default auto
-    AGENTIC_SELECT          rrf | rerank                                                  default rrf
+Environment:
 
-The agent's own chat tokens are recorded per item in `traces`, so the system can charge them to the
-prediction (the harness only counts the classifier's tokens and the retriever's embedding tokens).
+    AGENTIC_MAX_HOPS   planner calls per item at most; 0 is the fixed search, no LLM   default per question
+    AGENTIC_TIMEOUT_S  no new planner call after this many seconds per item            default 90
+    AGENTIC_SELECT     rq1 only: verified | rerank | neighbours (see rq1.py)           default verified
 """
 
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import re
 import threading
 import time
+from collections import Counter
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 
-from baseline_rag.index import CANDIDATES, RERANK_DEPTH, CrossEncoderReranker, rrf
-from baseline_rag.retrieve import HybridRetriever
-from gw_common.evidence import is_target_span, normalise
+from baseline_rag.chunks import DEFAULT_BUILD
+from baseline_rag.index import CrossEncoderReranker
+from gw_common import corpus as corpus_tools
+from gw_common.evidence import normalise
+from gw_common.judges.promise import sections
 from gw_common.llm import REPO_ROOT, LLMClient
 from gw_common.schemas import EvidenceCondition, EvidenceSpan, Query
 
-PROMPT = REPO_ROOT / "configs" / "prompts" / "agentic_planner.md"
-TRACE_FILE = REPO_ROOT / "artifacts" / "agentic" / "traces.jsonl"
-BASE_MODES = ("bm25", "bm25+rerank", "rrf", "rrf+rerank")
-SELECT_MODES = ("rrf", "rerank")
-SHOW_SPANS = 4       # evidence the planner sees per hop
-SHOW_CHARS = 300     # characters per span shown to the planner
-LIST_DEPTH = 10      # ranked list kept per query before fusion
+PROMPT_DIR = REPO_ROOT / "configs" / "prompts"
+TRACE_DIR = REPO_ROOT / "artifacts" / "agentic"
+PROMPTS = {"rq1_gate": "agentic_rq1_gate.md", "rq1_verify": "agentic_rq1_verify.md",
+           "rq2_plan": "agentic_rq2_planner.md"}
+PLAN_TOKENS = 1500      # the reply plus the model's reasoning; an empty or cut-off reply gets a longer retry
 _JSON_RE = re.compile(r"\{.*\}", re.S)
+_AGENT_CONDITIONS = (EvidenceCondition.CROSS_YEAR_AGENTIC, EvidenceCondition.COMPANY_AGENTIC,
+                     EvidenceCondition.PROMISE_WINDOW)
 
 
-def _env_int(name: str, default: int) -> int:
-    raw = os.getenv(name, "").strip()
-    return int(raw) if raw else default
-
-
-def _sections(path: Path) -> dict[str, str]:
-    text = path.read_text(encoding="utf-8")
-    parts = re.split(r"^## (system|user)\s*$", text, flags=re.M)
-    return {parts[i]: parts[i + 1].strip() for i in range(1, len(parts) - 1, 2)}
-
-
-def trace_key(company: str | None, year: int | None, text: str | None) -> tuple:
-    """How a trace written at retrieval time is found again at classification time."""
-    return (company or "", year, normalise(text or ""))
-
-
-@dataclass(slots=True)
-class Plan:
-    sufficient: bool
-    queries: list[str]
-    years: str = "any"
-    need: str = ""
-    parse_ok: bool = True
-
-
-def parse_plan(text: str) -> Plan:
-    """A reply that is not the asked JSON stops the loop (sufficient=True) rather than guessing queries."""
+def parse_reply(text: str) -> dict | None:
+    """The asked JSON object, or None: a reply that is not one must not be guessed at."""
     match = _JSON_RE.search(text or "")
-    if match:
-        try:
-            obj = json.loads(match.group(0))
-            queries = obj.get("queries") or []
-            queries = [str(q).strip() for q in (queries if isinstance(queries, list) else [queries])]
-            years = str(obj.get("years") or "any").strip().lower()
-            return Plan(sufficient=bool(obj.get("sufficient")), queries=[q for q in queries if q],
-                        years=years if years in ("earlier", "later") else "any",
-                        need=str(obj.get("need") or "").strip())
-        except (ValueError, TypeError, AttributeError):
-            pass
-    return Plan(sufficient=True, queries=[], parse_ok=False)
+    if not match:
+        return None
+    try:
+        obj = json.loads(match.group(0))
+    except ValueError:
+        return None
+    return obj if isinstance(obj, dict) else None
+
+
+def trace_key(condition: str, company: str | None, year: int | None, text: str | None) -> tuple:
+    """How a trace written at retrieval time is found again at classification time."""
+    return (condition, company or "", year, normalise(text or ""))
 
 
 @dataclass(slots=True)
 class Trace:
+    condition: str
     company: str
     year: int | None
     target: str
     hops: int = 0                 # planner calls made
-    llm_calls: int = 0            # planner calls that reached the model (not cached)
     input_tokens: int = 0
     output_tokens: int = 0
     planner_ms: float = 0.0
-    stop: str = ""                # sufficient | max_hops | timeout | parse_error | llm_error | no_new_query
+    stop: str = ""
     steps: list[dict] = field(default_factory=list)
+    final: list[str] = field(default_factory=list)   # how each span handed over was found
 
 
 class AgenticRetriever:
-    def __init__(self, build_id: str = "dev", client: LLMClient | None = None) -> None:
-        self.max_hops = _env_int("AGENTIC_MAX_HOPS", 2)
-        self.queries_per_hop = _env_int("AGENTIC_QUERIES_PER_HOP", 2)
-        self.timeout_s = float(os.getenv("AGENTIC_TIMEOUT_S", "") or 60)
-        default_mode = "rrf+rerank" if os.getenv("EMB_API_KEY", "").strip() else "bm25+rerank"
-        self.base_mode = os.getenv("AGENTIC_BASE_MODE", "").strip() or default_mode
-        self.select = os.getenv("AGENTIC_SELECT", "").strip() or "rrf"
-        if self.base_mode not in BASE_MODES:
-            raise ValueError(f"AGENTIC_BASE_MODE must be one of {BASE_MODES}")
-        if self.select not in SELECT_MODES:
-            raise ValueError(f"AGENTIC_SELECT must be one of {SELECT_MODES}")
-
+    def __init__(self, build_id: str = DEFAULT_BUILD, client: LLMClient | None = None, corpus=None,
+                 reranker=None) -> None:
+        raw_hops = os.getenv("AGENTIC_MAX_HOPS", "").strip()
+        self.max_hops = int(raw_hops) if raw_hops else None
+        self.timeout_s = float(os.getenv("AGENTIC_TIMEOUT_S", "") or 90)
+        self.select = os.getenv("AGENTIC_SELECT", "").strip() or "verified"
+        if self.select not in ("verified", "rerank", "neighbours"):
+            raise ValueError("AGENTIC_SELECT must be verified, rerank or neighbours")
         self.client = client or LLMClient()   # one client: the harness reads its embedding usage
-        # The shared passage store, filters and BM25/dense indexes, as-is; ranking is done here.
-        self.store = HybridRetriever(build_id, "rrf" if self.base_mode.startswith("rrf") else "bm25",
-                                     client=self.client)
-        self.chunks = self.store.chunks
-        need_reranker = self.base_mode.endswith("rerank") or self.select == "rerank"
-        self.reranker = CrossEncoderReranker() if need_reranker else None
-        self._prompt = _sections(PROMPT)
+        self.corpus = corpus or corpus_tools.load("statements", build_id=build_id, client=self.client)
+        self.reranker = reranker or CrossEncoderReranker()
+        self.prompts = {name: sections(PROMPT_DIR / file) for name, file in PROMPTS.items()}
         self.traces: dict[tuple, Trace] = {}
+        self.finished: dict[str, list[Trace]] = {}
         self._lock = threading.Lock()
+        self.trace_file: Path = TRACE_DIR / f"traces-{time.strftime('%Y%m%dT%H%M%S')}-{os.getpid()}.jsonl"
 
     def describe(self) -> dict[str, object]:
-        return {"max_hops": self.max_hops, "queries_per_hop": self.queries_per_hop,
-                "timeout_s": self.timeout_s, "base_mode": self.base_mode, "select": self.select,
-                "planner_prompt": PROMPT.name}
-
-    # ------------------------------------------------------------------ search
-    def _allowed(self, query: Query, years: str = "any") -> set[int] | None:
-        allowed = self.store._allowed(query)
-        if allowed is None or years == "any" or query.anchor_year is None:
-            return allowed
-        later = years == "later"
-        narrowed = {i for i in allowed
-                    if (self.chunks[i].year > query.anchor_year) == later
-                    and self.chunks[i].year != query.anchor_year}
-        return narrowed or allowed   # no report on that side: fall back rather than return nothing
-
-    def _ranked(self, text: str, allowed: set[int] | None) -> list[tuple[int, float]]:
-        if self.base_mode.startswith("rrf"):
-            ranked = rrf(self.store.bm25.search(text, allowed, CANDIDATES),
-                         self.store._dense_search(text, allowed))
-        else:
-            ranked = self.store.bm25.search(text, allowed, CANDIDATES)
-        if self.base_mode.endswith("rerank") and ranked:
-            head = ranked[:RERANK_DEPTH]
-            scores = self.reranker.rerank(text, [self.chunks[i].text for i, _ in head])
-            ranked = sorted(zip([i for i, _ in head], scores, strict=True), key=lambda kv: -kv[1])
-        return ranked[:LIST_DEPTH]
-
-    def _fuse(self, lists: list[tuple[int, str, list[tuple[int, float]]]], query: Query,
-              original: str, k: int) -> list[EvidenceSpan]:
-        """Fused, de-duplicated spans without the target; `why` names the hop that first found each."""
-        found_at: dict[int, int] = {}
-        for hop, _q, ranked in lists:
-            for i, _ in ranked:
-                found_at.setdefault(i, hop)
-        if self.select == "rerank" and found_at:
-            pool = list(found_at)[:RERANK_DEPTH * 2]
-            scores = self.reranker.rerank(original, [self.chunks[i].text for i in pool])
-            fused = sorted(zip(pool, scores, strict=True), key=lambda kv: -kv[1])
-        else:
-            fused = rrf(*[ranked for _hop, _q, ranked in lists])
-        out, seen = [], set()
-        for i, score in fused:
-            c = self.chunks[i]
-            key = normalise(c.text)
-            if key in seen:
-                continue
-            seen.add(key)
-            span = EvidenceSpan(statement_id=c.chunk_id, text=c.text, company=c.company, year=c.year,
-                                page=c.page, file=c.file, score=round(float(score), 4),
-                                why=f"agent:hop{found_at[i]}")
-            if is_target_span(span, query):
-                continue
-            out.append(span)
-            if len(out) >= k:
-                break
-        return out
+        info = dict(self.corpus.describe()) if hasattr(self.corpus, "describe") else {}
+        shas = {name: hashlib.sha256((PROMPT_DIR / file).read_bytes()).hexdigest()[:12]
+                for name, file in PROMPTS.items()}
+        return {**info, "max_hops": self.max_hops, "timeout_s": self.timeout_s, "select": self.select,
+                "prompts": shas, "trace_file": self.trace_file.name}
 
     # ------------------------------------------------------------------ planner
-    def _plan(self, query: Query, shown: list[EvidenceSpan], tried: list[str], hop: int):
-        evidence = "\n".join(f"- ({s.year}, p.{s.page}) {s.text[:SHOW_CHARS]}" for s in shown) or "(none)"
-        user = self._prompt["user"].format(
-            company=query.company or "(not given)", year=query.anchor_year or "(not given)",
-            aspect=query.aspect or "(none proposed)", text=query.target_text or query.text,
-            tried="\n".join(f"- {q}" for q in tried), evidence=evidence, hop=hop,
-            max_hops=self.max_hops, max_queries=self.queries_per_hop)
-        messages = [{"role": "system", "content": self._prompt["system"]}, {"role": "user", "content": user}]
-        return self.client.chat(messages, max_tokens=512)
+    def hops_for(self, default: int) -> int:
+        return default if self.max_hops is None else self.max_hops
 
-    # ------------------------------------------------------------------ protocol
-    def retrieve(self, query: Query, *, k: int = 3) -> list[EvidenceSpan]:
-        allowed = self._allowed(query)
-        if allowed is not None and not allowed:
-            return []
-        original = f"{query.aspect}. {query.text}" if query.aspect else query.text
-        lists = [(0, original, self._ranked(original, allowed))]
-        if query.condition is not EvidenceCondition.CROSS_YEAR_AGENTIC:
-            return self._fuse(lists, query, original, k)   # the in-system non-agentic arms: one search
-
-        trace = Trace(company=query.company or "", year=query.anchor_year, target=query.target_text or "")
-        tried, t0 = [original], time.perf_counter()
-        trace.stop = "max_hops"
-        for hop in range(1, self.max_hops + 1):
-            if time.perf_counter() - t0 > self.timeout_s:
-                trace.stop = "timeout"
-                break
-            shown = self._fuse(lists, query, original, SHOW_SPANS)
+    def ask(self, prompt: str, user: str, trace: Trace) -> dict | None:
+        """One planner call, charged to the trace. None, with the reason as the stop, ends the loop."""
+        parts = self.prompts[prompt]
+        messages = [{"role": "system", "content": parts["system"]}, {"role": "user", "content": user}]
+        trace.hops += 1
+        for max_tokens in (PLAN_TOKENS, 2 * PLAN_TOKENS):
             try:
-                reply = self._plan(query, shown, tried, hop)
+                reply = self.client.chat(messages, max_tokens=max_tokens,
+                                         response_format={"type": "json_object"})
             except Exception as exc:  # noqa: BLE001 - a failed planner call ends the loop, not the run
                 trace.stop = "llm_error"
-                trace.steps.append({"hop": hop, "error": str(exc)[:200]})
-                break
-            trace.hops += 1
-            trace.llm_calls += 0 if reply.cached else 1
+                trace.steps.append({"error": str(exc)[:200]})
+                return None
             trace.input_tokens += reply.input_tokens
             trace.output_tokens += reply.output_tokens
             trace.planner_ms += reply.latency_ms
-            plan = parse_plan(reply.text)
-            new = [q for q in plan.queries if normalise(q) not in {normalise(t) for t in tried}]
-            new = new[: self.queries_per_hop]
-            trace.steps.append({"hop": hop, "sufficient": plan.sufficient, "need": plan.need,
-                                "queries": new, "years": plan.years, "parse_ok": plan.parse_ok})
-            if not plan.parse_ok:
-                trace.stop = "parse_error"
-                break
-            if plan.sufficient:
-                trace.stop = "sufficient"
-                break
-            if not new:
-                trace.stop = "no_new_query"
-                break
-            hop_allowed = self._allowed(query, plan.years)
-            for q in new:
-                tried.append(q)
-                lists.append((hop, q, self._ranked(q, hop_allowed)))
+            obj = parse_reply(reply.text)
+            if obj is not None:
+                return obj
+        trace.stop = "parse_error"
+        return None
 
-        spans = self._fuse(lists, query, original, k)
-        trace.steps.append({"final": [s.why for s in spans]})
+    # ------------------------------------------------------------------ protocol
+    def retrieve(self, query: Query, *, k: int = 3) -> list[EvidenceSpan]:
+        if query.condition not in _AGENT_CONDITIONS:
+            return self._plain(query, k)     # the in-system fixed arms: the baseline's own search
+        from agentic_rag import rq1, rq2
+
+        policy = rq2 if query.condition is EvidenceCondition.PROMISE_WINDOW else rq1
+        if self.hops_for(policy.DEFAULT_HOPS) == 0 and policy is rq1:
+            return self._plain(query, k, why="agent:hop0")
+        trace = Trace(condition=query.condition.value, company=query.company or "", year=query.anchor_year,
+                      target=query.target_text or query.text)
+        started = time.perf_counter()
+        spans = policy.run(self, query, k, trace, started)
+        trace.final = [s.why for s in spans]
+        trace.planner_ms = round(trace.planner_ms, 1)
+        key = trace_key(trace.condition, query.company, query.anchor_year, query.target_text)
         with self._lock:
-            self.traces[trace_key(query.company, query.anchor_year, query.target_text)] = trace
-        self._write_trace(trace)
+            self.traces[key] = trace
+            self.finished.setdefault(trace.condition, []).append(trace)
+            self.trace_file.parent.mkdir(parents=True, exist_ok=True)
+            with self.trace_file.open("a", encoding="utf-8") as fp:
+                fp.write(json.dumps(asdict(trace), ensure_ascii=False) + "\n")
         return spans
 
-    def _write_trace(self, trace: Trace) -> None:
-        TRACE_FILE.parent.mkdir(parents=True, exist_ok=True)
-        with self._lock, TRACE_FILE.open("a", encoding="utf-8") as fp:
-            fp.write(json.dumps({"at": time.strftime("%Y-%m-%dT%H:%M:%S"), **self.describe(),
-                                 **asdict(trace)}, ensure_ascii=False) + "\n")
+    def _plain(self, query: Query, k: int, why: str | None = None) -> list[EvidenceSpan]:
+        cross_year = query.condition.value.startswith("cross_year")
+        text = f"{query.aspect}. {query.text}" if query.aspect else query.text
+        spans = self.corpus.search(text, company=query.company, year_from=query.year_from,
+                                   year_to=query.year_to,
+                                   exclude_year=query.anchor_year if cross_year else None,
+                                   k=k, mode="hybrid+rerank")
+        return [s.model_copy(update={"why": why}) for s in spans] if why else spans
+
+    # ------------------------------------------------------------------ what the run reports
+    def stats(self, condition: str) -> dict | None:
+        traces = self.finished.get(condition)
+        if not traces:
+            return None
+        n = len(traces)
+        spans = [why for t in traces for why in t.final]
+        later = sum(not why.startswith("agent:hop0") for why in spans)
+        return {
+            "items": n,
+            "planner_calls_per_item": sum(t.hops for t in traces) / n,
+            "input_tokens_per_item": sum(t.input_tokens for t in traces) / n,
+            "output_tokens_per_item": sum(t.output_tokens for t in traces) / n,
+            "planner_ms_per_item": sum(t.planner_ms for t in traces) / n,
+            "later_hop_share": later / len(spans) if spans else 0.0,
+            "no_evidence_share": sum(not t.final for t in traces) / n,
+            "stop": dict(Counter(t.stop for t in traces).most_common()),
+            "by_found": dict(Counter(spans).most_common()),
+        }

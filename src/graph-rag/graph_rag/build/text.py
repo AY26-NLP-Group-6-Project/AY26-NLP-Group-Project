@@ -47,9 +47,9 @@ def normalise(text: str) -> str:
 
 
 def aspect_key(surface: str) -> str:
-    """M1 aspect identity: normalised text with a leading determiner or possessive removed.
+    """Aspect identity of the first build: normalised text with a leading determiner or possessive removed.
 
     Deliberately conservative — two surface forms merge only if they are the same words. Embedding
-    clustering is M2 and is gated on a purity audit before it may create merges.
+    clustering is gated on a precision audit before it may create merges.
     """
     return _DETERMINERS.sub("", normalise(surface)).strip()

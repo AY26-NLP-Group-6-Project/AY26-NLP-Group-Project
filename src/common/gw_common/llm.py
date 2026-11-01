@@ -1,14 +1,14 @@
 """One LLM / embedding client for every system, configured from `.env`.
 
 Why it lives in gw_common: the classifier, the agentic arm and canonicalisation all call models, and
-03-eval-contract.md requires token counts, latency and reproducible re-runs for every arm. Putting the
+docs/evaluation.md requires token counts, latency and reproducible re-runs for every arm. Putting the
 calls behind one client is what makes those numbers comparable.
 
 Guarantees:
 
 - **Offline re-runs.** Every request is keyed by a hash of its full payload (model, messages or
   inputs, temperature, response format) and the response is cached in `artifacts/cache/llm.sqlite`.
-  A re-run of an evaluation reads the cache and makes no network call (02-repo-and-tooling.md §3).
+  A re-run of an evaluation reads the cache and makes no network call (docs/evaluation.md).
 - **Accounting.** Each call returns input/output tokens, latency and whether it was a cache hit, so
   `Prediction.input_tokens` etc. are measured, not estimated.
 - **Explicit models.** No chat model is hard-coded; the `.env` names it and every result echoes it.
@@ -284,9 +284,10 @@ class LLMClient:
         for start in range(0, len(todo), batch_size):
             batch = todo[start:start + batch_size]
             resp = self._embed_transport().embeddings.create(model=model, input=[texts[i] for i in batch])
-            self.usage["embed_calls"] = self.usage.get("embed_calls", 0) + 1
-            self.usage["embed_tokens"] = self.usage.get("embed_tokens", 0) + (
-                getattr(getattr(resp, "usage", None), "prompt_tokens", 0) or 0)
+            with self._usage_lock:
+                self.usage["embed_calls"] = self.usage.get("embed_calls", 0) + 1
+                self.usage["embed_tokens"] = self.usage.get("embed_tokens", 0) + (
+                    getattr(getattr(resp, "usage", None), "prompt_tokens", 0) or 0)
             for i, item in zip(batch, resp.data, strict=True):
                 vec = np.asarray(item.embedding, dtype=np.float32)
                 out[i] = vec

@@ -1,4 +1,4 @@
-# Graph build config (M1). See docs/graph-rag-notes/01-graph-schema.md
+# Graph build config. See docs/graph.md
 build_id: dev
 dataset_id: gw1000
 label_source: llm_pre
@@ -6,7 +6,7 @@ years: [2020, 2025]
 # all = parse every kept report, so the retrieval corpus is the whole knowledge base
 scope: all
 
-# M1 aspect handling is normalised exact match; these caps keep generic spans
+# Aspect handling is normalised exact match; these caps keep generic spans
 # ("waste", "data") from flooding the graph with string matches.
 min_surface_chars: 10
 min_surface_tokens: 2

@@ -17,12 +17,12 @@ ARTIFACTS = REPO_ROOT / "artifacts" / "graph"
 @dataclass(slots=True)
 class GraphConfig:
     build_id: str = "dev"
-    # D2: scope to the companies the eval set touches, all of their years.
+    # scope to the companies the eval set touches, all of their years.
     dataset_id: str = "gw1000"
     label_source: str = "llm_pre"
-    scope: str = "eval"  # eval = companies the eval set touches (D2); all = every kept report
+    scope: str = "eval"  # eval = companies the eval set touches ; all = every kept report
     years: tuple[int, int] = (2020, 2025)
-    # M1 aspect handling: normalised exact match only. Clustering is M2.
+    # aspect handling: normalised exact match only; clustering is the canonical stage.
     min_surface_chars: int = 10
     min_surface_tokens: int = 2
     max_string_matches_per_company_year: int = 3

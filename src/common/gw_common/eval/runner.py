@@ -22,6 +22,7 @@ import statistics
 import subprocess
 import time
 from collections import Counter
+from concurrent.futures import ThreadPoolExecutor
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -32,6 +33,7 @@ from gw_common.eval.exchange import align, read_evidence, read_predictions
 from gw_common.eval.report import write_report
 from gw_common.eval.select import SLICERS, describe, select
 from gw_common.evidence import drop_target
+from gw_common.llm import load_env
 from gw_common.registry import load as load_system
 from gw_common.schemas import (
     EvidenceCondition,
@@ -58,17 +60,30 @@ def _git() -> tuple[str, bool]:
         return "unknown", True
 
 
+def retrieval_map(fn, items: list) -> list:
+    """`fn` over `items`, in order, on `GW_RETRIEVAL_WORKERS` threads (default 1). An agent waits on the
+    network for most of an item, so it runs with more; with more than one worker a retrieval latency
+    includes queueing, so latencies are only compared between runs at one worker."""
+    load_env()
+    workers = max(1, int(os.getenv("GW_RETRIEVAL_WORKERS", "1")))
+    if workers == 1:
+        return [fn(it) for it in items]
+    with ThreadPoolExecutor(max_workers=workers) as pool:
+        return list(pool.map(fn, items))
+
+
 def build_query(item: GoldItem, condition: EvidenceCondition) -> Query:
-    cross_year = condition.value.startswith("cross_year")
+    any_year = condition.value.startswith("cross_year") or condition is EvidenceCondition.COMPANY_AGENTIC
     return Query(
         text=item.text,
         company=item.company,
         aspect=item.aspect,
-        year_from=None if cross_year else item.year,
-        year_to=None if cross_year else item.year,
+        year_from=None if any_year else item.year,
+        year_to=None if any_year else item.year,
         anchor_year=item.year,
         target_text=item.text,
         condition=condition,
+        meta={"page": item.page},
     )
 
 
@@ -86,14 +101,19 @@ def collect_evidence(
     retriever = getattr(system, "retriever", lambda: None)()
     if retriever is None or condition in (EvidenceCondition.SENTENCE_ONLY, EvidenceCondition.LOCAL):
         return {}, 0
-    evidence, dropped = {}, 0
-    for it in items:
+
+    def one(it: GoldItem) -> tuple[list[EvidenceSpan], int, float]:
         q = build_query(it, condition)
         t0 = time.perf_counter()
         returned = retriever.retrieve(q, k=k)
-        if timings_ms is not None:
-            timings_ms[it.item_id] = (time.perf_counter() - t0) * 1000
+        ms = (time.perf_counter() - t0) * 1000
         spans, n = drop_target(returned, q)
+        return spans, n, ms
+
+    evidence, dropped = {}, 0
+    for it, (spans, n, ms) in zip(items, retrieval_map(one, items), strict=True):
+        if timings_ms is not None:
+            timings_ms[it.item_id] = ms
         evidence[it.item_id] = spans
         dropped += n
     return evidence, dropped
@@ -231,6 +251,7 @@ def run_task(
     results: dict[str, dict] = {}
     baseline_runs: list[list[Label]] | None = None
     classifier_info: dict[str, object] = {}
+    retriever_info: dict[str, object] = {}
     with (run_dir / "predictions.jsonl").open("w", encoding="utf-8") as fp, \
          (run_dir / "evidence.jsonl").open("w", encoding="utf-8") as ev_fp:
         for cond in wanted:
@@ -255,6 +276,10 @@ def run_task(
                 embed_tokens = _embed_tokens(system) - embed_before
             if evidence_file is not None:
                 retrieval_ms, embed_tokens = {}, 0
+            elif evidence:
+                retriever = system.retriever()
+                if retriever is not None and hasattr(retriever, "describe"):
+                    retriever_info = retriever.describe()     # which store, which hash
             if clf is not None and hasattr(clf, "describe"):
                 classifier_info = clf.describe()
             for item_id, spans in evidence.items():
@@ -323,6 +348,9 @@ def run_task(
             }
             if evidence:
                 block["evidence"] = evidence_stats(items, evidence, target_dropped)
+                agent_stats = getattr(getattr(system, "_retriever", None), "stats", None)
+                if agent_stats is not None and (stats := agent_stats(cond.value)):
+                    block["agent"] = stats
             if cond is baseline:
                 baseline_runs = runs
             elif baseline_runs is not None:
@@ -365,7 +393,7 @@ def run_task(
         config={"split": split, "slices": {k: sorted(v) for k, v in (slices or {}).items()},
                 "sample": sample, "limit": limit, "evidence_k": evidence_k,
                 "baseline": baseline.value, "selection": describe(items),
-                "classifier": classifier_info},
+                "classifier": classifier_info, "retriever": retriever_info},
     )
     (run_dir / "manifest.json").write_text(manifest.model_dump_json(indent=2), encoding="utf-8")
     (run_dir / "metrics.json").write_text(
