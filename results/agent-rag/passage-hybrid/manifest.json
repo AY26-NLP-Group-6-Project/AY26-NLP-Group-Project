@@ -1,0 +1,77 @@
+{
+  "run_id": "20261020T142347Z-agentic-rag-rq1",
+  "system": "agentic-rag",
+  "task": "rq1",
+  "conditions": [
+    "sentence_only",
+    "local",
+    "same_report_rrf",
+    "cross_year_rrf",
+    "cross_year_agentic"
+  ],
+  "dataset_id": "gw1000",
+  "dataset_hash": "3e18cc14e648",
+  "label_source": "human_majority",
+  "n_items": 331,
+  "git_sha": "b32494b8353f9e67a3e0d7f17ef43ff99d62966e",
+  "git_dirty": true,
+  "graph_build_id": null,
+  "llm": {
+    "chat_model": "gpt-5.6-luna",
+    "chat_base_url": "https://api.openai.com/v1",
+    "embed_model": "text-embedding-3-small",
+    "embed_base_url": "https://api.openai.com/v1",
+    "temperature": 0.0,
+    "reasoning_effort": "low",
+    "cache": false,
+    "prices_usd_per_mtok": {
+      "chat_in": 0.2,
+      "chat_out": 1.2,
+      "embed": 0.02
+    }
+  },
+  "repeats": 3,
+  "seed": 20260929,
+  "started_at": "2026-10-20T14:23:47.094523+00:00",
+  "finished_at": "2026-10-20T15:03:50.829198+00:00",
+  "wall_seconds": 2403.7346787005663,
+  "config": {
+    "split": "dev",
+    "slices": {},
+    "sample": null,
+    "limit": null,
+    "evidence_k": 3,
+    "baseline": "sentence_only",
+    "selection": {
+      "split": {
+        "dev": 331
+      },
+      "row_type": {
+        "aspect": 266,
+        "no_aspect": 65
+      },
+      "gold": {
+        "implemented": 136,
+        "indeterminate": 72,
+        "none": 57,
+        "planning": 66
+      }
+    },
+    "classifier": {
+      "style": "label",
+      "prompt": "action_classifier.md",
+      "prompt_sha256": "4af9b84b0a68",
+      "workers": 8,
+      "max_evidence": 3,
+      "evidence_chars": 800,
+      "agent": {
+        "max_hops": 2,
+        "queries_per_hop": 2,
+        "timeout_s": 60.0,
+        "base_mode": "rrf+rerank",
+        "select": "rrf",
+        "planner_prompt": "agentic_planner.md"
+      }
+    }
+  }
+}
