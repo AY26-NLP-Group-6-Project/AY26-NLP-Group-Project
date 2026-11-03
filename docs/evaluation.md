@@ -296,7 +296,9 @@ GET  /runs          evaluation runs with their metrics
 ```
 
 Request and response models are the pydantic models of `gw_common.schemas`; routes hold no logic;
-every response that shows text carries `{company, year, page}`. No front end has been built.
+every response that shows text carries `{company, year, page}`. The demo front end (`frontend/`,
+Streamlit) calls the same Protocols in-process rather than through this API: one dev item, one system,
+the steps timed, the answer against the gold with its evidence and citations (`frontend/README.md`).
 
 ## 10. Rules
 

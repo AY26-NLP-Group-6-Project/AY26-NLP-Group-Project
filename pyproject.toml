@@ -27,6 +27,9 @@ dev = [
     "pytest>=8",
     "ruff>=0.6",
 ]
+frontend = [
+    "streamlit>=1.50",
+]
 
 [tool.ruff]
 line-length = 110

@@ -90,6 +90,13 @@ The promise pipeline (RQ2) has its own commands under `gw-graph promise-*`:
 [`docs/promises.md`](docs/promises.md). Its gold set has a dev/test split like the sentence set, and
 `gw-eval --task rq2` evaluates any system's retriever on it with the shared judge; open test once.
 
+A demo front end runs one dev item at a time through a registered system, step by step, against the
+gold, with the evidence, the citations, the timings and the cost ([`frontend/README.md`](frontend/README.md)):
+
+```bash
+uv sync --group frontend && uv run streamlit run frontend/app.py
+```
+
 ## 4. Plugging in your own system
 
 Copy `src/example-rag` to `src/<you>-rag`, rename it, add it to the workspace members in
@@ -113,6 +120,7 @@ src/common/gw_common/        shared contract and harness: schemas, Protocols, re
 src/baseline-rag/            BM25 + dense + RRF + rerank over the chunk stores; Postgres backend
 src/graph-rag/               the temporal claim graph, graph and fused retrieval, the promise pipeline
 src/example-rag/             copy-me template for a new system
+frontend/                    Streamlit demo: one dev item through one system, with the evidence and the gold
 configs/prompts/             every prompt, versioned; action_classifier_cited.md is the shared classifier
 configs/graph.dev.yaml       graph build config
 data/eval/                   frozen evaluation snapshots, one file per (dataset, label source, hash)

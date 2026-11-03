@@ -177,4 +177,5 @@ admitted; one issuer both ways; partial delivery not reconciled; never mentioned
 - Aspect canonicalisation failed its gate, so cross-year aspect edges rely on exact normalised matches.
 - Retrieval latencies were measured with three runs sharing one machine.
 - Test split unopened; retrieval metrics need pooled judgements that were not collected; the agentic arm
-  and the front end were not built; the stock-price analysis is a literature screen only.
+  has no published run; the stock-price analysis is a literature screen only. The front end
+  (`frontend/`) is a demo over single dev items, not a source of numbers.

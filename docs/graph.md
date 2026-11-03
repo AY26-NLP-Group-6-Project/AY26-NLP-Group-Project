@@ -157,7 +157,7 @@ Status of the original phase plan:
 | metric and target extraction by regex | replaced by LLM target extraction with validation (`promises.md`) |
 | retrieval arm in the RQ1 ablation | done; same accuracy as hybrid retrieval, faster |
 | trajectories | done as the promise pipeline, judged against human checks (`promises.md`) |
-| serving | FastAPI app exists (`evaluation.md`); no front end |
+| serving | FastAPI app exists (`evaluation.md`); a Streamlit demo front end over the dev split (`frontend/`) |
 | agentic arm | stub |
 
 Risks that materialised: canonicalisation was the whole ball game for cross-year aspect edges, and it
