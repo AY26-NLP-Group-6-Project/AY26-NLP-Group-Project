@@ -235,7 +235,7 @@ of the former notes index.
   the published runs and the agentic system's run on the teammate's branch
   (`results/agent-rag/passage-hybrid` on `dev/luyuanzhi`, 2026-10-20, passage store, label-style
   classifier). Marked pending: every test-split result, the agentic RQ2 arm, the agentic RQ1 arm on the
-  statement store with the cited classifier, the retrieval qrels, the web front end.
+  statement store with the cited classifier, the retrieval qrels.
 - Five example queries (the brief's Question 2) through the corpus tools in every mode (bm25, dense,
   hybrid, hybrid+rerank), k = 5, median of three calls after a warm-up call, statement store
   `d8a62bfe40c6`, one machine: BM25 2–4 ms inside a company filter and 20 ms over the whole store;
@@ -246,3 +246,19 @@ of the former notes index.
   statements, 3,401,540 words, 29,309 unique lower-cased word forms, 30.8 words per statement (median
   23, p90 47); the statement store 108,376 chunks / 3,396,185 words, the passage store 18,839 / 4,565,796
   (overlap counted).
+
+## 2026-11-03 · Demo front end over the dev split
+
+- `frontend/` (Streamlit, opt-in dependency group `frontend`): the sidebar switches RQ1 / RQ2 and
+  shows the question's definition; the page draws one item of that question's dev split (another at a
+  click, or by id), runs it through a chosen registered system under a chosen condition with the steps
+  timed live (first-use load, retrieval, the shared classifier or judge once per run, up to three runs
+  with a vote), and shows correct / wrong against the gold with the rationale, the citations, every
+  evidence span and where it came from, the gold's own context (annotators, agreement, notes), tokens
+  and cost, and any cited page rendered from the raw report. A query of one's own can replace the
+  sampled item (no gold then). Every run lands in a session log with a CSV download (the course's
+  "five queries and their speed"); the published runs under `results/` are listed per task.
+- Same rules as the harness: no gold reaches the system, the target sentence is dropped from the
+  evidence, shared prompts and default `k`; cached model responses are off by default so timings are
+  real. `frontend/core.py` holds the non-UI part, tested in `tests/test_frontend.py` with a fake system.
+
