@@ -27,6 +27,7 @@ CHUNKS = [
 
 class FakeStore:
     _allowed = HybridRetriever._allowed
+    allowed_ids = HybridRetriever.allowed_ids
 
     def __init__(self, build_id, mode, client=None):
         self.chunks = CHUNKS
