@@ -81,9 +81,14 @@ class PhraseEmbedder:
         missing = [t for t in dict.fromkeys(texts) if self._key(t) not in self._pos]
         if missing:
             if self._model is None:
+                import os
+
                 from fastembed import TextEmbedding
 
-                self._model = TextEmbedding(model_name=self.model_name)
+                # Explicit ORT threads: unset, ORT pins threads to cores, which fails loudly on
+                # WSL/containers ("pthread_setaffinity_np failed"). Same knob as baseline_rag.index.
+                threads = max(1, int(os.getenv("GW_ONNX_THREADS", "2")))
+                self._model = TextEmbedding(model_name=self.model_name, threads=threads)
             vecs = list(self._model.embed(missing, batch_size=self.batch_size))
             new = np.asarray(vecs, dtype=np.float32)
             new /= np.linalg.norm(new, axis=1, keepdims=True).clip(min=1e-12)
