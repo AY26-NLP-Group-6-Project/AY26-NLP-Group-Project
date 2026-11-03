@@ -88,7 +88,7 @@ Both questions are answered from the issuer's own reports; no external news or r
 Brief item & Where \\
 \midrule
 Q1 corpus: gathering, cleaning, chunking, storage; task and sample queries; documents, chunks, words, types & \S\ref{sec:kb}, Tables~\ref{tab:corpus}, \ref{tab:five-queries} \\
-Q2 UI; five queries with results and timing & \S\ref{sec:serving}, Table~\ref{tab:five-queries} \\
+Q2 UI; five queries with results and timing & \S\ref{sec:serving}, Figure~\ref{fig:ui}, Table~\ref{tab:five-queries} \\
 Q3 retrieval innovations with examples; P@K, R@K, MRR, nDCG & \S\ref{sec:graph}--\ref{sec:innovations}, \S\ref{sec:rq2-evidence}; rank-aware metrics \pending{} (\S\ref{sec:metrics}) \\
 Q4 approach vs.\ state of the art; preprocessing; 1,000-record set with IAA $\ge 80\%$; P/R/F; RAG metrics; latency, throughput, cost, scalability & \S\ref{sec:classifier}, \S\ref{sec:preprocessing}, \S\ref{sec:evalsets}, \S\ref{sec:rq1-main}--\ref{sec:rq1-cost} \\
 Q5 downstream innovations with ablations & \S\ref{sec:conditions}, \S\ref{sec:rq1-main}, \S\ref{sec:rq1-agentic}, \S\ref{sec:rq2-judge} \\
@@ -208,7 +208,7 @@ Dev for tuning, test opened once; repeats $\ge 3$ with the response cache bypass
 \subsection{Resources}
 \label{sec:resources}
 
-Knowledge base, queries and their retrieved results, the evaluation sets, predictions and judge outputs: \datalink. Source code with a README that explains how to install and run everything: \codelink. The repository is a \texttt{uv} workspace (\texttt{src/common}, \texttt{src/baseline-rag}, \texttt{src/graph-rag}, \texttt{src/agentic-rag}, \texttt{src/example-rag}); 94 unit tests run without network access.
+Knowledge base, queries and their retrieved results, the evaluation sets, predictions and judge outputs: \datalink. Source code with a README that explains how to install and run everything: \codelink. The repository is a \texttt{uv} workspace (\texttt{src/common}, \texttt{src/baseline-rag}, \texttt{src/graph-rag}, \texttt{src/agentic-rag}, \texttt{src/example-rag}, the Streamlit demo in \texttt{frontend/}); 109 unit tests run without network access.
 
 % =============================================================================================
 \section{Methodology}
@@ -289,7 +289,17 @@ The text is PDF-extracted English prose, so no microtext normalisation is needed
 
 \subsection{Serving, the UI, and five timed queries}
 \label{sec:serving}
-\texttt{gw-serve} exposes one FastAPI application with one router per system, so a front end switches systems with a parameter: \texttt{POST /classify} (text, company, year, aspect, condition) returns the label, rationale, citations and the evidence shown; \texttt{POST /retrieve} returns ranked statements with company, year and page; \texttt{GET /trajectory} returns a company's statements on an aspect over the years with their labels; \texttt{GET /graph/subgraph} returns a company's aspect subgraph; \texttt{GET /runs} lists evaluation runs. Every response that shows text carries its provenance, which is the detail the brief asks a UI to design around. \pending{}: the web front end over these routes (company picker, sentence or commitment input, evidence cards with page citations) is not in this draft.
+\texttt{gw-serve} exposes one FastAPI application with one router per system, so a front end switches systems with a parameter: \texttt{POST /classify} (text, company, year, aspect, condition) returns the label, rationale, citations and the evidence shown; \texttt{POST /retrieve} returns ranked statements with company, year and page; \texttt{GET /trajectory} returns a company's statements on an aspect over the years with their labels; \texttt{GET /graph/subgraph} returns a company's aspect subgraph; \texttt{GET /runs} lists evaluation runs. Every response that shows text carries its provenance, which is the detail the brief asks a UI to design around.
+
+The user interface is a Streamlit page over the same code the evaluation runs (\texttt{frontend/}, Figure~\ref{fig:ui}): the sidebar switches between the two questions and shows each one's definition, the system, the evidence condition, $k$, the number of model runs to vote over and the setup (model, prices, knowledge-base counts and hash, git revision). The page draws one item of the question's development split (another at a click, or by id), or takes a query of the user's own, and runs it through the chosen system step by step with a live timer per step: loading the system, retrieval, then the shared classifier (RQ1) or the shared judge (RQ2), once per run. The answer is shown as correct or wrong against the gold with the rationale and the sources it cites, every evidence span with where it came from, the retrieval, generation and end-to-end time, tokens and cost, the gold's own context (annotators, agreement, pre-annotations, or both RQ2 annotators' notes), and any cited page rendered from the raw report; for RQ2 the evidence is a timeline by report year with the judge's label on each statement. Every run lands in a session log with a CSV download. It follows the harness's rules: the system never sees the gold, the target sentence is dropped from the evidence, the shared prompts and default $k$ are used, and cached model responses are off by default so a timing is a real timing.
+
+\begin{figure*}[t]
+\centering
+\includegraphics[width=0.495\textwidth]{figures/ui-rq1.png}\hfill
+\includegraphics[width=0.495\textwidth]{figures/ui-rq2.png}
+\caption{The demo front end (\texttt{frontend/}, Streamlit). Left: an RQ1 development item run through the hybrid baseline under \cond{cross\_year\_rrf}; the label against the gold, the timings, tokens and cost, the rationale with its citations, and the three evidence spans with their source. Right: an RQ2 promise run under \cond{promise\_window}; the outcome against the gold and the evidence as a timeline by report year with the judge's label on each statement.}
+\label{fig:ui}
+\end{figure*}
 
 Table~\ref{tab:five-queries} runs five queries that stand for the user task through the corpus tools in every mode: a cross-year aspect lookup, a promise follow-up inside its deadline window, an annual target and its results, a milestone with named sites, and a generic query without a company filter. BM25 answers in 2--4\,ms inside a company filter and 20\,ms over the whole store; dense and hybrid add about 20\,ms when the query vector is served from the response cache (an uncached query adds the embedding round trip, 190--730\,ms p50 in the evaluation runs); the cross-encoder adds 100--550\,ms on CPU. The re-ranked lists are the most readable: Q3 returns the annual target sentence of each year in order, Q4 the sentence that reports two of the four promised sites, Q2 the table cell with the 89\% certification figure beside the 2021 target sentence. Q5 shows why the company filter exists: without it the nearest neighbours of a net-zero commitment are other issuers' near-identical sentences and national targets. The graph's joins on the top hits answer in 4--13\,ms. Full results are in \texttt{report/queries/}.
 
@@ -651,7 +661,7 @@ Asking per-statement questions and letting a rule name the outcome halved the ve
 The 1,000-sentence set meets the brief's agreement floor on the shared pilot (0.861 observed, \kappaval{} 0.81), but 950 rows carry one label; the RQ2 gold rests on two humans for 137 rows and on calibrated model annotators of two families for 236, with the calibration reported. Model annotators sit where the humans sit against each other, and two instances of one model are not a second opinion. We report these as limits, not as equivalents of a fully double-annotated set.
 
 \paragraph{Limits and what is not done.}
-Test splits are unopened; rank-aware retrieval metrics need pooled judgements that were not collected; the web front end over the API was not built; the agentic RQ2 arm is pending; a stock-price analysis was screened in the literature and judged under-powered at 28 firms, so it is future work; retrieval latencies were measured with three runs sharing one machine; extraction misses targets that exist only inside tables and scope that the promise sentence left to its context (fields right 0.82 on the stricter check). Everything is assistive screening: a postponement can have a good reason, and an unmentioned pledge may have been kept.
+Test splits are unopened; rank-aware retrieval metrics need pooled judgements that were not collected; the agentic RQ2 arm is pending; the demo front end runs single development items and is not a source of numbers; a stock-price analysis was screened in the literature and judged under-powered at 28 firms, so it is future work; retrieval latencies were measured with three runs sharing one machine; extraction misses targets that exist only inside tables and scope that the promise sentence left to its context (fields right 0.82 on the stricter check). Everything is assistive screening: a postponement can have a good reason, and an unmentioned pledge may have been kept.
 
 % =============================================================================================
 \section{Conclusion}
@@ -691,8 +701,10 @@ uv run gw-eval --publish artifacts/runs/<id> \
   --name <group>/<name> --note "..."
 uv run gw-eval --compare results/<a> results/<b>
 uv run gw-eval --ragas artifacts/runs/<id>
-# serve the API
+# serve the API; the demo front end
 uv run gw-serve --systems baseline-rag,graph-rag
+uv sync --group frontend
+uv run streamlit run frontend/app.py
 \end{verbatim}
 \end{small}
 The promise pipeline is the \texttt{gw-graph} sub-commands \texttt{targets-export}, \texttt{targets-ingest}, \texttt{promises}, \texttt{promise-evidence}, \texttt{promise-outcomes}, \texttt{promise-sheet}, \texttt{promise-score} and \texttt{promise-gold}; the graph build is \texttt{gw-graph build}. Both are documented in \texttt{docs/promises.md} and \texttt{docs/graph.md}; every published run is under \texttt{results/} with its manifest.
