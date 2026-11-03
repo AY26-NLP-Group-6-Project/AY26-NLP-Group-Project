@@ -227,3 +227,22 @@ of the former notes index.
   172, failed 62, unclear 125, disappeared 15. On dev against the gold 96 of 123 right (0.780, κ 0.67),
   the same count as the trajectory finder's evidence; the two differ on 13 promises, 5 right each way,
   McNemar p = 1.00; over-commitment 4 of 22, under-commitment 20 of 101, verdict precision 0.92.
+
+## 2026-11-03 · Report draft; five timed queries; corpus statistics
+
+- Report draft in the ACL template under `report/` (`main.tex`, `references.bib`, the ACL style files,
+  `README.md`), written from `results.md`, `promises.md`, `graph.md`, `baseline.md`, `evaluation.md`,
+  the published runs and the agentic system's run on the teammate's branch
+  (`results/agent-rag/passage-hybrid` on `dev/luyuanzhi`, 2026-10-20, passage store, label-style
+  classifier). Marked pending: every test-split result, the agentic RQ2 arm, the agentic RQ1 arm on the
+  statement store with the cited classifier, the retrieval qrels, the web front end.
+- Five example queries (the brief's Question 2) through the corpus tools in every mode (bm25, dense,
+  hybrid, hybrid+rerank), k = 5, median of three calls after a warm-up call, statement store
+  `d8a62bfe40c6`, one machine: BM25 2–4 ms inside a company filter and 20 ms over the whole store;
+  dense and hybrid about 20 ms with the query vector served from the response cache (an uncached query
+  adds the embedding round trip); hybrid+rerank 125–572 ms (CPU cross-encoder); the graph's joins on the
+  top hit 4–13 ms. Hits and timings in `report/queries/five_queries.{json,md}`.
+- Corpus statistics for the report, from the graph's statement table and the chunk stores: 110,314
+  statements, 3,401,540 words, 29,309 unique lower-cased word forms, 30.8 words per statement (median
+  23, p90 47); the statement store 108,376 chunks / 3,396,185 words, the passage store 18,839 / 4,565,796
+  (overlap counted).

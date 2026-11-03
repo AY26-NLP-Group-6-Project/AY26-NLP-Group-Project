@@ -1,0 +1,700 @@
+% AI6127 Group 6 project report. Build: latexmk -pdf main.tex (see README.md in this folder).
+\documentclass[11pt]{article}
+
+% "preprint": non-anonymous, with page numbers. Switch to "final" to drop the page numbers.
+\usepackage[preprint]{acl}
+
+\usepackage{times}
+\usepackage{latexsym}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{microtype}
+\usepackage{inconsolata}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{multirow}
+\usepackage{array}
+\usepackage{xcolor}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta,positioning,shapes.geometric,fit,calc}
+\usepackage{pgfplots}
+\pgfplotsset{compat=newest}
+
+% ---------------------------------------------------------------------------------------------
+% Fill in once; everything below reads these macros.
+% ---------------------------------------------------------------------------------------------
+\newcommand{\groupno}{6}
+\newcommand{\memberA}{Member One}   \newcommand{\matricA}{G2XXXXXXA} \newcommand{\mailA}{member1@e.ntu.edu.sg}
+\newcommand{\memberB}{Member Two}   \newcommand{\matricB}{G2XXXXXXB} \newcommand{\mailB}{member2@e.ntu.edu.sg}
+\newcommand{\memberC}{Member Three} \newcommand{\matricC}{G2XXXXXXC} \newcommand{\mailC}{member3@e.ntu.edu.sg}
+\newcommand{\memberD}{Member Four}  \newcommand{\matricD}{G2XXXXXXD} \newcommand{\mailD}{member4@e.ntu.edu.sg}
+\newcommand{\memberE}{Member Five}  \newcommand{\matricE}{G2XXXXXXE} \newcommand{\mailE}{member5@e.ntu.edu.sg}
+\newcommand{\memberF}{Member Six}   \newcommand{\matricF}{G2XXXXXXF} \newcommand{\mailF}{member6@e.ntu.edu.sg}
+\newcommand{\datalink}{\url{https://example.com/REPLACE-WITH-DATA-LINK}}
+\newcommand{\codelink}{\url{https://example.com/REPLACE-WITH-CODE-LINK}}
+% The chat model name as it should appear in the report (the run manifests record the id set in .env).
+\newcommand{\chatmodel}{\texttt{gpt-6-luna}}
+\newcommand{\embmodel}{\texttt{text-embedding-3-small}}
+\newcommand{\reranker}{\texttt{ms-marco-MiniLM-L-6-v2}}
+\newcommand{\pending}{\textbf{[Pending Result]}}
+% ---------------------------------------------------------------------------------------------
+
+\newcommand{\cond}[1]{\texttt{#1}}
+\newcommand{\run}[1]{\texttt{#1}}
+\newcommand{\kappaval}{$\kappa$}
+\newcolumntype{L}[1]{>{\raggedright\arraybackslash}p{#1}}
+
+\setlength\titlebox{7.5cm}
+
+\title{Greenwash-RAG: Evidence-Grounded, Cross-Year Tracking of\\Sustainability Claims in SGX Reports\\
+  {\large AI6127 Group Project Report, Group \groupno}}
+
+\author{%
+  \memberA \\ \matricA \\ \texttt{\mailA} \And
+  \memberB \\ \matricB \\ \texttt{\mailB} \And
+  \memberC \\ \matricC \\ \texttt{\mailC} \AND
+  \memberD \\ \matricD \\ \texttt{\mailD} \And
+  \memberE \\ \matricE \\ \texttt{\mailE} \And
+  \memberF \\ \matricF \\ \texttt{\mailF} \\
+}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+We build a retrieval-augmented system over 240 sustainability reports of 56 SGX-listed issuers (2020--2025, 10,635 pages, 3.5\,M words) and ask two questions. \textbf{RQ1:} given one sentence and a candidate sustainability aspect, does evidence retrieved from the company's own reports change the action label a model assigns under the A3CG scheme (implemented / planning / indeterminate / none)? \textbf{RQ2:} when a report makes a dated commitment, what do the company's later reports say became of it? The knowledge base is every statement of the parsed reports (108,376 chunks); the retriever is BM25 plus dense retrieval fused by reciprocal rank fusion and re-ranked by a cross-encoder, with company and year filters; a temporal claim graph and a bounded agentic planner are the two retrieval innovations; one shared classifier with citations serves every arm. On a self-annotated set of 1,000 sentences (six annotators, Fleiss \kappaval{} 0.81 on the shared pilot), retrieved evidence moves majority-vote macro-F1 by at most 0.04 on the development split, never significantly (paired McNemar $p \ge 0.21$); the claim graph matches hybrid retrieval at a tenth of the retrieval latency, and statement-level evidence beats 200-word passages for cross-year evidence ($p = 0.043$). For RQ2 we extract 1,273 validated dated targets, follow 373 checkable commitments through later reports, and label each statement before a fixed rule names the outcome. Against a gold set of 373 commitments (137 double-annotated by the group, \kappaval{} 0.84; the rest by two calibrated model annotators of different families), both retrievers reach vote accuracy 0.789 on the development split; verdicts are right 90--94\% of the time and the system gives a verdict on 14--23\% of the commitments a reader cannot settle. Human-verified, about half of the dated commitments in these reports were met, one in eight was missed or re-dated, and a third cannot be settled from the text. All test-split results are pending and every number carries its run identifier.
+\end{abstract}
+
+% =============================================================================================
+\section{Problem Definition}
+\label{sec:problem}
+
+\paragraph{The user task.}
+SGX requires every mainboard issuer to publish an annual sustainability report. Analysts, investors, regulators and journalists ask questions of the form ``Company X committed to an emissions target in 2021; was it delivered, and on which pages is the evidence?'' Answering by hand means reading three or four years of templated ESG prose. Our system takes a company and either a sentence with a candidate aspect or a dated commitment, retrieves the company's own report text across years, and returns a page-cited answer: for a sentence, an A3CG action label with a rationale and citations; for a commitment, an outcome with the statements it rests on. Sample inputs are the five timed queries of Table~\ref{tab:five-queries} and the case studies of Section~\ref{sec:rq2-cases}. The output is assistive screening with sources, never a verdict that a company is greenwashing \citep{ong-etal-2025-a3cg,calamai2025survey}.
+
+\paragraph{RQ1: does evidence change the label?}
+An item is a tuple $(s, a, c, y, p)$: a sentence $s$ from the report of company $c$ in year $y$ on page $p$, with a candidate aspect $a$ (for example \emph{Scope 3 emissions}). The classifier $f(s, a, E)$ returns a label in \{implemented, planning, indeterminate, none\}, where \emph{none} means the proposed aspect is not a valid aspect--action pair, following the A3CG scheme \citep{ong-etal-2025-a3cg}. $E$ is the evidence condition: nothing (the A3CG setting), the neighbouring sentences on the same page, up to $k$ statements retrieved from the same report, or up to $k$ statements retrieved from the company's \emph{other} years. The question is $\Delta$ macro-F1 of each condition over sentence-only, measured on the same items with a paired test, and whether a structured retriever (a claim graph) or a planning retriever (an agent) reaches a different $\Delta$ from plain hybrid retrieval at the same evidence budget.
+
+\paragraph{RQ2: what became of dated commitments?}
+A \emph{promise} is a statement by company $c$ in report year $y_0$ that names a target (metric, quantity, unit, baseline) and a deadline year $d \ge y_0$. The system must return an outcome in \{achieved, failed, unclear, disappeared\} from the company's reports of years $y_0{+}1 \ldots d{+}1$, together with the statements that justify it. \emph{Failed} covers a deadline that passed without the target being reported as met, whether the report admits the miss or moves the date; \emph{unclear} is the ``not enough information'' class \citep{thorne-etal-2018-fever}; \emph{disappeared} means no later statement about the target or its metric. The taxonomy extends \citet{jiang2025targets}, who code emissions targets as achieved, failed or disappeared.
+
+\paragraph{Scope.}
+Both questions are answered from the issuer's own reports; no external news or regulatory evidence is used. Raw reports are copyrighted and are never redistributed; the knowledge base we share is derived text with provenance. Table~\ref{tab:coverage} maps the questions of the assignment brief to the sections that answer them.
+
+\begin{table}[t]
+\centering\small
+\begin{tabular}{@{}L{3.4cm}L{3.6cm}@{}}
+\toprule
+Brief item & Where \\
+\midrule
+Q1 corpus: gathering, cleaning, chunking, storage; task and sample queries; documents, chunks, words, types & \S\ref{sec:kb}, Tables~\ref{tab:corpus}, \ref{tab:five-queries} \\
+Q2 UI; five queries with results and timing & \S\ref{sec:serving}, Table~\ref{tab:five-queries} \\
+Q3 retrieval innovations with examples; P@K, R@K, MRR, nDCG & \S\ref{sec:graph}--\ref{sec:innovations}, \S\ref{sec:rq2-evidence}; rank-aware metrics \pending{} (\S\ref{sec:metrics}) \\
+Q4 approach vs.\ state of the art; preprocessing; 1,000-record set with IAA $\ge 80\%$; P/R/F; RAG metrics; latency, throughput, cost, scalability & \S\ref{sec:classifier}, \S\ref{sec:preprocessing}, \S\ref{sec:evalsets}, \S\ref{sec:rq1-main}--\ref{sec:rq1-cost} \\
+Q5 downstream innovations with ablations & \S\ref{sec:conditions}, \S\ref{sec:rq1-main}, \S\ref{sec:rq1-agentic}, \S\ref{sec:rq2-judge} \\
+Names and matriculation numbers; data and code links & first page; \S\ref{sec:resources} \\
+\bottomrule
+\end{tabular}
+\caption{Where each item of the assignment brief is answered.}
+\label{tab:coverage}
+\end{table}
+
+% =============================================================================================
+\section{Related Studies}
+\label{sec:related}
+
+\paragraph{Aspect--action analysis of ESG text.}
+A3CG \citep{ong-etal-2025-a3cg} annotates 2,004 statements from SGX sustainability reports (2017--2022) with aspect spans and an action label in \{implemented, planning, indeterminate\}, where \emph{indeterminate} covers hedged intent, bare disclosure and responsibility statements, the classes most exposed to greenwashing. Its supervised models reach pair-level F1 of 67--71 on the full set and 41--48 on unseen categories; action classification is harder than aspect extraction everywhere, and the paper reports no inter-annotator agreement. The same group's follow-up, COGLM \citep{braun2026coglm}, adds contrastive, ordinal and gated objectives on LoRA adapters and sets the model-side state of the art (72.4 full / 67.6 seen / 49.0 unseen). Both classify one isolated sentence; A3CG's own error analysis names \emph{ellipsis} (missing context) and \emph{unattributed statements} as the dominant failure modes, which are exactly what company-scoped retrieval could supply. That is our RQ1.
+
+\paragraph{Promise verification and greenwashing detection.}
+ML-Promise \citep{seki-etal-2025-mlpromise} labels promise identification, actionable evidence, clarity and verification timing over ESG reports in five languages, locating evidence \emph{within the same document}; the English portion is about 200 instances and there is no cross-year dimension. EmeraldMind \citep{kaoukis2025emeraldmind} is the closest system: a vector store and an ESG knowledge graph (53,748 entities from 37 reports) behind a RAG pipeline that returns greenwashing / not / abstain with an evidence-grounded justification, with hybrid retrieval the best variant; its claims are semi-synthetic and it has no temporal dimension. \citet{florstedt-etal-2025-greenwashing} use specificity and internal claim substantiation as greenwashing hints over German DAX reports. The survey of \citet{calamai2025survey} finds that no dataset of verified greenwashing cases exists and recommends decomposed pipelines with traceable reasoning and human oversight, which is the architecture we adopt. ESGBench \citep{george2025esgbench} shows how hard numeric and table grounding in ESG PDFs is for RAG (exact match 21\%). \citet{jiang2025targets} code 1,541 CDP emissions targets as achieved, failed or disappeared and find that 31\% of firms' targets disappear; no SGX study checks whether earlier commitments were met. Our RQ2 fills that gap with a four-class taxonomy and page-cited evidence.
+
+\paragraph{Retrieval and graphs.}
+Our retriever follows the course design: BM25 \citep{robertson2009bm25}, dense embeddings, reciprocal rank fusion \citep{cormack2009rrf} and a cross-encoder re-ranker \citep{reimers-gurevych-2019-sentence,wang2020minilm}, inside the RAG contract of \citet{lewis2020rag}. Community-summary GraphRAG \citep{edge2024graphrag} targets global sense-making questions and is expensive to index; our queries are local and structured, so we build a small temporal claim graph instead. \citet{zhou2025graphrag} find that graph-only methods lose to vector RAG on specific questions and that the original text chunks must be kept, while graph structure pays off on multi-hop questions; our graph arms therefore always return statements with their page, and a fused arm is kept. \citet{ferrazzi2026agentic} find that agentic RAG is not universally better than enhanced RAG, costs 3.3$\times$ the input tokens, and is worse than a re-ranker at final document selection; our agent plans and rewrites queries but leaves selection to rank fusion or the re-ranker. For canonicalising free-text aspects we follow CESI \citep{vashishth2018cesi}, EDC \citep{zhang-soh-2024-edc} and \citet{peeters2025entity}.
+
+\paragraph{Verification, abstention and evaluation.}
+FEVER \citep{thorne-etal-2018-fever} established the \emph{not enough information} class and showed it is the hard one; ClaimDecomp \citep{chen-etal-2022-claimdecomp} derives a verdict from yes/no sub-questions; \citet{wen2024abstention} survey abstention as a way to cut unsupported output. Our RQ2 judge labels each statement with three sub-questions and lets a fixed rule name the outcome, defaulting to \emph{unclear}. Answer-level RAG metrics follow RAGAS \citep{es-etal-2024-ragas}; majority voting over repeats follows self-consistency \citep{wang2023selfconsistency}; systems are compared with the paired McNemar test \citep{mcnemar1947,dietterich1998}, and agreement with Fleiss' and Cohen's \kappaval{} \citep{fleiss1971,cohen1960}.
+
+\paragraph{What is open.}
+Nobody has asked whether retrieved report-internal or cross-year evidence changes the A3CG action label; no ESG benchmark follows a commitment across report years; and A3CG's report list is unpublished, so a longitudinal SGX corpus with page-level provenance is itself an artefact.
+
+% =============================================================================================
+\section{Experiment Design}
+\label{sec:design}
+
+\subsection{Corpus and knowledge base}
+\label{sec:kb}
+
+\paragraph{Gathering.}
+Reports were discovered through the public sitemap of SustainabilityReports.com (discovery only; its terms forbid bulk download) and fetched from the issuers' own investor-relations sites on the shared \texttt{listedcompany.com} platform (229 files; \texttt{robots.txt} allows crawlers; at most one request per second per host) and, for 11 pilot files, from company sites or SGXNet. Every candidate is a row of \texttt{kb/manifest.csv} with its URL, fetch date and the rule that kept or rejected it.
+
+\paragraph{Cleaning.}
+Eleven ordered filters, all auditable from the manifest: year outside 2019--2026 in the URL; SHA-256 duplicates; fewer than 500 words of text layer (scanned); under 8 pages (cover letters); more than 20\% CJK or Thai characters (non-English editions); AGM notices and circulars; full annual reports that do not mention sustainability on page~1; GRI indexes, TCFD supplements, policies and frameworks by filename and title page; a positive test that the first ten pages name a sustainability or ESG report; the reporting year taken as the calendar year in which the period ends; one document per company-year (the longest). A random sample of 15 kept reports was checked by hand; all were genuine sustainability reports of the named issuer with a plausible year. Three reports downloaded from SGXNet should be replaced by company-hosted copies before any redistribution, since SGX's site terms may forbid extraction for analysis.
+
+\paragraph{Parsing and chunking.}
+PDFs are parsed page by page, ligatures and footnote digits repaired, and the text split into statements with the same sentence splitter the annotation set used, so every one of the 1,000 evaluation sentences matches a parsed statement inside its own report. Tables flatten into one statement per row or cell. The retrieval unit is the \emph{statement}: every statement of five words or more is one chunk, prose, table rows and metric lines alike, because a question about a number, or about what became of a target, needs exactly the rows a prose filter would drop (Section~\ref{sec:rq2-evidence} measures that cost). A second store of 200-word passages (one sentence of overlap, never crossing a report) is kept as the granularity ablation. Each chunk carries \{company, year, page, file, statement ids\} and is indexed with a contextual header ``Company (Year), page $N$: \ldots'' that helps both BM25 and the encoder.
+
+\paragraph{Storage.}
+A store is a directory with \texttt{chunks.jsonl}, L2-normalised float32 vectors (\embmodel{}, 1,536 dimensions) and a manifest whose hash over the chunk texts is written into every run; the two stores are packaged as zip files (557\,MB and 104\,MB) and shared inside the group. The same chunks are mirrored into Postgres with pgvector (HNSW cosine index, b-tree on company and year); on development queries the file and database backends return the same top-5 lists. The parsed statements, reports and the claim graph live in DuckDB.
+
+\begin{table}[t]
+\centering\footnotesize
+\setlength{\tabcolsep}{3pt}
+\begin{tabular}{@{}L{4.3cm}>{\raggedleft\arraybackslash}p{3.0cm}@{}}
+\toprule
+reports (documents) & 240 \\
+issuers & 56 \\
+report years & 2020--2025 \\
+\quad reports per year & 38 / 38 / 40 / 43 / 43 / 38 \\
+issuers with $\ge 3$ years (all six) & 41 (29) \\
+pages & 10,635 \\
+words in the PDF text layer & 3,475,125 \\
+parsed statements & 110,314 \\
+\quad words / types (unique lower-cased word forms) & 3,401,540 / 29,309 \\
+\quad words per statement, mean / median / p90 & 30.8 / 23 / 47 \\
+chunks, statement store (default; $\ge 5$ words) & 108,376 \\
+chunks, passage store (ablation; $\approx$ 200 words) & 18,839 \\
+store hashes (statement / passage) & \texttt{d8a62bfe40c6} \newline \texttt{c80d0ab23191} \\
+\bottomrule
+\end{tabular}
+\caption{The corpus (Question 1). Both chunk counts exceed the 10,000-passage floor; the word count exceeds the 100,000-word floor thirty-fold.}
+\label{tab:corpus}
+\end{table}
+
+\subsection{Evaluation sets}
+\label{sec:evalsets}
+
+\paragraph{RQ1: gw1000.}
+1,000 sentences from 52 issuers' 2023--2025 reports, each with one candidate aspect and its A3CG category (or none), page-level provenance and the neighbouring sentences. Sentences were pre-annotated by three LLMs (used only to propose aspects and for label-noise analysis; they agree with the human majority 0.79--0.80 and are never a system input), then labelled by six annotators under an A3CG-aligned guideline. The 50 pilot rows carry all six labels (observed agreement 0.861, Fleiss \kappaval{} 0.809), the other 950 one label each, one tie adjudicated; 34 rows shown as \emph{no aspect} received an action label and had their span filled by review (flagged, reported separately). Labels: implemented 417, planning 191, indeterminate 222, none 170; no duplicate sentences. Split: dev 331 / test 669, stratified by row type, label and category, pilot rows pinned to dev. The file \texttt{kb/annotation/eval.xls} is the tabular export the brief asks for; the frozen snapshot \texttt{gw1000.human\_majority.3e18cc14e648.jsonl} carries its hash into every run manifest.
+
+\paragraph{RQ2: rq2promises.}
+Every checkable promise (Section~\ref{sec:promises}) carries a settled outcome. 137 were labelled on a blind two-annotator sheet by the group (agreement 0.898, Cohen's \kappaval{} 0.84, adjudicated to a final label). The remaining 237 were labelled by two model annotators of different families (Claude Fable, Claude Opus) run as sub-agents under the same sheet guide, reading exactly the cells the humans read, blind to each other and to the system, after calibration on fresh stratified slices of 40 human rows: 0.875 and 0.925 against the adjudicated human final (\kappaval{} 0.81 / 0.88), where the two humans agree 0.95 with each other on the same slice; two instances of one model agreed 79 times in 80, which is why the second annotator was moved to another family. The pair agreed on 221 of 237; the 16 disagreements went to a third pass; one row settled as \emph{not a promise} (an extraction error) leaves the set. Gold over 373: achieved 206, failed 68, unclear 86, disappeared 13 (32 companies, deadlines 2021--2025). Split: dev 123 / test 250, stratified by outcome and label source, the 75 promises the judge prompt was tuned on pinned to dev; dev holds 22 human-labelled rows, test 115.
+
+\subsection{Evidence conditions and arms}
+\label{sec:conditions}
+
+One classifier, one prompt, one budget ($k = 3$ spans of at most 800 characters) for every RQ1 arm; systems differ only in the evidence they hand it (Table~\ref{tab:conditions}). The harness drops any returned span that \emph{is} the target sentence and counts the drops, so no arm can score by re-reading what it classifies. For RQ2 the same \texttt{retrieve(query, k)} call serves every system under the \cond{promise\_window} condition: the query carries the company, the year window ($y_0{+}1$ to $d{+}1$), the metric and the promise record, and at most $k = 20$ statements come back for the shared judge.
+
+\begin{table}[t]
+\centering\small
+\begin{tabular}{@{}L{3.0cm}L{4.4cm}@{}}
+\toprule
+condition & evidence the classifier sees \\
+\midrule
+\cond{sentence\_only} & nothing (the A3CG setting; the baseline for every $\Delta$) \\
+\cond{local} & neighbouring sentences of the same page \\
+\cond{same\_report\_rrf} & $k$ statements retrieved from the same report (hybrid) \\
+\cond{cross\_year\_rrf} & $k$ statements from the same company, other years (hybrid) \\
+\cond{cross\_year\_graph} & statements reached through the claim graph \\
+\cond{cross\_year\_fused} & graph first, BM25 over other-year statements fills to $k$ \\
+\cond{cross\_year\_agentic} & bounded plan--retrieve--stop loop over the same store \\
+\cond{promise\_window} & RQ2: $\le 20$ statements from later reports, read by the judge \\
+\bottomrule
+\end{tabular}
+\caption{Evidence conditions. The first four are served by every system; the graph and agentic conditions by the system that owns them.}
+\label{tab:conditions}
+\end{table}
+
+\subsection{Metrics}
+\label{sec:metrics}
+
+\emph{Classification.} Macro-F1 over the three action labels on rows whose gold label is an action (331 on dev), with micro-F1, accuracy, per-label precision / recall / F1 and confusion matrices; detection F1 for \emph{none}, because evidence can talk a model into inventing an aspect. \emph{Stability.} Three uncached repeats per condition: mean $\pm$ sd, the items whose label changed between repeats, and the majority vote. \emph{Comparison.} Re-running an identical configuration does not reproduce its score (three sentence-only votes on the same items: 0.7397 / 0.7498 / 0.7580), so arms and systems are compared only with the paired McNemar test on majority votes over the same items, with pooled flips wrong$\to$right / right$\to$wrong and a bootstrap 95\% interval. \emph{Answer-level RAG metrics.} Faithfulness, answer relevance, context precision and context relevance as defined by RAGAS, implemented in-house so every intermediate judgement is kept, scored by the same model and calibrated against a human on a blind sheet. \emph{RQ2.} Accuracy, \kappaval{}, macro-F1 over the four outcomes, the share of gold-unclear promises given a verdict (over-commitment), the share of settled promises left unclear (under-commitment), the precision of the verdicts given, and a bootstrap interval. \emph{Performance.} Retrieval, classification and end-to-end latency (p50 / p95), items per second, input and output tokens, and USD per 1,000 items at 0.20 / 1.20 USD per million input / output tokens. \emph{Rank-aware retrieval metrics.} The harness computes P@5, R@10, MRR and nDCG@10 from pooled relevance judgements (\texttt{gw-eval --task retrieval}, with a pooled judging sheet over every mode's top-$k$); the judgements have not been collected, so these numbers are \pending{}.
+
+\subsection{Protocol}
+\label{sec:protocol}
+
+Dev for tuning, test opened once; repeats $\ge 3$ with the response cache bypassed; the same classifier, prompt, model, reasoning effort and budget for every arm, so any change re-runs every arm; the gold label is stripped before an item reaches a system; every number in this report names the published run (\texttt{results/<group>/<name>/}), the snapshot hash and the store hash it comes from. Chat model \chatmodel{} at low reasoning effort and temperature 0; embeddings \embmodel{}; re-ranker \reranker{} on CPU.
+
+\subsection{Resources}
+\label{sec:resources}
+
+Knowledge base, queries and their retrieved results, the evaluation sets, predictions and judge outputs: \datalink. Source code with a README that explains how to install and run everything: \codelink. The repository is a \texttt{uv} workspace (\texttt{src/common}, \texttt{src/baseline-rag}, \texttt{src/graph-rag}, \texttt{src/agentic-rag}, \texttt{src/example-rag}); 94 unit tests run without network access.
+
+% =============================================================================================
+\section{Methodology}
+\label{sec:method}
+
+\begin{figure*}[t]
+\centering
+\resizebox{\textwidth}{!}{%
+\begin{tikzpicture}[
+  font=\footnotesize, node distance=3mm and 5mm,
+  box/.style={draw, rounded corners=2pt, align=center, inner sep=3pt, minimum height=7mm, fill=gray!8},
+  store/.style={box, fill=blue!6},
+  sys/.style={box, fill=orange!10},
+  outbox/.style={box, fill=green!8},
+  arr/.style={-{Latex[length=2mm]}, thick}]
+  \node[box] (pdf) at (0,0) {240 PDFs\\manifest with\\source URLs};
+  \node[store] (stm) at (3.4,0) {parsed statements\\110,314 in DuckDB\\\{company, year, page\}};
+  \node[store] (chunks) at (7.8,0) {chunk stores + vectors\\statements 108,376\\passages 18,839 (ablation)};
+  \node[store] (graph) at (12.3,0) {temporal claim graph\\aspects, mentions, follows\_up\\promise tables};
+  \node[sys] (hyb) at (5.0,-2.2) {hybrid retriever\\BM25 + dense + RRF + rerank\\company / year filters};
+  \node[sys] (ag) at (9.4,-2.2) {agentic retriever\\plan--retrieve--stop\\over the corpus tools};
+  \node[sys] (gr) at (13.4,-2.2) {graph retriever\\join (company, aspect, year)\\trajectory finder};
+  \node[outbox, text width=8.8cm] (cons) at (8.4,-4.0) {shared cited classifier (RQ1, $\le 3$ spans: label, rationale, citations)\\shared promise judge (RQ2, $\le 20$ statements: per-statement labels, then a rule)};
+  \node[box] (harness) at (14.2,-4.0) {evaluation harness\\gold, metrics,\\manifests, API};
+  \draw[arr] (pdf) -- (stm);
+  \draw[arr] (stm) -- (chunks);
+  \draw[arr] (stm.north) -- ++(0,0.45) -| (graph.north);
+  \draw[arr] (chunks.south) -- (hyb.north);
+  \draw[arr] (chunks.south) -- (ag.north);
+  \draw[arr] (graph.south) -- (ag.north);
+  \draw[arr] (graph.south) -- (gr.north);
+  \draw[arr] (hyb.south) -- (cons.north -| hyb.south);
+  \draw[arr] (ag.south) -- (cons.north -| ag.south);
+  \draw[arr] (gr.south) -- ($(cons.north east)+(-0.6,0)$);
+  \draw[arr] (cons.east) -- (harness.west);
+\end{tikzpicture}%
+}
+\caption{Architecture. Every retriever reads the same parsed statements; every RQ1 arm hands at most three spans to one classifier, every RQ2 arm at most twenty to one judge; the harness owns the data, the gold labels, the metrics and the run manifests.}
+\label{fig:arch}
+\end{figure*}
+
+\subsection{Architecture}
+Figure~\ref{fig:arch} shows the pipeline. A \emph{system} implements two small protocols, \texttt{retrieve(query, k)} and \texttt{classify(items, evidence)}, and registers an entry point; the harness in \texttt{src/common} does everything else. Three systems are compared: the hybrid baseline, the graph system and the agentic system, all over the same knowledge base and with the same shared classifier and judge.
+
+\subsection{Hybrid retriever (sparse, dense, fusion, re-ranking)}
+\label{sec:hybrid}
+The baseline retriever is built from parts, not from a hosted service: an in-process Okapi BM25 index ($k_1 = 1.5$, $b = 0.75$) over the contextualised chunk text; a dense index of \embmodel{} vectors searched by cosine over L2-normalised vectors (pgvector HNSW when the Postgres backend is on); reciprocal rank fusion of the top 50 from each ($k_0 = 60$); and a cross-encoder (\reranker{} via fastembed, ONNX on CPU) over the fused top 20. A mode switch (\texttt{bm25}, \texttt{dense}, \texttt{rrf}, \texttt{rrf+rerank}) runs the ablation through one code path. Metadata filters come from the condition: the same report, or the same company excluding the target's year, or an explicit year window; the retriever never returns the target sentence.
+
+\subsection{Temporal claim graph}
+\label{sec:graph}
+Three of the project's needs are joins, not similarity problems: the same company's statements on the same aspect in other years (ESG prose is templated, so nearest neighbours without a company filter are other companies' near-identical sentences, as query Q5 in Table~\ref{tab:five-queries} shows); following a commitment forward in time; and detecting a moved baseline or a dropped target. EmeraldMind's graph has no temporal dimension, so a \emph{temporal} claim graph is the defensible contribution. It is stored in DuckDB with networkx for traversal of a company's subgraph: 56 companies, 240 reports, 110,314 statements, 7,503 aspects (734 from the annotated spans and their string matches, 6,769 extracted by an LLM), 29,637 statement$\to$aspect mentions carrying the action label where one exists, and 8,524 \texttt{follows\_up} edges (statement $\to$ later statement of the same company and aspect, with \texttt{years\_apart} and a \texttt{same\_text} flag; 28\% of the edges join verbatim repeats, a fact about templated reporting the trajectory logic uses). Two gates shaped the build. Page furniture (GRI index rows repeated every year) produced thousands of false chains until a sentence-shape gate on what the aspect extractor sees dropped 23,097 candidate mentions; the gate applies only to extraction, never to retrieval. LLM aspect extraction over 9,320 statements passed its gate on the 1,000 gold sentences (partial-match F1 0.649, category accuracy 0.903, false-positive rate on no-aspect sentences 0.264) and ingestion rejects any span that is not a verbatim substring. Canonicalisation of the free-text aspects did \emph{not} pass its gate: on a clean test set of 81 pools and 123 gold pairs, embeddings with complete-linkage HAC reached pairwise precision 0.467, and embeddings proposing with an LLM verifying under written rules 0.597 [0.49--0.70], against a gate of 0.80; the graph therefore keeps morphological normalisation only (7,503 $\to$ 7,319 ids), and 79\% of the extracted aspect nodes occur once. The graph arms return statements with their page, never bare nodes: \cond{cross\_year\_graph} joins the item's aspect to the company's other-year statements that mention it (coverage 0.40 on dev, 9\,ms); \cond{cross\_year\_fused} fills to $k$ with BM25 over the company's other-year statements (coverage 0.89, 20\,ms).
+
+\subsection{Agentic retriever}
+\label{sec:agentic}
+The agentic system (\cond{cross\_year\_agentic}) is a bounded plan--retrieve--stop loop over the same store. Hop 0 is the ordinary hybrid search with the sentence itself. At each later hop a planner prompt sees the target sentence, the aspect and the evidence gathered so far, and answers in JSON whether the evidence already resolves the sentence's references and actor; if not, it proposes up to two keyword queries, optionally restricted to earlier or later reports, which run through the same search. The planner never labels the sentence and is told not to look for whether a plan was later achieved, since that does not change an A3CG label. Final spans come from reciprocal rank fusion over every ranked list the loop produced (or the cross-encoder against the original sentence), because agents are worse than a re-ranker at final selection \citep{ferrazzi2026agentic}. Budgets are environment variables (default two hops, two queries per hop, 60\,s per item), every planner decision is traced, and the planner's tokens are charged to the prediction so cost is end to end. For RQ2 the same loop may plan over the corpus tools inside the promise window; that arm is \pending{}.
+
+\subsection{The corpus as tools; one protocol for both questions}
+\label{sec:tools}
+So that an agent plans over exactly what the fixed baseline uses, the corpus is exposed as a small tool set: \texttt{search(text, company, year\_from, year\_to, exclude\_year, k, mode)} in four modes, \texttt{get}, \texttt{neighbours} (same page, report order), \texttt{page}, \texttt{reports(company)} and \texttt{companies()}; the graph corpus adds \texttt{aspects}, \texttt{follow\_ups} and \texttt{related\_targets(company, metric)}. The hybrid baseline is one \texttt{search} call; an agentic retriever is a plan over the same calls; both end in the same \texttt{retrieve}, and the same \texttt{retrieve} serves RQ2 under \cond{promise\_window}, so a teammate's system takes part in both questions without changing its interface.
+
+\subsection{Shared classifier (RQ1)}
+\label{sec:classifier}
+\paragraph{Choice, against the state of the art.} The supervised A3CG models and COGLM are the strongest published classifiers, but they read one sentence and cannot be conditioned on retrieved evidence without retraining, and RQ1 needs the \emph{same} classifier under every evidence condition. We therefore use one zero-shot LLM classifier (\chatmodel{}, low effort, temperature 0) with a prompt that encodes the A3CG guideline, including the three \emph{indeterminate} sub-rules, and reads up to three evidence spans tagged E1\ldots E3. On A3CG's own released test splits with the gold aspect given it scores macro-F1 0.748 (0.714 / 0.723 averaged over the seen / unseen folds), a reference rather than a like-for-like comparison, since our items carry provenance and theirs do not. \emph{Grounding.} The classifier returns a label, a one- or two-sentence rationale and the citations it rests on (the target, the context, or E$i$), resolved to company, year and page; asking for them costs no accuracy (paired $p$ 0.27--1.00 against the one-word version) and makes faithfulness measurable. \emph{Self-consistency.} Each condition runs three times with the cache bypassed; the majority vote is the reported label and the spread is the noise floor.
+
+\subsection{Preprocessing}
+\label{sec:preprocessing}
+The text is PDF-extracted English prose, so no microtext normalisation is needed; the preprocessing that mattered was elsewhere. Broken ligature glyphs (a \emph{ti} rendered as one unreadable character in \emph{consumption}) and footnote digits fused to words (``incidents13'') are repaired; multi-column tables flatten into long statements and are kept, because result lines live there; statements are stored in report order so neighbours and pages can be read around a hit; every chunk is prefixed with its company, year and page for indexing. The one filter we removed is the lesson of Section~\ref{sec:rq2-evidence}: a sentence-shape filter that improves aspect extraction removes a third of the statements of five words or more and most of the lines that report results.
+
+\subsection{Promise pipeline (RQ2)}
+\label{sec:promises}
+\paragraph{Extraction (knowledge-base construction, done once).} Candidate statements name a year not before their report year and contain a commitment cue (3,164). An LLM extracts the target span, metric, quantity, unit, baseline year, deadline year, kind (quantitative / milestone / qualitative) and a recurring flag; mechanical validation rejects a span that does not occur verbatim and a deadline before the report year. Two extractors were run: the project's small model in-repo (1,462 validated targets, USD 0.83) and Claude sub-agents in 12 shards (1,273); statement-level agreement 0.905, \kappaval{} 0.79; the stronger extraction is the store, the in-repo one the reproducible comparison. Restatements of one commitment across years are merged (1,273 targets $\to$ 880 promises) and same-metric commitments with another deadline or quantity are linked as \texttt{related}. A promise is \emph{checkable} if it was stated before its deadline, the deadline is $\le 2025$ with a report for that year or the next, and the metric names something: 374 (32 companies; 198 quantitative, 107 milestone, 69 qualitative; 161 recurring annual targets).
+
+\paragraph{Evidence.}\label{sec:rq2-evidence} The first version read the top six statements of the deadline-year reports under rank fusion of BM25 over every statement and dense retrieval over the sentence-shaped statements only. The final \emph{trajectory finder} ranks every statement of every later report with both rankings complete, takes a budget per report year (6 from the first report at or after the deadline, 3 from the next, 2 from each earlier one), adds the statements before and after the two best hits of the deadline report (a target table parses into one statement per cell and the result sits beside the target), adds up to three linked targets from the promise graph, and shows everything in report order with ``directly follows E3'' marks: 11.6 statements per promise from 2.0 report years. Under \cond{promise\_window} the hybrid baseline instead returns its top 20 inside the same window.
+
+\paragraph{Judge.} Version 1 asked the model to name the outcome from the evidence. Version 2 asks three questions per statement (is it about this very target, its metric only, or something else; does it state the deadline year's result as met or missed; does it move the target to a later or no date) and one per promise (is it an annual target renewed every year), and a fixed rule names the outcome: a \emph{met} and no \emph{missed} on a this-target statement $\to$ achieved; otherwise a later date on a non-annual target $\to$ revised; otherwise a \emph{missed} $\to$ failed; otherwise any this-target or same-metric statement from the deadline year on $\to$ unclear; otherwise disappeared, with the calendar enforced (a report before the deadline year cannot state a miss). A reply that does not label every statement is unclear; the outcome is the strict majority of three uncached runs, and no majority is unclear. \emph{Revised} is reported as \emph{failed}: the deadline was stated, and it passed without the target being reported as met (Section~\ref{sec:rq2-judge} gives the reason).
+
+\paragraph{Human checks.} Blind sheets, one row per promise with the statement, the extracted fields, the related targets and the evidence tagged E1, E2, \ldots{} with year and page; the system's proposal is kept in a key file. Rows are sampled with a floor per proposed outcome and at most four per company, so scores are weighted back to the pool with bootstrap intervals. Three sheets were filled: 75 promises on the first system (one annotator working through an AI-drafted first pass), 60 held-out promises on the final system (same annotator, after the judge was tuned on the first sheet), and 150 promises for two annotators (the 60 plus 90 never checked), of which 137 were settled and form the human part of the gold set.
+
+\subsection{Serving, the UI, and five timed queries}
+\label{sec:serving}
+\texttt{gw-serve} exposes one FastAPI application with one router per system, so a front end switches systems with a parameter: \texttt{POST /classify} (text, company, year, aspect, condition) returns the label, rationale, citations and the evidence shown; \texttt{POST /retrieve} returns ranked statements with company, year and page; \texttt{GET /trajectory} returns a company's statements on an aspect over the years with their labels; \texttt{GET /graph/subgraph} returns a company's aspect subgraph; \texttt{GET /runs} lists evaluation runs. Every response that shows text carries its provenance, which is the detail the brief asks a UI to design around. \pending{}: the web front end over these routes (company picker, sentence or commitment input, evidence cards with page citations) is not in this draft.
+
+Table~\ref{tab:five-queries} runs five queries that stand for the user task through the corpus tools in every mode: a cross-year aspect lookup, a promise follow-up inside its deadline window, an annual target and its results, a milestone with named sites, and a generic query without a company filter. BM25 answers in 2--4\,ms inside a company filter and 20\,ms over the whole store; dense and hybrid add about 20\,ms when the query vector is served from the response cache (an uncached query adds the embedding round trip, 190--730\,ms p50 in the evaluation runs); the cross-encoder adds 100--550\,ms on CPU. The re-ranked lists are the most readable: Q3 returns the annual target sentence of each year in order, Q4 the sentence that reports two of the four promised sites, Q2 the table cell with the 89\% certification figure beside the 2021 target sentence. Q5 shows why the company filter exists: without it the nearest neighbours of a net-zero commitment are other issuers' near-identical sentences and national targets. The graph's joins on the top hits answer in 4--13\,ms. Full results are in \texttt{report/queries/}.
+
+\begin{table*}[t]
+\centering\small
+\begin{tabular}{@{}lL{3.4cm}rrrrL{6.2cm}@{}}
+\toprule
+& query (filter) & BM25 & dense & hybrid & +rerank & top hit after re-ranking \\
+& & ms & ms & ms & ms & \\
+\midrule
+Q1 & Scope 3 greenhouse gas emissions reporting (Gallant Venture, 2022--2025) & 3.8 & 19.2 & 23.3 & 571.6 & 2023 p.26 ``Disclose Scope 1, 2, and, if appropriate, Scope 3 greenhouse gas (GHG) emissions and the related risks.'' \\
+Q2 & 100\% ISPO certification of mills and estates (Indofood Agri, 2021--2025) & 2.3 & 20.5 & 23.5 & 430.0 & 2024 p.43 ``Sustainability certification of all estates' hectarage is ISPO certified \ldots 89\%''; second hit 2021 p.11 ``we aim to have 100\% of our mills and estates ISPO certified by 2023.'' \\
+Q3 & electricity consumption per square foot target (Old Chang Kee, 2021--2025) & 2.9 & 19.3 & 22.3 & 130.1 & 2021 p.14 ``Our target is to maintain or lower our electricity consumption (kwh) per square foot in FY2022.''; the FY2023 and FY2024 target sentences follow \\
+Q4 & solar rooftops installed at distribution centers (ThaiBev, 2023--2025) & 2.4 & 20.5 & 21.0 & 180.9 & 2023 p.169 ``In 2023, ThaiBev installed solar rooftops at two distribution centers in Nakhon Ratchasima and Surat Thani.'' \\
+Q5 & commitment to achieve net zero emissions by 2050 (no filter) & 20.2 & 22.4 & 44.6 & 125.4 & ThaiBev 2025 p.31 ``Thailand has committed to achieving Net-Zero greenhouse gas emissions by 2050.''; then CSE Global 2025, Centurion 2025 \\
+\bottomrule
+\end{tabular}
+\caption{Five example queries (Question 2): median of three calls after a warm-up, $k = 5$, statement store \texttt{d8a62bfe40c6}, one machine, CPU re-ranker. End-to-end classification of an item, retrieval plus one classifier call, runs at 2.8--3.8\,s p50 in the evaluation runs (Table~\ref{tab:rq1-cost}).}
+\label{tab:five-queries}
+\end{table*}
+
+\subsection{Retrieval innovations and the queries they fixed}
+\label{sec:innovations}
+Beyond the course pipeline, five changes mattered, each for a specific failure. (1)~\emph{Contextual headers}: prefixing each chunk with company, year and page gives BM25 and the encoder the company name a bare table row lacks. (2)~\emph{Company and year filters, and the cross-year window}: templated prose makes other companies' sentences the nearest neighbours (Q5); every RQ1 arm filters by company and excludes the target's year, every RQ2 arm reads only the window after the promise. (3)~\emph{The statement as the unit}: three 200-word passages from other years are worse evidence than three statements ($p = 0.043$, Section~\ref{sec:rq1-unit}), and the graph's edges point at statements, so the comparison is on one unit. (4)~\emph{Every statement in the dense index}: the first promise evidence fused a complete BM25 ranking with a dense ranking that covered only the 71,342 sentence-shaped statements; RRF with $k_0 = 60$ puts a statement that is first in one list (score $1/61$) below one that is thirtieth in both ($2/90$), so result lines that ranked first to third on BM25 were cut, and only 1.6\% of the evidence shown came from outside the dense index. Table~\ref{tab:fixed-queries} lists eight answer statements found by hand; with both rankings complete, a budget per report year and neighbours, six of the eight are shown and the human-verified \emph{unclear} share of commitments fell from 49\% to 31\%. (5)~\emph{The graph join and the trajectory finder}: an exact join on (company, aspect, year) answers in 9--20\,ms what the hybrid path answers in 190--730\,ms, and ordered, budgeted reading of later reports lets the judge read 11.7 statements instead of 20 at the same accuracy (Section~\ref{sec:rq2-gold}).
+
+\begin{table}[t]
+\centering\footnotesize
+\setlength{\tabcolsep}{3pt}
+\begin{tabular}{@{}L{3.3cm}rrr@{}}
+\toprule
+promise $\to$ answer statement & BM25 & dense & fused@6 \\
+\midrule
+ThaiBev solar rooftops $\to$ ``installed solar rooftops at two distribution centers'' & 1 & no vector & 7 \\
+Jumbo complaints $\to$ FY2022 performance table & 1 & no vector & 9 \\
+Gallant Venture GHG $\to$ ``achieved a 15.4\% reduction'' & 3 & no vector & 16 \\
+Old Chang Kee electricity $\to$ ``was 61 kwh per square foot (FY2020: 68)'' & 3 & no vector & 18 \\
+Indofood Agri ISPO $\to$ ``by 2024 has been postponed'' & 5 & 11 & 7 \\
+Old Chang Kee accidents $\to$ ``Requires improvement as we recorded two cases'' & none & 10 & 19 \\
+Tiong Woon ERP $\to$ ``In FY2022, we began integrating'' & none & 58 & -- \\
+Indofood Agri pouch $\to$ ``has been delayed'' (2023 report) & 1 & 1 & n/a \\
+\bottomrule
+\end{tabular}
+\caption{Queries that failed under the first promise evidence (Question 3): the rank of the hand-found answer statement in each ranking and after fusion cut at six (n/a: the sentence lies outside the first version's deadline-year window). Six of the eight are shown by the final finder; the ISPO sentence ranks eighth among many ISPO statements and the Tiong Woon sentence is not reachable by similarity.}
+\label{tab:fixed-queries}
+\end{table}
+
+% =============================================================================================
+\section{Results for RQ1}
+\label{sec:rq1}
+
+\subsection{Does evidence change the label?}
+\label{sec:rq1-main}
+
+Table~\ref{tab:rq1-main} and Figure~\ref{fig:rq1} give every arm on the 331 development items with the cited classifier and three repeats (runs \run{baseline/statement-hybrid-cited}, \run{graph/graph-arms-cited}, \run{baseline/passage-hybrid-cited}, all on snapshot \texttt{3e18cc14e648}). Three independent runs of the no-evidence configuration give votes of 0.7397, 0.7498 and 0.7580 (pairwise $p = 1.00$ and $0.77$): that spread of 0.018 is the noise floor. Against it, the best evidence arm, hybrid retrieval from the company's other years, adds 0.037 to its own sentence-only vote with $p = 0.21$; graph plus BM25 fused adds 0.017 with $p = 1.00$; same-report evidence and the neighbouring sentences add nothing. \textbf{Retrieved evidence moves the vote by at most 0.04, never significantly, and the graph is not distinguishable from plain hybrid retrieval} (best hybrid against best graph: $+6 / -11$ items, $p = 0.33$). The per-label view (Table~\ref{tab:rq1-labels}) shows where the small gain sits: \emph{indeterminate} recall rises from 0.50 to 0.57 under cross-year evidence while \emph{implemented} and \emph{planning} hardly move, which is the direction A3CG's error analysis predicts for missing context. The price is detection: the \emph{none} F1 drops from 0.766 to 0.690--0.739 when evidence is shown, so evidence occasionally talks the model into a pair the annotators rejected.
+
+\begin{table*}[t]
+\centering\footnotesize
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{@{}lrrrrrrr@{}}
+\toprule
+arm (run) & macro-F1 mean $\pm$ sd & vote & 95\% CI & none F1 & $p$ & retr.\ p50 & USD/1k \\
+\midrule
+sentence only (B) & 0.7451 $\pm$ 0.019 & 0.7397 & 0.683--0.793 & 0.766 & -- & -- & 0.215 \\
+sentence only (G) & 0.7450 $\pm$ 0.014 & 0.7498 & 0.695--0.801 & 0.753 & -- & -- & 0.214 \\
+sentence only (P) & 0.7517 $\pm$ 0.005 & 0.7580 & 0.704--0.810 & 0.739 & -- & -- & 0.213 \\
+neighbouring sentences (B) & 0.7453 $\pm$ 0.007 & 0.7617 & 0.705--0.816 & 0.705 & 0.82 & -- & 0.251 \\
+hybrid, same report (B) & 0.7380 $\pm$ 0.006 & 0.7442 & 0.687--0.794 & 0.690 & 0.68 & 734 ms & 0.259 \\
+hybrid, other years (B) & 0.7676 $\pm$ 0.004 & \textbf{0.7767} & 0.721--0.828 & 0.739 & 0.21 & 191 ms & 0.255 \\
+graph, other years (G) & 0.7472 $\pm$ 0.010 & 0.7449 & 0.688--0.799 & 0.731 & 0.77 & 9 ms & 0.227 \\
+graph + BM25 fused (G) & 0.7708 $\pm$ 0.006 & 0.7668 & 0.713--0.818 & 0.711 & 1.00 & 20 ms & 0.253 \\
+\midrule
+any arm, test split (669 items) & \multicolumn{7}{l}{\pending{}} \\
+\bottomrule
+\end{tabular}
+\caption{RQ1 on the development split (331 items, cited classifier, three uncached repeats). Runs: (B) \run{baseline/statement-hybrid-cited}, (G) \run{graph/graph-arms-cited}, (P) \run{baseline/passage-hybrid-cited}. Macro-F1 over the three action labels; the vote is the majority over repeats with its bootstrap 95\% interval; $p$ is the paired McNemar test of the arm's vote against the sentence-only vote of the same run; retrieval latency is p50 per item with three runs sharing one machine; cost at 0.20 / 1.20 USD per million input / output tokens.}
+\label{tab:rq1-main}
+\end{table*}
+
+\begin{figure}[t]
+\centering
+\begin{tikzpicture}
+\begin{axis}[
+  width=\columnwidth, height=5.6cm, ybar, bar width=9pt,
+  ymin=0.60, ymax=0.86, ylabel={vote macro-F1}, ylabel near ticks,
+  symbolic x coords={S-only,local,same rep.,cross-yr hyb.,graph,fused,cross-yr pass.},
+  xtick=data, x tick label style={rotate=35, anchor=east, font=\scriptsize},
+  y tick label style={font=\scriptsize}, ylabel style={font=\scriptsize},
+  error bars/y dir=both, error bars/y explicit, error bars/error bar style={black, thin},
+  enlarge x limits=0.1,
+]
+\addplot+[fill=blue!35, draw=blue!60!black] table[x=arm, y=f1, y error plus=hi, y error minus=lo, row sep=\\] {
+arm f1 lo hi \\
+S-only 0.7397 0.0572 0.0531 \\
+local 0.7617 0.0566 0.0540 \\
+{same rep.} 0.7442 0.0576 0.0502 \\
+{cross-yr hyb.} 0.7767 0.0557 0.0510 \\
+graph 0.7449 0.0572 0.0536 \\
+fused 0.7668 0.0540 0.0515 \\
+{cross-yr pass.} 0.7396 0.0559 0.0529 \\
+};
+\end{axis}
+\end{tikzpicture}
+\caption{RQ1 majority-vote macro-F1 per arm with the bootstrap 95\% interval (dev, 331 items). Every interval overlaps every other; only the paired test can separate arms, and it does not.}
+\label{fig:rq1}
+\end{figure}
+
+\begin{table}[t]
+\centering\footnotesize
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{@{}llrrr@{}}
+\toprule
+arm & label & P & R & F1 \\
+\midrule
+\multirow{3}{*}{sentence only} & implemented & 0.796 & 0.860 & 0.827 \\
+ & planning & 0.740 & 0.864 & 0.797 \\
+ & indeterminate & 0.735 & 0.500 & 0.595 \\
+\midrule
+\multirow{3}{*}{hybrid, other yrs} & implemented & 0.805 & 0.882 & 0.842 \\
+ & planning & 0.803 & 0.864 & 0.832 \\
+ & indeterminate & 0.774 & 0.569 & 0.656 \\
+\midrule
+\multirow{3}{*}{graph + BM25} & implemented & 0.807 & 0.860 & 0.833 \\
+ & planning & 0.803 & 0.864 & 0.832 \\
+ & indeterminate & 0.719 & 0.569 & 0.636 \\
+\bottomrule
+\end{tabular}
+\caption{Per-label precision, recall and F1 of the majority vote (dev; supports 136 / 66 / 72). The confusion is the same in every arm: a quarter of the \emph{indeterminate} items are read as \emph{implemented} (25, 24 and 23 of 72), the LLM failure mode A3CG reports.}
+\label{tab:rq1-labels}
+\end{table}
+
+\subsection{Why so little: the classifier rarely uses what it is given}
+\label{sec:rq1-why}
+The classifier cites a retrieved span in 9\% of items with same-report evidence and about 1\% with other-year evidence from either retriever. The RAG-metric judge (Table~\ref{tab:ragas}) finds the rationales faithful (0.96--0.98 of their atomic statements supported by the sources shown) and a minority of the retrieved statements relevant (context relevance 0.37 same report, 0.29 other years; context precision 0.50 and 0.37). A human calibration of that judge on a blind sheet of 186 rows found it strict on faithfulness (agreement 0.976; it never called supported what the person called unsupported) and lenient on relevance by about 1.7$\times$ (agreement 0.831; nine passages called relevant that the person did not), so the corrected context relevance is about 0.22 and 0.17. Relevant sentences are often there and still not needed: for labelling what a sentence says, the sentence carries the answer.
+
+\begin{table}[t]
+\centering\scriptsize
+\setlength{\tabcolsep}{3pt}
+\begin{tabular}{@{}lrrrr@{}}
+\toprule
+condition & faith. & ans.\ rel. & ctx.\ P & ctx.\ rel. \\
+\midrule
+sentence only & 0.964 & 0.574 & -- & -- \\
+local & 0.961 & 0.573 & -- & -- \\
+hybrid, same report & 0.976 & 0.563 & 0.497 & 0.369 \\
+hybrid, other years & 0.973 & 0.568 & 0.371 & 0.286 \\
+\midrule
+judge--human agreement & 0.976 & -- & -- & 0.831 \\
+judge lenient by & -- & -- & -- & 1.7$\times$ \\
+\bottomrule
+\end{tabular}
+\caption{Answer-level RAG metrics (run \run{baseline/statement-hybrid-cited}, repeat 0, 331 items, LLM-judged) and the human calibration of the judge (186 rows). Answer relevance is comparable across conditions, not against 1.0.}
+\label{tab:ragas}
+\end{table}
+
+\subsection{Statements beat passages as cross-year evidence}
+\label{sec:rq1-unit}
+Table~\ref{tab:rq1-unit} pairs the passage store (18,839 windows of about 200 words over the same statements) against the statement store on the same 331 items. Inside the same report the two units tie; from the company's other years, three passages are worse than three statements ($+18 / -7$ flips, $p = 0.043$), and passage evidence lowers \emph{none} F1 further (0.70 against 0.74). One of four comparisons is significant, so this is a direction rather than a settled fact, but it is why the statement is the project's unit and why the passage store is kept only as the ablation.
+
+\begin{table}[t]
+\centering\scriptsize
+\setlength{\tabcolsep}{3pt}
+\begin{tabular}{@{}lrrrr@{}}
+\toprule
+arm & passages & statements & flips & $p$ \\
+\midrule
+hybrid, same report & 0.7499 & 0.7442 & $+11 / {-12}$ & 1.00 \\
+hybrid, other years & 0.7396 & \textbf{0.7767} & $+18 / {-7}$ & \textbf{0.043} \\
+local & 0.7509 & 0.7617 & $+9 / {-6}$ & 0.61 \\
+sentence only & 0.7580 & 0.7397 & $+5 / {-7}$ & 0.77 \\
+\bottomrule
+\end{tabular}
+\caption{Granularity ablation: vote macro-F1 under the passage and the statement store, paired on the 331 items (flips passage $\to$ statement, McNemar $p$). Runs \run{baseline/passage-hybrid-cited} and \run{baseline/statement-hybrid-cited}.}
+\label{tab:rq1-unit}
+\end{table}
+
+\subsection{The agentic arm}
+\label{sec:rq1-agentic}
+Table~\ref{tab:rq1-agentic} reports the agentic system's run (\run{agent-rag/passage-hybrid}, 2026-10-20, 331 dev items, three repeats). It was run on the passage store with the one-word classifier before the project moved to the statement store and the cited classifier, so its numbers are paired only within the run, not against Table~\ref{tab:rq1-main}. Within the run, hybrid cross-year evidence adds 0.046 to sentence-only ($p = 0.27$) and the agentic loop over the same store adds 0.033 ($p = 1.00$); the planner declared the hop-0 evidence sufficient for most items (839 of 879 final spans came from hop 0, 38 from hop 1, 2 from hop 2) and costs three times the tokens of the fixed arm (USD 0.63 against 0.20 per 1,000 items) and 10\,s against 7.3\,s retrieval p50, with a p95 of 43\,s. The budget-against-accuracy result matches \citet{ferrazzi2026agentic}: the agent does not buy accuracy here, and the question it can still answer is RQ2, where the search is a multi-hop plan. \pending{}: the agentic arm on the statement store with the cited classifier (paired against Table~\ref{tab:rq1-main}), its RQ2 run on the gold development split, and both on test.
+
+\begin{table}[t]
+\centering\scriptsize
+\setlength{\tabcolsep}{3pt}
+\begin{tabular}{@{}lrrrrr@{}}
+\toprule
+condition & mean $\pm$ sd & vote & $p$ & tok in/out & USD/1k \\
+\midrule
+sentence only & 0.724 $\pm$ 0.004 & 0.7227 & -- & 394/9 & 0.090 \\
+local & 0.753 $\pm$ 0.019 & 0.7457 & 0.07 & 506/24 & 0.129 \\
+same report & 0.724 $\pm$ 0.021 & 0.7287 & 0.42 & 899/31 & 0.217 \\
+other years, hybrid & 0.762 $\pm$ 0.009 & \textbf{0.7688} & 0.27 & 839/27 & 0.201 \\
+other years, agentic & 0.750 $\pm$ 0.005 & 0.7555 & 1.00 & 1654/253 & 0.634 \\
+\midrule
+statement store, cited & \multicolumn{5}{l}{\pending{}} \\
+\bottomrule
+\end{tabular}
+\caption{The agentic system on dev (passage store, one-word classifier, three repeats; run \run{agent-rag/passage-hybrid}). $p$ is McNemar against the run's own sentence-only vote; the agentic tokens include the planner's.}
+\label{tab:rq1-agentic}
+\end{table}
+
+\subsection{Speed, cost and scalability}
+\label{sec:rq1-cost}
+Table~\ref{tab:rq1-cost} gives the performance figures of the reference runs. A classifier call takes 2.7--3.1\,s p50 regardless of evidence; retrieval adds 9--20\,ms through the graph and 190--730\,ms through the hybrid path, which needs a query embedding round trip and a CPU cross-encoder pass; throughput at the classifier's concurrency of eight is 2.3--2.7 items per second. Cost is USD 0.21--0.30 per 1,000 items (540 input and 89 output tokens without evidence, 660--990 and 86--105 with). The knowledge base is 108,376 chunks with 1,536-dimensional vectors (660\,MB in memory, loaded once per process); the Postgres backend serves the same vectors through an HNSW index for a shared deployment, and the per-company filters keep the dense candidate set small. Judging all 374 promises three times costs USD 1.5--1.9; the whole RQ1 evaluation of one system on dev, four conditions times three repeats, costs about USD 1.
+
+\begin{table}[t]
+\centering\scriptsize
+\setlength{\tabcolsep}{3pt}
+\begin{tabular}{@{}lrrrr@{}}
+\toprule
+condition & retr.\ p50/p95 & e2e p50/p95 & items/s & USD/1k \\
+\midrule
+sentence only & -- & 2766/5766 & 2.51 & 0.215 \\
+local & -- & 2751/4585 & 2.61 & 0.251 \\
+hybrid, same report & 734/1449 & 3805/6213 & 2.29 & 0.259 \\
+hybrid, other years & 191/954 & 3214/6686 & 2.39 & 0.255 \\
+graph, other years & 9/11 & 2991/5207 & 2.41 & 0.227 \\
+graph + BM25 fused & 20/88 & 3152/4918 & 2.39 & 0.253 \\
+\bottomrule
+\end{tabular}
+\caption{Latency (ms per item), throughput and cost (runs \run{baseline/statement-hybrid-cited} and \run{graph/graph-arms-cited}; three runs shared one machine).}
+\label{tab:rq1-cost}
+\end{table}
+
+% =============================================================================================
+\section{Results for RQ2}
+\label{sec:rq2}
+
+\begin{figure}[t]
+\centering
+\begin{tikzpicture}[font=\scriptsize, node distance=2mm,
+  st/.style={draw, rounded corners=2pt, fill=blue!6, align=center, inner sep=3pt, text width=6.4cm}]
+  \node[st] (a) {110,314 parsed statements};
+  \node[st, below=of a] (b) {3,164 candidates: a future year and a commitment cue};
+  \node[st, below=of b] (c) {1,273 validated dated targets (sub-agents; the small model finds 1,462, $\kappa$ 0.79)};
+  \node[st, below=of c] (d) {880 promises: restatements merged, \texttt{related} targets linked};
+  \node[st, below=of d] (e) {374 checkable: deadline $\le$ 2025, stated before it, a report for it};
+  \node[st, fill=green!8, below=of e] (f) {373 gold outcomes, dev 123 / test 250: 137 by the human pair ($\kappa$ 0.84), 236 by the model pair, adjudicated};
+  \foreach \x/\y in {a/b,b/c,c/d,d/e,e/f} \draw[-{Latex[length=1.6mm]}] (\x) -- (\y);
+\end{tikzpicture}
+\caption{The promise pipeline from statements to the gold set.}
+\label{fig:funnel}
+\end{figure}
+
+\subsection{Judge and evidence versions on the human checks}
+\label{sec:rq2-judge}
+Table~\ref{tab:rq2-checks} scores the first and the final system on their human check sheets, weighted to the pools they were drawn from. Overall accuracy on the reported classes is 0.82 in both; what changed is \emph{where} the system is wrong. The first judge, naming the outcome directly, gave a verdict on 31\% of the commitments the annotator could not settle, always in the stricter direction (a later year's result read as the deadline year's, a different scope or level taken for this target, an annual target set again read as a moved deadline). With per-statement labels and the rule, on held-out rows nothing was tuned on, that over-commitment fell to 14\% (2--33) and the verdicts given are right 85\% of the time (74--94); the price is 15\% of settled commitments left \emph{unclear}. On the 74 rows the prompt was tuned on, the model's own outcome in the same reply reaches 0.81 and the rule 0.88--0.92, so the rule adds to the questions, mostly on \emph{revised}. The judge is noisy: 16\% of promises do not get the same outcome in three runs, almost always a verdict against unclear, hence the majority vote. The \emph{failed}-versus-\emph{revised} boundary accounted for 8 of the 20 disagreements on the held-out sheet, partly a guide ambiguity of ours; the decision to report both as \emph{failed} (the deadline passed without the target being reported as met) moved raw accuracy by 0.03 only and left one rule for annotators and system alike.
+
+\begin{table}[t]
+\centering\footnotesize
+\setlength{\tabcolsep}{3pt}
+\begin{tabular}{@{}L{2.9cm}>{\raggedleft\arraybackslash}p{2.1cm}>{\raggedleft\arraybackslash}p{2.3cm}@{}}
+\toprule
+& first system: judge v1, top-6, 75 of 374 & final system: rule judge, trajectory, 60 held out of 299 \\
+\midrule
+genuine commitment / fields right & 0.99 / 0.91 & 1.00 / 0.82 \\
+accuracy, reported classes & 0.82 (0.72--0.90) & 0.82 (0.70--0.92) \\
+verdict where the check says unclear & 31\% (20--42) & \textbf{14\% (2--33)} \\
+unclear where the check has a verdict & 0\% & 15\% (3--29) \\
+verdicts that are right & 75\% (63--86) & 85\% (74--94) \\
+statements shown per promise & 6 & 11.6 \\
+\bottomrule
+\end{tabular}
+\caption{The two human check sheets, weighted to their pools, 95\% bootstrap intervals (\texttt{promise-check-first-evidence.xlsx}, \texttt{promise-check-trajectory.xlsx}). The final system's rows were not used for tuning.}
+\label{tab:rq2-checks}
+\end{table}
+
+\subsection{Retrieval arms against the gold set}
+\label{sec:rq2-gold}
+Table~\ref{tab:rq2-main} runs \texttt{gw-eval --task rq2} on the gold development split: one \cond{promise\_window} retrieval per promise with each system, the shared rule judge three times over identical evidence, the vote scored against the gold (runs \run{graph/promise-window-trajectory}, \run{baseline/promise-window-hybrid}, snapshot \texttt{a6f35618dd6e}). The trajectory finder's evidence and the hybrid baseline's top 20 both put the vote at 97 of 123 right (accuracy 0.789, \kappaval{} 0.69 and 0.68, macro-F1 0.769 and 0.771); paired, $+4 / -4$, $p = 1.00$. \textbf{On RQ2 as on RQ1, the graph line's structured retrieval and plain hybrid retrieval are not distinguishable on dev.} What differs is how they get there: the finder reads 11.7 statements where the baseline reads 20, so its judgements cost 20\% less (USD 1.30 against 1.62 per 1,000) and are steadier (10 promises change label across repeats against 20); the baseline is more cautious (a verdict on 3 of the 22 gold-unclear promises against 5, 21 of 101 settled ones left unclear against 17, 94\% of its verdicts right against 90\%). Per class (finder): precision / recall achieved 0.93 / 0.82, failed 0.92 / 0.71, unclear 0.50 / 0.77, disappeared 0.67 / 1.00; the confusions are \emph{achieved} and \emph{failed} promises left unclear (10 and 7) and the two boundaries the human annotators also split on, unclear against disappeared when the evidence touches the subject but not the target, and whether a practice shown running counts as achieved. Accuracy on the 22 human-labelled dev rows is 0.68 (both arms) against 0.81 on the model-labelled rows; the human rows are the earlier, harder sample.
+
+\begin{table*}[t]
+\centering\scriptsize
+\setlength{\tabcolsep}{3.5pt}
+\begin{tabular}{@{}lrrrrrrrrr@{}}
+\toprule
+arm (run) & acc.\ mean $\pm$ sd & vote acc. & \kappaval & macro-F1 & over-commit & under-commit & verdict prec. & stmts & retr.\ p50 \\
+\midrule
+trajectory finder (T) & 0.791 $\pm$ 0.005 & 0.789 & 0.69 & 0.769 & 5 / 22 & 17 / 101 & 80 / 89 (0.90) & 11.7 & 261 ms \\
+hybrid top-20 in window (H) & 0.783 $\pm$ 0.009 & 0.789 & 0.68 & 0.771 & 3 / 22 & 21 / 101 & 78 / 83 (0.94) & 20.0 & 641 ms \\
+agentic, plan in window & \multicolumn{9}{l}{\pending{}} \\
+\midrule
+any arm, test split (250 promises) & \multicolumn{9}{l}{\pending{}} \\
+\bottomrule
+\end{tabular}
+\caption{RQ2 on the gold development split (123 promises, shared rule judge, three uncached repeats). Runs: (T) \run{graph/promise-window-trajectory}, (H) \run{baseline/promise-window-hybrid}. Over-commit: a verdict where the gold is unclear; under-commit: unclear where the gold has a verdict. Paired T vs H on the votes: $+4 / {-4}$, McNemar $p = 1.00$. Bootstrap 95\% interval of the vote accuracy 0.715--0.854 and 0.715--0.862.}
+\label{tab:rq2-main}
+\end{table*}
+
+\subsection{What the commitments did}
+\label{sec:rq2-outcomes}
+Figure~\ref{fig:outcomes} gives the outcome shares three ways: human-verified on the first evidence (49\% unclear), human-verified on the complete evidence (31\% unclear), and the gold set over all 373. Where the outcome can be told, four in five commitments were met and one in five was missed or re-dated; a few vanish from the reports. About a third of the first-round \emph{unclear} was the retrieval, not the reports. System counts over the 374 on trajectory evidence: achieved 169, failed 56, unclear 134, disappeared 15; on the hybrid baseline's evidence 172 / 62 / 125 / 15.
+
+\begin{figure}[t]
+\centering
+\begin{tikzpicture}
+\begin{axis}[
+  width=\columnwidth, height=5.6cm, ybar, bar width=7pt,
+  ymin=0, ymax=65, ylabel={share of commitments (\%)}, ylabel near ticks,
+  symbolic x coords={achieved,failed,unclear,disappeared}, xtick=data,
+  x tick label style={font=\scriptsize}, y tick label style={font=\scriptsize}, ylabel style={font=\scriptsize},
+  legend style={font=\scriptsize, at={(0.5,-0.22)}, anchor=north, draw=none, fill=none, legend columns=1, cells={anchor=west}},
+  enlarge x limits=0.18,
+]
+\addplot+[fill=gray!40, draw=gray!70!black] coordinates {(achieved,36.0) (failed,7.6) (unclear,48.7) (disappeared,5.3)};
+\addplot+[fill=blue!35, draw=blue!60!black] coordinates {(achieved,50.1) (failed,12.8) (unclear,30.9) (disappeared,6.2)};
+\addplot+[fill=green!40, draw=green!50!black] coordinates {(achieved,55.2) (failed,18.2) (unclear,23.1) (disappeared,3.5)};
+\legend{{human: first evidence (n=75, pool 374)},{human: complete evidence (n=60, pool 299)},{gold set (n=373)}}
+\end{axis}
+\end{tikzpicture}
+\caption{What dated commitments became, by source of the label. The two human-verified bars are different samples weighted to different pools; the gold bar counts every checkable promise.}
+\label{fig:outcomes}
+\end{figure}
+
+\subsection{Case studies}
+\label{sec:rq2-cases}
+Ten commitments from eight companies were followed through every statement of the company, one per pattern (Table~\ref{tab:cases}); none is a finding of greenwashing. Reading the whole timeline changed the sheet's label for five of the ten, and of the eleven commitments the first check called \emph{disappeared}, five were in the reports after all (a partial delivery on page 169 of a 1,976-statement report, a miss stated in a flattened target table, a delay disclosed two years before the deadline). One timeline shows what only the sequence reveals: Gallant Venture wrote in 2022 ``We will be expanding our reporting scope to include Scope 3 categories by FY2023'' (p.34); in 2023 ``We are looking into incorporating several Scope 3 GHG emission categories'' (p.26); in 2024 and 2025 ``exploring'' (p.27). Each later sentence alone is an unremarkable statement of intent and would be labelled \emph{indeterminate}; only the sequence shows a commitment that was dated once and whose date was never replaced. Query Q1 of Table~\ref{tab:five-queries} is this case, and the dense ranking returns exactly these sentences.
+
+\begin{table}[t]
+\centering\footnotesize
+\begin{tabular}{@{}L{1.5cm}L{2.6cm}L{2.7cm}@{}}
+\toprule
+company & commitment (deadline) & pattern \\
+\midrule
+Tiong Woon & solar panels (FY2023) & delivered on time, output reported after \\
+Indofood Agri & 100\% allergen disclosure (2022) & 99\% at the deadline, delivered a year late, disclosed \\
+Gallant Venture & GHG $-10$\% vs 2017 (2022) & deadline moved to 2024 without comment; level met \\
+Indofood Agri & 100\% ISPO certification (2023) & moved to 2024, then 2026, with reasons; 89\% for three years \\
+Gallant Venture & report Scope 3 (FY2023) & dated commitment dissolves into intent \\
+CDL HTrust & SBTi target (FY2024) & milestone slips a year per report \\
+Old Chang Kee & electricity per sq ft (annual) & two years met, two missed and said so \\
+Kim Heng & zero corruption cases; $\le 3$ lost-time incidents & one issuer, both outcomes, in its own target tables \\
+ThaiBev & solar rooftops at four sites (2023) & two reported, not reconciled \\
+LHN & digital name cards (FY2022) & never mentioned again \\
+\bottomrule
+\end{tabular}
+\caption{The ten page-cited case studies (full timelines in \texttt{docs/case-studies.md}).}
+\label{tab:cases}
+\end{table}
+
+% =============================================================================================
+\section{Discussions}
+\label{sec:discussion}
+
+\paragraph{Evidence does not change the label, and that is a result.}
+The headline experiment was designed to be falsifiable: evidence should help the ellipsis and attribution cases and leave modality and negation alone. What we measure is a small, consistent, insignificant gain concentrated in \emph{indeterminate} recall, a cost in \emph{none} detection, and a classifier that cites what it is given in 1--9\% of items. The retrieved statements are mostly not relevant (corrected context relevance about 0.2), and when they are, the sentence already carried the answer. For an A3CG-style label, context is rarely the missing ingredient; the hard errors are pragmatic (hedging read as implementation), which no amount of same-company text fixes. A larger $k$, or evidence selected for the specific reference it resolves, might move the needle; a fixed budget of three spans does not.
+
+\paragraph{The graph's value is structure and speed, not accuracy.}
+On RQ1 the claim graph matches hybrid retrieval at a tenth of the latency; on RQ2 its trajectory finder matches the hybrid baseline with 40\% fewer statements, cheaper and steadier judgements, and an ordered reading a person can follow. It did not deliver what the proposal hoped for, a better cross-year join through canonical aspects, because canonicalisation failed its precision gate and 79\% of extracted aspects stayed singletons; cross-year edges rest on exact normalised matches. The promise graph (targets, restatements, \texttt{related} links) is the part of the structure that earned its keep.
+
+\paragraph{The unit and the filter.}
+Two decisions about the knowledge base mattered more than any retriever: retrieving statements rather than passages, and ranking \emph{every} statement rather than the sentence-shaped ones. The second is where a sensible-looking filter did real damage, silently, through rank fusion; the human-verified \emph{unclear} share of commitments fell from 49\% to 31\% once it was removed. Chunking is a design choice with a measurable cost, which is the course's point.
+
+\paragraph{Agentic retrieval.}
+At $k = 3$ the planner stops at hop 0 for most sentences and triples the cost for no gain, matching \citet{ferrazzi2026agentic}; its case is RQ2, where finding a result line two reports later is a multi-hop plan over search, neighbours and pages, and where the tool layer now lets it run under the same evaluation. That run is pending.
+
+\paragraph{Judging outcomes: decompose, rule, abstain.}
+Asking per-statement questions and letting a rule name the outcome halved the verdicts given on commitments a reader cannot settle; the rule's cost is abstention on 15\% of settled ones. Both directions are reported, because a user of the output needs the precision of the verdicts (0.90--0.94) more than the accuracy. The judge is noisy (16\% unstable), tables read across columns are the recurring error, and a bare ``this target'' is mis-attributed; the model annotators show the same two boundary cases as the humans.
+
+\paragraph{Annotation.}
+The 1,000-sentence set meets the brief's agreement floor on the shared pilot (0.861 observed, \kappaval{} 0.81), but 950 rows carry one label; the RQ2 gold rests on two humans for 137 rows and on calibrated model annotators of two families for 236, with the calibration reported. Model annotators sit where the humans sit against each other, and two instances of one model are not a second opinion. We report these as limits, not as equivalents of a fully double-annotated set.
+
+\paragraph{Limits and what is not done.}
+Test splits are unopened; rank-aware retrieval metrics need pooled judgements that were not collected; the web front end over the API was not built; the agentic RQ2 arm is pending; a stock-price analysis was screened in the literature and judged under-powered at 28 firms, so it is future work; retrieval latencies were measured with three runs sharing one machine; extraction misses targets that exist only inside tables and scope that the promise sentence left to its context (fields right 0.82 on the stricter check). Everything is assistive screening: a postponement can have a good reason, and an unmentioned pledge may have been kept.
+
+% =============================================================================================
+\section{Conclusion}
+\label{sec:conclusion}
+We built a retrieval-augmented system over 240 SGX sustainability reports with a knowledge base of every parsed statement, a hybrid retriever, a temporal claim graph, an agentic planner and one shared, cited classifier, and evaluated it on a self-annotated set of 1,000 sentences and a gold set of 373 dated commitments with paired tests throughout. Five things can be claimed on the development splits. Statement-level evidence from the company's own reports neither helps nor hurts action classification beyond run-to-run noise, and passages from other years are worse than statements. A temporal claim graph retrieves cross-year evidence at the same accuracy as hybrid retrieval at 9--20\,ms against 190--730\,ms. Following a dated commitment through later reports is feasible: the system's verdicts are right 85--94\% of the time, and it over-commits on 14--23\% of the commitments a reader cannot settle. About half of the dated commitments in these reports can be verified as met from the issuer's later reports, one in six to one in eight was missed or re-dated, a quarter to a third cannot be judged from the text, and a few vanish. Checking outcomes needs every statement in the index, table rows and result lines included. The test-split results, the agentic RQ2 arm and the retrieval qrels are pending and will be added before submission; every number above carries the run it comes from.
+
+\clearpage
+\bibliography{references}
+
+\clearpage
+\appendix
+\section{Reproduction}
+\label{app:repro}
+\begin{small}
+\begin{verbatim}
+uv sync && cp .env.example .env     # keys
+unzip gw-kb-statements-<hash>.zip \
+      -d artifacts/baseline/
+uv run gw-baseline stats            # d8a62bfe40c6
+uv run pytest -q                    # 94 tests
+# RQ1, one system, dev, three repeats
+uv run gw-eval --system baseline-rag \
+  --split dev --repeats 3 --conditions \
+  sentence_only,local,same_report_rrf,\
+  cross_year_rrf
+uv run gw-eval --system graph-rag --split dev \
+  --repeats 3 --conditions \
+  sentence_only,local,cross_year_graph,\
+  cross_year_fused
+# RQ2, any system, shared judge
+uv run gw-eval --task rq2 --system graph-rag \
+  --split dev --repeats 3
+uv run gw-eval --task rq2 --system baseline-rag \
+  --split dev --repeats 3
+# publish, index, compare (paired McNemar)
+uv run gw-eval --publish artifacts/runs/<id> \
+  --name <group>/<name> --note "..."
+uv run gw-eval --compare results/<a> results/<b>
+uv run gw-eval --ragas artifacts/runs/<id>
+# serve the API
+uv run gw-serve --systems baseline-rag,graph-rag
+\end{verbatim}
+\end{small}
+The promise pipeline is the \texttt{gw-graph} sub-commands \texttt{targets-export}, \texttt{targets-ingest}, \texttt{promises}, \texttt{promise-evidence}, \texttt{promise-outcomes}, \texttt{promise-sheet}, \texttt{promise-score} and \texttt{promise-gold}; the graph build is \texttt{gw-graph build}. Both are documented in \texttt{docs/promises.md} and \texttt{docs/graph.md}; every published run is under \texttt{results/} with its manifest.
+
+\end{document}

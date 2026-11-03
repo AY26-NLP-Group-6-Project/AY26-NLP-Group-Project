@@ -1,0 +1,1119 @@
+[
+  {
+    "id": "Q1",
+    "task": "cross-year aspect lookup",
+    "text": "Scope 3 greenhouse gas emissions reporting",
+    "company": "Gallant Venture",
+    "year_from": 2022,
+    "year_to": 2025,
+    "modes": {
+      "bm25": {
+        "ms_median": 3.8,
+        "ms_runs": [
+          4.1,
+          3.8,
+          2.0
+        ],
+        "hits": [
+          {
+            "company": "Gallant Venture",
+            "year": 2022,
+            "page": 34,
+            "score": 21.3718,
+            "statement_id": "136b0754p0034s015",
+            "text": "Disclose Scope 1, Scope 2, and, if appropriate, Scope 3 greenhouse gas (GHG) emissions, and the related risks."
+          },
+          {
+            "company": "Gallant Venture",
+            "year": 2023,
+            "page": 26,
+            "score": 21.0458,
+            "statement_id": "0c0fcf63p0026s010",
+            "text": "Disclose Scope 1, 2, and, if appropriate, Scope 3 greenhouse gas (GHG) emissions and the related risks."
+          },
+          {
+            "company": "Gallant Venture",
+            "year": 2022,
+            "page": 5,
+            "score": 20.5062,
+            "statement_id": "136b0754p0005s008",
+            "text": "We also extended our greenhouse gas (“GHG”) inventory to include Scope 2 emissions."
+          },
+          {
+            "company": "Gallant Venture",
+            "year": 2023,
+            "page": 11,
+            "score": 19.5773,
+            "statement_id": "0c0fcf63p0011s003",
+            "text": "We remain committed to reducing our Scope 1 and 2 greenhouse gas (“GHG”) emissions as far as possible."
+          },
+          {
+            "company": "Gallant Venture",
+            "year": 2024,
+            "page": 10,
+            "score": 19.1437,
+            "statement_id": "9cfcb327p0010s015",
+            "text": "We remain committed to minimising our Scope 1 and 2 greenhouse gas (“GHG”) emissions to the greatest extent possible."
+          }
+        ]
+      },
+      "dense": {
+        "ms_median": 19.2,
+        "ms_runs": [
+          19.2,
+          19.2,
+          19.1
+        ],
+        "hits": [
+          {
+            "company": "Gallant Venture",
+            "year": 2023,
+            "page": 26,
+            "score": 0.6495,
+            "statement_id": "0c0fcf63p0026s013",
+            "text": "We are looking into incorporating several Scope 3 GHG emission categories into our subsequent reports."
+          },
+          {
+            "company": "Gallant Venture",
+            "year": 2024,
+            "page": 27,
+            "score": 0.6456,
+            "statement_id": "9cfcb327p0027s005",
+            "text": "We are exploring including several Scope 3 GHG emission categories in our future reports."
+          },
+          {
+            "company": "Gallant Venture",
+            "year": 2023,
+            "page": 26,
+            "score": 0.6257,
+            "statement_id": "0c0fcf63p0026s010",
+            "text": "Disclose Scope 1, 2, and, if appropriate, Scope 3 greenhouse gas (GHG) emissions and the related risks."
+          },
+          {
+            "company": "Gallant Venture",
+            "year": 2022,
+            "page": 34,
+            "score": 0.6205,
+            "statement_id": "136b0754p0034s015",
+            "text": "Disclose Scope 1, Scope 2, and, if appropriate, Scope 3 greenhouse gas (GHG) emissions, and the related risks."
+          },
+          {
+            "company": "Gallant Venture",
+            "year": 2022,
+            "page": 14,
+            "score": 0.6078,
+            "statement_id": "136b0754p0014s010",
+            "text": "Furthermore, we are looking to expand our GHG inventory to include Scope 3 categories in the next reporting period."
+          }
+        ]
+      },
+      "hybrid": {
+        "ms_median": 23.3,
+        "ms_runs": [
+          23.3,
+          23.5,
+          23.1
+        ],
+        "hits": [
+          {
+            "company": "Gallant Venture",
+            "year": 2022,
+            "page": 34,
+            "score": 0.032,
+            "statement_id": "136b0754p0034s015",
+            "text": "Disclose Scope 1, Scope 2, and, if appropriate, Scope 3 greenhouse gas (GHG) emissions, and the related risks."
+          },
+          {
+            "company": "Gallant Venture",
+            "year": 2023,
+            "page": 26,
+            "score": 0.0315,
+            "statement_id": "0c0fcf63p0026s010",
+            "text": "Disclose Scope 1, 2, and, if appropriate, Scope 3 greenhouse gas (GHG) emissions and the related risks."
+          },
+          {
+            "company": "Gallant Venture",
+            "year": 2022,
+            "page": 5,
+            "score": 0.0297,
+            "statement_id": "136b0754p0005s008",
+            "text": "We also extended our greenhouse gas (“GHG”) inventory to include Scope 2 emissions."
+          },
+          {
+            "company": "Gallant Venture",
+            "year": 2025,
+            "page": 14,
+            "score": 0.0277,
+            "statement_id": "32b8bee4p0014s009",
+            "text": "For Scope 2 greenhouse gas emissions, the Group set a target to achieve a 2% reduction from the 2023 baseline of 3,662 tCO2e."
+          },
+          {
+            "company": "Gallant Venture",
+            "year": 2025,
+            "page": 14,
+            "score": 0.0274,
+            "statement_id": "32b8bee4p0014s006",
+            "text": "For Scope 1 greenhouse gas emissions, the Group had set a target to achieve a 12% reduction from the 2017 baseline of 17,962 tCO2e."
+          }
+        ]
+      },
+      "hybrid+rerank": {
+        "ms_median": 571.6,
+        "ms_runs": [
+          618.5,
+          571.6,
+          563.4
+        ],
+        "hits": [
+          {
+            "company": "Gallant Venture",
+            "year": 2023,
+            "page": 26,
+            "score": 6.9265,
+            "statement_id": "0c0fcf63p0026s010",
+            "text": "Disclose Scope 1, 2, and, if appropriate, Scope 3 greenhouse gas (GHG) emissions and the related risks."
+          },
+          {
+            "company": "Gallant Venture",
+            "year": 2025,
+            "page": 27,
+            "score": 6.7948,
+            "statement_id": "32b8bee4p0027s001",
+            "text": "Disclose Scope 1, Scope 2, and, if appropriate, Scope 3 greenhouse gas (“GHG”) emissions, and the related risks."
+          },
+          {
+            "company": "Gallant Venture",
+            "year": 2025,
+            "page": 28,
+            "score": 6.7356,
+            "statement_id": "32b8bee4p0028s003",
+            "text": "To address these developments, the Group plans to: Develop a centralised emissions monitoring system covering Scope 1 and Scope 2 emissions, with progressive inclusion of Scope 3 emissions; Strengthen internal reporting controls; and Conduct regular legal and compliance reviews."
+          },
+          {
+            "company": "Gallant Venture",
+            "year": 2025,
+            "page": 14,
+            "score": 6.5392,
+            "statement_id": "32b8bee4p0014s009",
+            "text": "For Scope 2 greenhouse gas emissions, the Group set a target to achieve a 2% reduction from the 2023 baseline of 3,662 tCO2e."
+          },
+          {
+            "company": "Gallant Venture",
+            "year": 2024,
+            "page": 10,
+            "score": 5.0364,
+            "statement_id": "9cfcb327p0010s015",
+            "text": "We remain committed to minimising our Scope 1 and 2 greenhouse gas (“GHG”) emissions to the greatest extent possible."
+          }
+        ]
+      }
+    },
+    "graph": {
+      "statement_id": "0c0fcf63p0026s010",
+      "aspects": [],
+      "aspects_ms": 12.8,
+      "follow_ups": [],
+      "follow_ups_n": 0,
+      "follow_ups_ms": 12.6
+    },
+    "related_targets": {
+      "n": 0,
+      "ms": 33.7,
+      "items": []
+    }
+  },
+  {
+    "id": "Q2",
+    "task": "promise follow-up inside the deadline window",
+    "text": "100% ISPO certification of mills and estates",
+    "company": "Indofood Agri",
+    "year_from": 2021,
+    "year_to": 2025,
+    "modes": {
+      "bm25": {
+        "ms_median": 2.3,
+        "ms_runs": [
+          2.3,
+          2.3,
+          2.2
+        ],
+        "hits": [
+          {
+            "company": "Indofood Agri",
+            "year": 2025,
+            "page": 45,
+            "score": 33.192,
+            "statement_id": "7357444ap0045s003",
+            "text": "In this section UPDATES FOR 2025 Sustainability certification 89% of all nucleus estates’ hectarage production is ISPO certified 85% of nucleus CPO production is ISPO certified Supply chain traceability and transparency 100% of FFB processed in mills is traceable to estates 100% of CPO processed in "
+          },
+          {
+            "company": "Indofood Agri",
+            "year": 2023,
+            "page": 40,
+            "score": 30.3043,
+            "statement_id": "052effeep0040s000",
+            "text": "of all estates’ hectarage is ISPO certified of nucleus CPO production is ISPO certified Sustainability certification In this section Supply chain traceability and transparency of FFB processed in mills is traceable to estates of CPO processed in refineries is traceable to mills of PK processed in ke"
+          },
+          {
+            "company": "Indofood Agri",
+            "year": 2023,
+            "page": 15,
+            "score": 30.2504,
+            "statement_id": "052effeep0015s007",
+            "text": "As a demonstration of our dedication to responsible sourcing, we aim to achieve 100% ISPO certification for all our mills and nucleus estates by the end of 2024."
+          },
+          {
+            "company": "Indofood Agri",
+            "year": 2021,
+            "page": 30,
+            "score": 28.8915,
+            "statement_id": "787eaec0p0030s000",
+            "text": "Responsible sourcing Material topics Goal/target Progress in 2021 Sustainability Certification By end 2023: ISPO certification for all estates Achieved 83% of targeted hectarage* By end 2023: ISPO certification for all mills Achieved certification for 18 out of 27 mills."
+          },
+          {
+            "company": "Indofood Agri",
+            "year": 2022,
+            "page": 34,
+            "score": 28.5581,
+            "statement_id": "d515aa12p0034s000",
+            "text": "Responsible sourcing Material topics Goal/target Updates for 2022 Sustainability Certification By end 2024: ISPO certification for all nucleus estates Achieved 86% of targeted hectarage* By end 2024: ISPO certification for all mills Achieved certification for 20 out of 27 mills."
+          }
+        ]
+      },
+      "dense": {
+        "ms_median": 20.5,
+        "ms_runs": [
+          20.2,
+          20.5,
+          20.5
+        ],
+        "hits": [
+          {
+            "company": "Indofood Agri",
+            "year": 2023,
+            "page": 40,
+            "score": 0.6596,
+            "statement_id": "052effeep0040s000",
+            "text": "of all estates’ hectarage is ISPO certified of nucleus CPO production is ISPO certified Sustainability certification In this section Supply chain traceability and transparency of FFB processed in mills is traceable to estates of CPO processed in refineries is traceable to mills of PK processed in ke"
+          },
+          {
+            "company": "Indofood Agri",
+            "year": 2021,
+            "page": 30,
+            "score": 0.6418,
+            "statement_id": "787eaec0p0030s000",
+            "text": "Responsible sourcing Material topics Goal/target Progress in 2021 Sustainability Certification By end 2023: ISPO certification for all estates Achieved 83% of targeted hectarage* By end 2023: ISPO certification for all mills Achieved certification for 18 out of 27 mills."
+          },
+          {
+            "company": "Indofood Agri",
+            "year": 2022,
+            "page": 5,
+            "score": 0.6404,
+            "statement_id": "d515aa12p0005s013",
+            "text": "Currently, 86% of our estates are ISPO certified, along with 20 of 27 mills and 84% of nucleus CPO production."
+          },
+          {
+            "company": "Indofood Agri",
+            "year": 2025,
+            "page": 45,
+            "score": 0.6374,
+            "statement_id": "7357444ap0045s003",
+            "text": "In this section UPDATES FOR 2025 Sustainability certification 89% of all nucleus estates’ hectarage production is ISPO certified 85% of nucleus CPO production is ISPO certified Supply chain traceability and transparency 100% of FFB processed in mills is traceable to estates 100% of CPO processed in "
+          },
+          {
+            "company": "Indofood Agri",
+            "year": 2023,
+            "page": 6,
+            "score": 0.636,
+            "statement_id": "052effeep0006s012",
+            "text": "Currently, 89% of our estates are ISPO certified, along with 21 of 27 mills and 85% of nucleus CPO production."
+          }
+        ]
+      },
+      "hybrid": {
+        "ms_median": 23.5,
+        "ms_runs": [
+          23.2,
+          23.8,
+          23.5
+        ],
+        "hits": [
+          {
+            "company": "Indofood Agri",
+            "year": 2023,
+            "page": 40,
+            "score": 0.0325,
+            "statement_id": "052effeep0040s000",
+            "text": "of all estates’ hectarage is ISPO certified of nucleus CPO production is ISPO certified Sustainability certification In this section Supply chain traceability and transparency of FFB processed in mills is traceable to estates of CPO processed in refineries is traceable to mills of PK processed in ke"
+          },
+          {
+            "company": "Indofood Agri",
+            "year": 2025,
+            "page": 45,
+            "score": 0.032,
+            "statement_id": "7357444ap0045s003",
+            "text": "In this section UPDATES FOR 2025 Sustainability certification 89% of all nucleus estates’ hectarage production is ISPO certified 85% of nucleus CPO production is ISPO certified Supply chain traceability and transparency 100% of FFB processed in mills is traceable to estates 100% of CPO processed in "
+          },
+          {
+            "company": "Indofood Agri",
+            "year": 2021,
+            "page": 30,
+            "score": 0.0318,
+            "statement_id": "787eaec0p0030s000",
+            "text": "Responsible sourcing Material topics Goal/target Progress in 2021 Sustainability Certification By end 2023: ISPO certification for all estates Achieved 83% of targeted hectarage* By end 2023: ISPO certification for all mills Achieved certification for 18 out of 27 mills."
+          },
+          {
+            "company": "Indofood Agri",
+            "year": 2023,
+            "page": 15,
+            "score": 0.0308,
+            "statement_id": "052effeep0015s007",
+            "text": "As a demonstration of our dedication to responsible sourcing, we aim to achieve 100% ISPO certification for all our mills and nucleus estates by the end of 2024."
+          },
+          {
+            "company": "Indofood Agri",
+            "year": 2022,
+            "page": 34,
+            "score": 0.0301,
+            "statement_id": "d515aa12p0034s000",
+            "text": "Responsible sourcing Material topics Goal/target Updates for 2022 Sustainability Certification By end 2024: ISPO certification for all nucleus estates Achieved 86% of targeted hectarage* By end 2024: ISPO certification for all mills Achieved certification for 20 out of 27 mills."
+          }
+        ]
+      },
+      "hybrid+rerank": {
+        "ms_median": 430.0,
+        "ms_runs": [
+          430.0,
+          431.9,
+          424.5
+        ],
+        "hits": [
+          {
+            "company": "Indofood Agri",
+            "year": 2024,
+            "page": 43,
+            "score": 8.885,
+            "statement_id": "2e075abcp0043s005",
+            "text": "Sustainability certification of all estates’ hectarage is ISPO certified of nucleus CPO production is ISPO certified 89% 84% of FFB processed in mills is traceable to estates of CPO processed in refineries is traceable to mills of PK processed in kernel crushers is traceable to estates of mills audi"
+          },
+          {
+            "company": "Indofood Agri",
+            "year": 2021,
+            "page": 11,
+            "score": 8.6051,
+            "statement_id": "787eaec0p0011s012",
+            "text": "As part of our commitment to responsible sourcing, we aim to have 100% of our mills and estates ISPO certified by 2023."
+          },
+          {
+            "company": "Indofood Agri",
+            "year": 2025,
+            "page": 45,
+            "score": 8.5723,
+            "statement_id": "7357444ap0045s003",
+            "text": "In this section UPDATES FOR 2025 Sustainability certification 89% of all nucleus estates’ hectarage production is ISPO certified 85% of nucleus CPO production is ISPO certified Supply chain traceability and transparency 100% of FFB processed in mills is traceable to estates 100% of CPO processed in "
+          },
+          {
+            "company": "Indofood Agri",
+            "year": 2023,
+            "page": 15,
+            "score": 8.5505,
+            "statement_id": "052effeep0015s007",
+            "text": "As a demonstration of our dedication to responsible sourcing, we aim to achieve 100% ISPO certification for all our mills and nucleus estates by the end of 2024."
+          },
+          {
+            "company": "Indofood Agri",
+            "year": 2022,
+            "page": 13,
+            "score": 8.2748,
+            "statement_id": "d515aa12p0013s008",
+            "text": "As part of our commitment to responsible sourcing, we aim to have 100% of our mills and nucleus estates ISPO certified by 2024."
+          }
+        ]
+      }
+    },
+    "graph": {
+      "statement_id": "2e075abcp0043s005",
+      "aspects": [],
+      "aspects_ms": 5.0,
+      "follow_ups": [],
+      "follow_ups_n": 0,
+      "follow_ups_ms": 3.9
+    },
+    "related_targets": {
+      "n": 0,
+      "ms": 0.7,
+      "items": []
+    }
+  },
+  {
+    "id": "Q3",
+    "task": "annual target and its result",
+    "text": "electricity consumption per square foot target",
+    "company": "Old Chang Kee",
+    "year_from": 2021,
+    "year_to": 2025,
+    "modes": {
+      "bm25": {
+        "ms_median": 2.9,
+        "ms_runs": [
+          3.2,
+          2.9,
+          2.8
+        ],
+        "hits": [
+          {
+            "company": "Old Chang Kee",
+            "year": 2021,
+            "page": 14,
+            "score": 37.6697,
+            "statement_id": "2d505f22p0014s007",
+            "text": "For FY2021, our electricity consumption was 61 kwh per square foot (FY2020: 68 kwh per square foot)."
+          },
+          {
+            "company": "Old Chang Kee",
+            "year": 2023,
+            "page": 14,
+            "score": 37.6697,
+            "statement_id": "c9371752p0014s007",
+            "text": "For FY2023, our electricity consumption was 66 kwh per square foot (FY2022: 69 kwh per square foot)."
+          },
+          {
+            "company": "Old Chang Kee",
+            "year": 2022,
+            "page": 14,
+            "score": 37.6697,
+            "statement_id": "d0d33dbbp0014s007",
+            "text": "For FY2022, our electricity consumption was 69 kwh per square foot (FY2021: 61 kwh per square foot)."
+          },
+          {
+            "company": "Old Chang Kee",
+            "year": 2021,
+            "page": 14,
+            "score": 36.1685,
+            "statement_id": "2d505f22p0014s008",
+            "text": "Our target is to maintain or lower our electricity consumption (kwh) per square foot in FY2022."
+          },
+          {
+            "company": "Old Chang Kee",
+            "year": 2022,
+            "page": 14,
+            "score": 34.6343,
+            "statement_id": "d0d33dbbp0014s009",
+            "text": "Our target is to maintain or lower our electricity consumption (kwh) per square foot in FY2023 as compared to FY2022."
+          }
+        ]
+      },
+      "dense": {
+        "ms_median": 19.3,
+        "ms_runs": [
+          19.3,
+          19.5,
+          19.3
+        ],
+        "hits": [
+          {
+            "company": "Old Chang Kee",
+            "year": 2021,
+            "page": 14,
+            "score": 0.5465,
+            "statement_id": "2d505f22p0014s008",
+            "text": "Our target is to maintain or lower our electricity consumption (kwh) per square foot in FY2022."
+          },
+          {
+            "company": "Old Chang Kee",
+            "year": 2022,
+            "page": 14,
+            "score": 0.5356,
+            "statement_id": "d0d33dbbp0014s007",
+            "text": "For FY2022, our electricity consumption was 69 kwh per square foot (FY2021: 61 kwh per square foot)."
+          },
+          {
+            "company": "Old Chang Kee",
+            "year": 2021,
+            "page": 14,
+            "score": 0.5345,
+            "statement_id": "2d505f22p0014s007",
+            "text": "For FY2021, our electricity consumption was 61 kwh per square foot (FY2020: 68 kwh per square foot)."
+          },
+          {
+            "company": "Old Chang Kee",
+            "year": 2023,
+            "page": 14,
+            "score": 0.528,
+            "statement_id": "c9371752p0014s007",
+            "text": "For FY2023, our electricity consumption was 66 kwh per square foot (FY2022: 69 kwh per square foot)."
+          },
+          {
+            "company": "Old Chang Kee",
+            "year": 2022,
+            "page": 14,
+            "score": 0.524,
+            "statement_id": "d0d33dbbp0014s009",
+            "text": "Our target is to maintain or lower our electricity consumption (kwh) per square foot in FY2023 as compared to FY2022."
+          }
+        ]
+      },
+      "hybrid": {
+        "ms_median": 22.3,
+        "ms_runs": [
+          22.3,
+          22.3,
+          23.3
+        ],
+        "hits": [
+          {
+            "company": "Old Chang Kee",
+            "year": 2021,
+            "page": 14,
+            "score": 0.0323,
+            "statement_id": "2d505f22p0014s007",
+            "text": "For FY2021, our electricity consumption was 61 kwh per square foot (FY2020: 68 kwh per square foot)."
+          },
+          {
+            "company": "Old Chang Kee",
+            "year": 2021,
+            "page": 14,
+            "score": 0.032,
+            "statement_id": "2d505f22p0014s008",
+            "text": "Our target is to maintain or lower our electricity consumption (kwh) per square foot in FY2022."
+          },
+          {
+            "company": "Old Chang Kee",
+            "year": 2022,
+            "page": 14,
+            "score": 0.032,
+            "statement_id": "d0d33dbbp0014s007",
+            "text": "For FY2022, our electricity consumption was 69 kwh per square foot (FY2021: 61 kwh per square foot)."
+          },
+          {
+            "company": "Old Chang Kee",
+            "year": 2023,
+            "page": 14,
+            "score": 0.0318,
+            "statement_id": "c9371752p0014s007",
+            "text": "For FY2023, our electricity consumption was 66 kwh per square foot (FY2022: 69 kwh per square foot)."
+          },
+          {
+            "company": "Old Chang Kee",
+            "year": 2022,
+            "page": 14,
+            "score": 0.0308,
+            "statement_id": "d0d33dbbp0014s009",
+            "text": "Our target is to maintain or lower our electricity consumption (kwh) per square foot in FY2023 as compared to FY2022."
+          }
+        ]
+      },
+      "hybrid+rerank": {
+        "ms_median": 130.1,
+        "ms_runs": [
+          130.1,
+          128.9,
+          130.2
+        ],
+        "hits": [
+          {
+            "company": "Old Chang Kee",
+            "year": 2021,
+            "page": 14,
+            "score": 7.6666,
+            "statement_id": "2d505f22p0014s008",
+            "text": "Our target is to maintain or lower our electricity consumption (kwh) per square foot in FY2022."
+          },
+          {
+            "company": "Old Chang Kee",
+            "year": 2022,
+            "page": 14,
+            "score": 7.6437,
+            "statement_id": "d0d33dbbp0014s009",
+            "text": "Our target is to maintain or lower our electricity consumption (kwh) per square foot in FY2023 as compared to FY2022."
+          },
+          {
+            "company": "Old Chang Kee",
+            "year": 2023,
+            "page": 14,
+            "score": 7.0031,
+            "statement_id": "c9371752p0014s009",
+            "text": "Our target for FY2024 is to maintain or lower our electricity consumption (kwh) per square foot in FY2024 as compared to FY2023."
+          },
+          {
+            "company": "Old Chang Kee",
+            "year": 2023,
+            "page": 14,
+            "score": 6.8048,
+            "statement_id": "c9371752p0014s008",
+            "text": "We had met our FY2023 target of maintaining or reducing our electrical consumption (kwh) per square foot against FY2022."
+          },
+          {
+            "company": "Old Chang Kee",
+            "year": 2022,
+            "page": 14,
+            "score": 6.1212,
+            "statement_id": "d0d33dbbp0014s008",
+            "text": "We did not meet our FY2022 target of maintaining or reducing our electrical consumption (kwh) per square foot against FY2021, due to the higher retail sales in FY2022 as a result of the gradual loosening of Covid-19 safe management measures compared to FY2021."
+          }
+        ]
+      }
+    },
+    "graph": {
+      "statement_id": "2d505f22p0014s008",
+      "aspects": [
+        {
+          "aspect": "electricity consumption (kwh) per square foot",
+          "category": "resource optimisation",
+          "action": null,
+          "method": "llm"
+        }
+      ],
+      "aspects_ms": 10.8,
+      "follow_ups": [],
+      "follow_ups_n": 0,
+      "follow_ups_ms": 4.0
+    },
+    "related_targets": {
+      "n": 0,
+      "ms": 0.6,
+      "items": []
+    }
+  },
+  {
+    "id": "Q4",
+    "task": "milestone with named sites",
+    "text": "solar rooftops installed at distribution centers",
+    "company": "ThaiBev",
+    "year_from": 2023,
+    "year_to": 2025,
+    "modes": {
+      "bm25": {
+        "ms_median": 2.4,
+        "ms_runs": [
+          2.6,
+          2.4,
+          2.3
+        ],
+        "hits": [
+          {
+            "company": "ThaiBev",
+            "year": 2023,
+            "page": 169,
+            "score": 37.1423,
+            "statement_id": "58207305p0169s002",
+            "text": "In 2023, ThaiBev installed solar rooftops at two distribution centers in Nakhon Ratchasima and Surat Thani."
+          },
+          {
+            "company": "ThaiBev",
+            "year": 2023,
+            "page": 169,
+            "score": 28.6118,
+            "statement_id": "58207305p0169s004",
+            "text": "In 2024, ThaiBev plans to install solar rooftops at two additional distribution centers in Chon Buri and Pathum Thani provinces."
+          },
+          {
+            "company": "ThaiBev",
+            "year": 2023,
+            "page": 39,
+            "score": 21.1691,
+            "statement_id": "58207305p0039s010",
+            "text": "In 2023, ThaiBev started Phase 4 to expand solar panel installation to cover all business groups in Thailand, with solar rooftops and floating solar panels to be installed at the breweries and non-alcoholic beverage factories."
+          },
+          {
+            "company": "ThaiBev",
+            "year": 2023,
+            "page": 169,
+            "score": 18.5055,
+            "statement_id": "58207305p0169s003",
+            "text": "In addition, HAVI installed solar rooftops at Bangplee Industrial Estate in Samut Prakan Province, which reduced the proportion of non-renewable electricity purchased from the provincial authority by around 20%."
+          },
+          {
+            "company": "ThaiBev",
+            "year": 2025,
+            "page": 34,
+            "score": 17.5679,
+            "statement_id": "22e3aebdp0034s002",
+            "text": "Solar Energy Project The solar energy project covers the installation of solar rooftops and floating solar panels in Thailand, Myanmar, Vietnam, Singapore, and Malaysia."
+          }
+        ]
+      },
+      "dense": {
+        "ms_median": 20.5,
+        "ms_runs": [
+          20.3,
+          20.5,
+          20.7
+        ],
+        "hits": [
+          {
+            "company": "ThaiBev",
+            "year": 2023,
+            "page": 169,
+            "score": 0.4891,
+            "statement_id": "58207305p0169s002",
+            "text": "In 2023, ThaiBev installed solar rooftops at two distribution centers in Nakhon Ratchasima and Surat Thani."
+          },
+          {
+            "company": "ThaiBev",
+            "year": 2023,
+            "page": 169,
+            "score": 0.48,
+            "statement_id": "58207305p0169s004",
+            "text": "In 2024, ThaiBev plans to install solar rooftops at two additional distribution centers in Chon Buri and Pathum Thani provinces."
+          },
+          {
+            "company": "ThaiBev",
+            "year": 2023,
+            "page": 39,
+            "score": 0.4293,
+            "statement_id": "58207305p0039s007",
+            "text": "Solar System Project The solar system project’s phases 1–3 cover the installation of solar rooftops and floating solar panels at the spirits factories, breweries, non-alcoholic beverage factories, and food factory in Thailand, Myanmar, and Vietnam."
+          },
+          {
+            "company": "ThaiBev",
+            "year": 2024,
+            "page": 34,
+            "score": 0.4258,
+            "statement_id": "d4b5be2bp0034s002",
+            "text": "Solar System Projects The solar system project’s covers the installation of solar rooftops and floating solar panels in Thailand, Myanmar, Vietnam, Singapore, Malaysia, and France."
+          },
+          {
+            "company": "ThaiBev",
+            "year": 2025,
+            "page": 34,
+            "score": 0.4229,
+            "statement_id": "22e3aebdp0034s002",
+            "text": "Solar Energy Project The solar energy project covers the installation of solar rooftops and floating solar panels in Thailand, Myanmar, Vietnam, Singapore, and Malaysia."
+          }
+        ]
+      },
+      "hybrid": {
+        "ms_median": 21.0,
+        "ms_runs": [
+          21.0,
+          20.8,
+          21.4
+        ],
+        "hits": [
+          {
+            "company": "ThaiBev",
+            "year": 2023,
+            "page": 169,
+            "score": 0.0328,
+            "statement_id": "58207305p0169s002",
+            "text": "In 2023, ThaiBev installed solar rooftops at two distribution centers in Nakhon Ratchasima and Surat Thani."
+          },
+          {
+            "company": "ThaiBev",
+            "year": 2023,
+            "page": 169,
+            "score": 0.0323,
+            "statement_id": "58207305p0169s004",
+            "text": "In 2024, ThaiBev plans to install solar rooftops at two additional distribution centers in Chon Buri and Pathum Thani provinces."
+          },
+          {
+            "company": "ThaiBev",
+            "year": 2023,
+            "page": 39,
+            "score": 0.0308,
+            "statement_id": "58207305p0039s007",
+            "text": "Solar System Project The solar system project’s phases 1–3 cover the installation of solar rooftops and floating solar panels at the spirits factories, breweries, non-alcoholic beverage factories, and food factory in Thailand, Myanmar, and Vietnam."
+          },
+          {
+            "company": "ThaiBev",
+            "year": 2024,
+            "page": 34,
+            "score": 0.0308,
+            "statement_id": "d4b5be2bp0034s002",
+            "text": "Solar System Projects The solar system project’s covers the installation of solar rooftops and floating solar panels in Thailand, Myanmar, Vietnam, Singapore, Malaysia, and France."
+          },
+          {
+            "company": "ThaiBev",
+            "year": 2025,
+            "page": 34,
+            "score": 0.0308,
+            "statement_id": "22e3aebdp0034s002",
+            "text": "Solar Energy Project The solar energy project covers the installation of solar rooftops and floating solar panels in Thailand, Myanmar, Vietnam, Singapore, and Malaysia."
+          }
+        ]
+      },
+      "hybrid+rerank": {
+        "ms_median": 180.9,
+        "ms_runs": [
+          180.9,
+          181.3,
+          178.7
+        ],
+        "hits": [
+          {
+            "company": "ThaiBev",
+            "year": 2023,
+            "page": 169,
+            "score": 8.3394,
+            "statement_id": "58207305p0169s002",
+            "text": "In 2023, ThaiBev installed solar rooftops at two distribution centers in Nakhon Ratchasima and Surat Thani."
+          },
+          {
+            "company": "ThaiBev",
+            "year": 2023,
+            "page": 169,
+            "score": 7.7032,
+            "statement_id": "58207305p0169s004",
+            "text": "In 2024, ThaiBev plans to install solar rooftops at two additional distribution centers in Chon Buri and Pathum Thani provinces."
+          },
+          {
+            "company": "ThaiBev",
+            "year": 2023,
+            "page": 169,
+            "score": 5.5962,
+            "statement_id": "58207305p0169s001",
+            "text": "Moving forward, ThaiBev will continue to increase the proportion of corporate electric vehicles as one of the key initiatives to achieve net-zero emission by 2040 (Scopes 1 and 2). - At Lampang regional distribution center, ThaiBev has installed a solar rooftop and LED lights, which consume 75% less"
+          },
+          {
+            "company": "ThaiBev",
+            "year": 2023,
+            "page": 169,
+            "score": 1.2176,
+            "statement_id": "58207305p0169s003",
+            "text": "In addition, HAVI installed solar rooftops at Bangplee Industrial Estate in Samut Prakan Province, which reduced the proportion of non-renewable electricity purchased from the provincial authority by around 20%."
+          },
+          {
+            "company": "ThaiBev",
+            "year": 2023,
+            "page": 39,
+            "score": 1.1303,
+            "statement_id": "58207305p0039s007",
+            "text": "Solar System Project The solar system project’s phases 1–3 cover the installation of solar rooftops and floating solar panels at the spirits factories, breweries, non-alcoholic beverage factories, and food factory in Thailand, Myanmar, and Vietnam."
+          }
+        ]
+      }
+    },
+    "graph": {
+      "statement_id": "58207305p0169s002",
+      "aspects": [],
+      "aspects_ms": 4.7,
+      "follow_ups": [],
+      "follow_ups_n": 0,
+      "follow_ups_ms": 3.8
+    },
+    "related_targets": {
+      "n": 0,
+      "ms": 1.1,
+      "items": []
+    }
+  },
+  {
+    "id": "Q5",
+    "task": "generic, no company filter (templated ESG prose)",
+    "text": "commitment to achieve net zero emissions by 2050",
+    "company": null,
+    "year_from": null,
+    "year_to": null,
+    "modes": {
+      "bm25": {
+        "ms_median": 20.2,
+        "ms_runs": [
+          29.6,
+          20.2,
+          18.8
+        ],
+        "hits": [
+          {
+            "company": "Suntec Reit",
+            "year": 2023,
+            "page": 28,
+            "score": 28.352,
+            "statement_id": "03f881f9p0028s005",
+            "text": "As part of our commitment towards achieving longterm sustainable development, in FY 2023, the Manager launched its Net-Zero roadmap, highlighting our plans to achieve our target of net-zero carbon emissions 14 for our entire portfolio by 2050."
+          },
+          {
+            "company": "VICOM Ltd",
+            "year": 2023,
+            "page": 42,
+            "score": 27.6095,
+            "statement_id": "f445b976p0042s009",
+            "text": "In line with the Paris Agreement, Singapore aims to achieve net-zero emissions by 2050."
+          },
+          {
+            "company": "Uni-Asia Grp",
+            "year": 2025,
+            "page": 18,
+            "score": 27.4917,
+            "statement_id": "28dbd8e1p0018s014",
+            "text": "In Japan, “Beyond Zero” is a roadmap that calls for the country to achieve net zero GHG emissions by 2050."
+          },
+          {
+            "company": "Centurion",
+            "year": 2025,
+            "page": 9,
+            "score": 26.998,
+            "statement_id": "25fe156dp0009s023",
+            "text": "Centurion has established a long-term ambition to achieve Net Zero Scope 1 and Scope 2 emissions by 2050."
+          },
+          {
+            "company": "Uni-Asia Grp",
+            "year": 2022,
+            "page": 22,
+            "score": 26.9605,
+            "statement_id": "0f1692cdp0022s004",
+            "text": "Similarly, Japan has a roadmap to “Beyond Zero” that calls for Japan to achieve net zero GHG emissions by 2050."
+          }
+        ]
+      },
+      "dense": {
+        "ms_median": 22.4,
+        "ms_runs": [
+          22.6,
+          22.3,
+          22.4
+        ],
+        "hits": [
+          {
+            "company": "Abundance International",
+            "year": 2024,
+            "page": 27,
+            "score": 0.6754,
+            "statement_id": "bdef3a5dp0027s003",
+            "text": "Reach net-zero emission by 2050."
+          },
+          {
+            "company": "FSL Trust",
+            "year": 2025,
+            "page": 21,
+            "score": 0.6556,
+            "statement_id": "a068f451p0021s003",
+            "text": "Reach net-zero emissions by 2050."
+          },
+          {
+            "company": "Venture",
+            "year": 2024,
+            "page": 17,
+            "score": 0.6292,
+            "statement_id": "17381593p0017s004",
+            "text": "In Malaysia3 and China4, commitments have been made to reach carbon neutrality by 2050 and 2060 respectively."
+          },
+          {
+            "company": "ThaiBev",
+            "year": 2025,
+            "page": 31,
+            "score": 0.6245,
+            "statement_id": "22e3aebdp0031s004",
+            "text": "In this context, Thailand has committed to achieving Net-Zero greenhouse gas emissions by 2050."
+          },
+          {
+            "company": "Centurion",
+            "year": 2024,
+            "page": 3,
+            "score": 0.618,
+            "statement_id": "2b709314p0003s013",
+            "text": "These efforts are fully aligned with the global movement towards Net Zero emissions by 2050."
+          }
+        ]
+      },
+      "hybrid": {
+        "ms_median": 44.6,
+        "ms_runs": [
+          47.2,
+          44.6,
+          44.0
+        ],
+        "hits": [
+          {
+            "company": "VICOM Ltd",
+            "year": 2023,
+            "page": 42,
+            "score": 0.0298,
+            "statement_id": "f445b976p0042s009",
+            "text": "In line with the Paris Agreement, Singapore aims to achieve net-zero emissions by 2050."
+          },
+          {
+            "company": "FSL Trust",
+            "year": 2025,
+            "page": 21,
+            "score": 0.0285,
+            "statement_id": "a068f451p0021s003",
+            "text": "Reach net-zero emissions by 2050."
+          },
+          {
+            "company": "CSE Global",
+            "year": 2025,
+            "page": 17,
+            "score": 0.0258,
+            "statement_id": "97c6fc16p0017s007",
+            "text": "Aligned with the Singapore Green Plan positioning Singapore to achieve its 2050 net zero emissions goal, we are committed to contributing to Singapore’s national agenda on sustainable development and net-zero ambitions."
+          },
+          {
+            "company": "ThaiBev",
+            "year": 2025,
+            "page": 31,
+            "score": 0.0254,
+            "statement_id": "22e3aebdp0031s004",
+            "text": "In this context, Thailand has committed to achieving Net-Zero greenhouse gas emissions by 2050."
+          },
+          {
+            "company": "Centurion",
+            "year": 2025,
+            "page": 9,
+            "score": 0.0249,
+            "statement_id": "25fe156dp0009s023",
+            "text": "Centurion has established a long-term ambition to achieve Net Zero Scope 1 and Scope 2 emissions by 2050."
+          }
+        ]
+      },
+      "hybrid+rerank": {
+        "ms_median": 125.4,
+        "ms_runs": [
+          125.5,
+          124.5,
+          125.4
+        ],
+        "hits": [
+          {
+            "company": "ThaiBev",
+            "year": 2025,
+            "page": 31,
+            "score": 8.4888,
+            "statement_id": "22e3aebdp0031s004",
+            "text": "In this context, Thailand has committed to achieving Net-Zero greenhouse gas emissions by 2050."
+          },
+          {
+            "company": "CSE Global",
+            "year": 2025,
+            "page": 17,
+            "score": 8.131,
+            "statement_id": "97c6fc16p0017s007",
+            "text": "Aligned with the Singapore Green Plan positioning Singapore to achieve its 2050 net zero emissions goal, we are committed to contributing to Singapore’s national agenda on sustainable development and net-zero ambitions."
+          },
+          {
+            "company": "Centurion",
+            "year": 2025,
+            "page": 3,
+            "score": 7.087,
+            "statement_id": "25fe156dp0003s048",
+            "text": "The Group has articulated a long-term ambition to achieve Net Zero Scope 1 and Scope 2 greenhouse gas (“GHG”) emissions by 2050."
+          },
+          {
+            "company": "VICOM Ltd",
+            "year": 2023,
+            "page": 42,
+            "score": 7.0347,
+            "statement_id": "f445b976p0042s009",
+            "text": "In line with the Paris Agreement, Singapore aims to achieve net-zero emissions by 2050."
+          },
+          {
+            "company": "Centurion",
+            "year": 2025,
+            "page": 9,
+            "score": 7.0092,
+            "statement_id": "25fe156dp0009s023",
+            "text": "Centurion has established a long-term ambition to achieve Net Zero Scope 1 and Scope 2 emissions by 2050."
+          }
+        ]
+      }
+    },
+    "graph": {
+      "statement_id": "22e3aebdp0031s004",
+      "aspects": [],
+      "aspects_ms": 5.0,
+      "follow_ups": [],
+      "follow_ups_n": 0,
+      "follow_ups_ms": 3.9
+    }
+  }
+]
