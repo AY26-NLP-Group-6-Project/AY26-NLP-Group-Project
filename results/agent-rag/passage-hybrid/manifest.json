@@ -1,11 +1,8 @@
 {
-  "run_id": "20261020T142347Z-agentic-rag-rq1",
+  "run_id": "20261103T065933Z-agentic-rag-rq1",
   "system": "agentic-rag",
   "task": "rq1",
   "conditions": [
-    "sentence_only",
-    "local",
-    "same_report_rrf",
     "cross_year_rrf",
     "cross_year_agentic"
   ],
@@ -13,7 +10,7 @@
   "dataset_hash": "3e18cc14e648",
   "label_source": "human_majority",
   "n_items": 331,
-  "git_sha": "b32494b8353f9e67a3e0d7f17ef43ff99d62966e",
+  "git_sha": "bc8e029ce48e66409947ae4de8a949c98620effb",
   "git_dirty": true,
   "graph_build_id": null,
   "llm": {
@@ -32,9 +29,9 @@
   },
   "repeats": 3,
   "seed": 20260929,
-  "started_at": "2026-10-20T14:23:47.094523+00:00",
-  "finished_at": "2026-10-20T15:03:50.829198+00:00",
-  "wall_seconds": 2403.7346787005663,
+  "started_at": "2026-11-03T06:59:33.688022+00:00",
+  "finished_at": "2026-11-03T07:35:51.275723+00:00",
+  "wall_seconds": 2177.587706184,
   "config": {
     "split": "dev",
     "slices": {},
@@ -58,9 +55,9 @@
       }
     },
     "classifier": {
-      "style": "label",
-      "prompt": "action_classifier.md",
-      "prompt_sha256": "4af9b84b0a68",
+      "style": "cited",
+      "prompt": "action_classifier_cited.md",
+      "prompt_sha256": "f79137d448e4",
       "workers": 8,
       "max_evidence": 3,
       "evidence_chars": 800,
@@ -70,8 +67,16 @@
         "timeout_s": 60.0,
         "base_mode": "rrf+rerank",
         "select": "rrf",
-        "planner_prompt": "agentic_planner.md"
+        "planner_prompt": "agentic_planner_v2.md"
       }
+    },
+    "retriever": {
+      "max_hops": 2,
+      "queries_per_hop": 2,
+      "timeout_s": 60.0,
+      "base_mode": "rrf+rerank",
+      "select": "rrf",
+      "planner_prompt": "agentic_planner_v2.md"
     }
   }
 }

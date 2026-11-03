@@ -37,7 +37,7 @@ from gw_common.evidence import is_target_span, normalise
 from gw_common.llm import REPO_ROOT, LLMClient
 from gw_common.schemas import EvidenceCondition, EvidenceSpan, Query
 
-PROMPT = REPO_ROOT / "configs" / "prompts" / "agentic_planner.md"
+PROMPT = REPO_ROOT / "configs" / "prompts" / "agentic_planner_v2.md"
 TRACE_FILE = REPO_ROOT / "artifacts" / "agentic" / "traces.jsonl"
 BASE_MODES = ("bm25", "bm25+rerank", "rrf", "rrf+rerank")
 SELECT_MODES = ("rrf", "rerank")
