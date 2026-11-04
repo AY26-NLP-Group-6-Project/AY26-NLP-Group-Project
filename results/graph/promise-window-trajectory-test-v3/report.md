@@ -2,7 +2,7 @@
 
 - system: `graph-rag` · task: `rq2` · condition: `promise_window`, k = 20
 - gold: `rq2promises` @ `a6f35618dd6e` · n = 250 · split: `test` · repeats: 3
-- judge: `v3` · prompt `promise_outcome_v3.md` @ `01a3a075315f` · model: `gpt-6-luna` · effort: `low`
+- judge: `v3` · prompt `promise_outcome_v3.md` @ `01a3a075315f` · model: `gpt-5.6-luna` · effort: `low`
 - retriever: `{"evidence_from": "20261104T005955Z-graph-rag-rq2"}`
 - git: `fe8fed89` (dirty) · wall: 827.9s
 
