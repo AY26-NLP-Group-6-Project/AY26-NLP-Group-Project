@@ -158,6 +158,7 @@ venv/
 ENV/
 env.bak/
 venv.bak/
+.claude/
 
 # Spyder project settings
 .spyderproject
@@ -244,3 +245,14 @@ data/*
 data/eval/*
 !data/eval/gw1000.*
 !data/eval/rq2promises.*
+
+# LaTeX build artefacts of the report (report/main.pdf stays tracked)
+report/*.aux
+report/*.bbl
+report/*.blg
+report/*.log
+report/*.out
+report/*.fls
+report/*.fdb_latexmk
+report/*.synctex.gz
+report/build.log

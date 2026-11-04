@@ -33,7 +33,7 @@ are. The reference and the record are under [`docs/`](docs/README.md); the findi
 ## 2. Setup
 
 ```bash
-uv sync                                        # the workspace: src/common, src/baseline-rag, src/graph-rag, src/example-rag
+uv sync                                        # the workspace: src/common, baseline-rag, graph-rag, agentic-rag, example-rag
 cp .env.example .env                           # fill LLM_API_KEY and EMB_API_KEY; model, effort and prices are set
 unzip gw-kb-statements-<hash>.zip -d artifacts/baseline/
 uv run gw-baseline stats                       # the manifest; hash d8a62bfe40c6
@@ -90,6 +90,13 @@ The promise pipeline (RQ2) has its own commands under `gw-graph promise-*`:
 [`docs/promises.md`](docs/promises.md). Its gold set has a dev/test split like the sentence set, and
 `gw-eval --task rq2` evaluates any system's retriever on it with the shared judge; open test once.
 
+A demo front end runs one dev item at a time through a registered system, step by step, against the
+gold, with the evidence, the citations, the timings and the cost ([`frontend/README.md`](frontend/README.md)):
+
+```bash
+uv sync --group frontend && uv run streamlit run frontend/app.py
+```
+
 ## 4. Plugging in your own system
 
 Copy `src/example-rag` to `src/<you>-rag`, rename it, add it to the workspace members in
@@ -112,12 +119,14 @@ src/common/gw_common/        shared contract and harness: schemas, Protocols, re
                              report, LLM client, classifier, FastAPI app
 src/baseline-rag/            BM25 + dense + RRF + rerank over the chunk stores; Postgres backend
 src/graph-rag/               the temporal claim graph, graph and fused retrieval, the promise pipeline
+src/agentic-rag/             a bounded planner over the corpus tools, for both questions (docs/agentic.md)
 src/example-rag/             copy-me template for a new system
+frontend/                    Streamlit demo: one dev item through one system, with the evidence and the gold
 configs/prompts/             every prompt, versioned; action_classifier_cited.md is the shared classifier
 configs/graph.dev.yaml       graph build config
 data/eval/                   frozen evaluation snapshots, one file per (dataset, label source, hash)
 artifacts/                   git-ignored: runs, chunk stores, the graph, the LLM cache
-results/                     published runs: results/baseline/<name>/, results/graph/<name>/
+results/                     published runs: results/baseline/<name>/, results/graph/<name>/, results/agentic/<name>/
 docs/                        reference and record (docs/README.md)
 kb/                          kb/raw/ the reports (git-ignored); kb/annotation/ the evaluation set, the
                              human check sheets and their scores

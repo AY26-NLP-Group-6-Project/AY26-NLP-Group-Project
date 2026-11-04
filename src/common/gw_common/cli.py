@@ -41,6 +41,7 @@ def eval_main(argv: list[str] | None = None) -> int:
                     help="repeat each condition; mean ± sd and a majority vote are reported")
     ap.add_argument("--baseline", default="sentence_only", help="condition that deltas are measured against")
     ap.add_argument("--k", type=int, help="evidence spans per item (default 3 for rq1, 20 for rq2)")
+    ap.add_argument("--judge", default="v2", choices=["v1", "v2", "v3"], help="rq2: the judge's version")
     ap.add_argument("--evidence", type=Path, help="score evidence produced outside this package")
     ap.add_argument("--predictions", type=Path, help="score labels produced outside this package")
     ap.add_argument("--export-queries", type=Path, metavar="OUT",
@@ -62,6 +63,7 @@ def eval_main(argv: list[str] | None = None) -> int:
     ap.add_argument("--list", action="store_true", help="list registered systems and exit")
     ap.add_argument("--compare", nargs=2, metavar=("RUN_A", "RUN_B"),
                     help="paired comparison of two runs' majority votes on the same items")
+    ap.add_argument("--pairs", help="with --compare: extra condition pairs, condA:condB,condA:condB")
     ap.add_argument("--publish", type=Path, metavar="RUN_DIR",
                     help="copy manifest, metrics and reports of a run into results/ (versioned)")
     ap.add_argument("--note", default="", help="with --publish: one line on what the run was for")
@@ -76,7 +78,8 @@ def eval_main(argv: list[str] | None = None) -> int:
             print(f"{name:22s} {target}")
         return 0
     if args.compare:
-        print(compare(Path(args.compare[0]), Path(args.compare[1])))
+        pairs = [tuple(p.split(":", 1)) for p in (args.pairs or "").split(",") if p]
+        print(compare(Path(args.compare[0]), Path(args.compare[1]), pairs))
         return 0
     if args.publish:
         out = publish(args.publish, RESULTS_DIR, args.note, args.name)
@@ -106,7 +109,8 @@ def eval_main(argv: list[str] | None = None) -> int:
         from gw_common.eval import rq2
 
         run_dir = rq2.run_rq2(args.system, split=args.split, repeats=args.repeats, k=args.k,
-                              limit=args.limit, sample=args.sample)
+                              limit=args.limit, sample=args.sample, judge=args.judge,
+                              evidence_file=args.evidence)
         print((run_dir / "report.md").read_text(encoding="utf-8"))
         print(f"run dir: {run_dir}")
         return 0

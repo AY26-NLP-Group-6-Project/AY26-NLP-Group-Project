@@ -227,3 +227,108 @@ of the former notes index.
   172, failed 62, unclear 125, disappeared 15. On dev against the gold 96 of 123 right (0.780, κ 0.67),
   the same count as the trajectory finder's evidence; the two differ on 13 promises, 5 right each way,
   McNemar p = 1.00; over-commitment 4 of 22, under-commitment 20 of 101, verdict precision 0.92.
+
+## 2026-10-31 · The agentic arm, on dev
+
+- `src/agentic-rag` rebuilt as a bounded planner over `gw_common.corpus.load("statements")` with a policy per
+  question and a fence in code (`agentic.md`). Harness: `company_agentic`, `GW_RETRIEVAL_WORKERS`, an agent block in
+  run reports, `--compare --pairs`. It does not read the graph, by decision.
+- RQ2 first, because it looked like the case for an agent. Audit of `20261031T053204Z-baseline-rag-rq2` (vote 0.805,
+  24 errors): a phrase of the answer was already shown in 14 of the 17 errors checkable by regular expression. Ceiling
+  test `20261031T053208Z` (k = 40): shown 16 of 17, vote 0.772, +3 / −7, p = 0.34. Below the stopping line set
+  beforehand (fewer than 10 errors from retrieval), so the RQ2 planner prompt was not iterated.
+- RQ2 arms: fixed budget `20261031T054118Z` 0.813 (11.6 statements), planner `20261031T054802Z` 0.789 (14.3 statements,
+  1.30 calls), p ≥ 0.45 pairwise with hybrid and each other.
+- RQ1 `20261031T054130Z`, six arms in one run: `company_agentic` 0.7645, `sentence_only` 0.7686 (+11 / −8, p = 0.65),
+  `cross_year_rrf` 0.7988 (+19 / −12, p = 0.28), `local` 0.7745. The gate gave 262 of 331 sentences no evidence. The text
+  rule committed in `320a4f1`, before this run started and unchanged since, gave `local` +9 / −0 on its 75 sentences
+  (p = 0.004).
+  One round of ablations (`20261031T061753Z`, `T061754Z`, `T062526Z`, `T062533Z`) stayed inside the noise.
+- Configuration and hypotheses committed in `4a3d35f`. The test attempt stopped when the API account ran out of credit
+  (HTTP 429, `credit_balance_exhausted`, chat and embeddings on one key); no metrics written, no test label read.
+  Finished runs cost USD 6.20. To resume: `agentic.md`, section 6.
+- Judge v3 (`39ffb79`), written after reading the dev errors and notes, on the same statements with a new API key:
+  fixed budget `20261031T074640Z` 0.870 (v2 0.813, +9 / −2, p = 0.065), agent `T074637Z` 0.837 (0.789, +9 / −3, p = 0.15), hybrid
+  `T074643Z` 0.813 (0.805, +6 / −5, p = 1.00), agent at 500 characters `T074646Z` 0.854. Agent against fixed budget under v3 +2 /
+  −6, p = 0.29. Of the 195 statements the planner's actions added, the judge gave a result label to 1. Test still unread;
+  v3 is not in the freeze of `4a3d35f`. USD 2.4.
+- Two more on dev, then tuning stopped: the agent's evidence keeping only statements the judge's labels used
+  (`20261031T081040Z`, simulated verifier) 0.862, fixed budget at five repeats (`20261031T081043Z`) 0.862, against 0.870 at three
+  (p = 1.00 for both). USD 1.5.
+- RQ2 test split read once (`bfd27d6`, clean; the pipeline, a choice of the project made on those dev numbers, and comparisons T1–T5, Q1–Q3
+  committed first). Hybrid v2 `20261031T085152Z` 0.768, v3 `T091251Z` 0.816; fixed budget v2 `T085149Z` 0.764, v3 `T090719Z` 0.808; agent v2
+  `T085145Z` 0.784, v3 `T091030Z` 0.840; chosen pipeline `T092745Z` 0.808. Nothing frozen reaches 0.05: T1 +28 / −18, p = 0.18; T3 +5 / −13,
+  p = 0.096; T4 p = 0.090; T5 p = 0.065. The filter that looked useful on dev lost. USD 8.5. Cost figures in earlier notes were per judgement;
+  per promise at three judgements they are three times the judge's part (`agentic.md`, section 6). RQ1 not run on test.
+
+## 2026-11-03 · Report draft; five timed queries; corpus statistics
+
+- Report draft in the ACL template under `report/` (`main.tex`, `references.bib`, the ACL style files,
+  `README.md`), written from `results.md`, `promises.md`, `graph.md`, `baseline.md`, `evaluation.md`,
+  the published runs and the agentic system's run on the teammate's branch
+  (`results/agent-rag/passage-hybrid` on `dev/luyuanzhi`, 2026-10-20, passage store, label-style
+  classifier). Marked pending: every test-split result, the agentic RQ2 arm, the agentic RQ1 arm on the
+  statement store with the cited classifier, the retrieval qrels.
+- Five example queries (the brief's Question 2) through the corpus tools in every mode (bm25, dense,
+  hybrid, hybrid+rerank), k = 5, median of three calls after a warm-up call, statement store
+  `d8a62bfe40c6`, one machine: BM25 2–4 ms inside a company filter and 20 ms over the whole store;
+  dense and hybrid about 20 ms with the query vector served from the response cache (an uncached query
+  adds the embedding round trip); hybrid+rerank 125–572 ms (CPU cross-encoder); the graph's joins on the
+  top hit 4–13 ms. Hits and timings in `report/queries/five_queries.{json,md}`.
+- Corpus statistics for the report, from the graph's statement table and the chunk stores: 110,314
+  statements, 3,401,540 words, 29,309 unique lower-cased word forms, 30.8 words per statement (median
+  23, p90 47); the statement store 108,376 chunks / 3,396,185 words, the passage store 18,839 / 4,565,796
+  (overlap counted).
+
+## 2026-11-03 · Demo front end over the dev split
+
+- `frontend/` (Streamlit, opt-in dependency group `frontend`): the sidebar switches RQ1 / RQ2 and
+  shows the question's definition; the page draws one item of that question's dev split (another at a
+  click, or by id), runs it through a chosen registered system under a chosen condition with the steps
+  timed live (first-use load, retrieval, the shared classifier or judge once per run, up to three runs
+  with a vote), and shows correct / wrong against the gold with the rationale, the citations, every
+  evidence span and where it came from, the gold's own context (annotators, agreement, notes), tokens
+  and cost, and any cited page rendered from the raw report. A query of one's own can replace the
+  sampled item (no gold then). Every run lands in a session log with a CSV download (the course's
+  "five queries and their speed"); the published runs under `results/` are listed per task.
+- Same rules as the harness: no gold reaches the system, the target sentence is dropped from the
+  evidence, shared prompts and default `k`; cached model responses are off by default so timings are
+  real. `frontend/core.py` holds the non-UI part, tested in `tests/test_frontend.py` with a fake system.
+
+
+## 2026-11-04 · The graph line on the RQ2 test split; judge v3 on its dev evidence; merges
+
+- `origin/feat/frontend-demo` merged (`3cfb559`); `origin/dev/agentic-rq2` merged on the branch `merge/agentic-rq2`
+  (`ac21acf`, PR #8): the rebuilt agentic arm, judge v3, the agentic batch's published runs and its RQ2 test read of
+  2026-10-31. Four doc conflicts resolved by keeping both sides; the agentic branch's `tests/test_agentic.py` taken whole.
+- Judge v3 on the trajectory finder's stored dev evidence (`20261104T010004Z-graph-rag-rq2`, published as
+  `graph/promise-window-trajectory-v3`, no new retrieval): vote 0.837 against 0.789 under v2, +8 / −2, p = 0.11; κ 0.75,
+  macro-F1 0.788; verdict on 5 of 22 gold-unclear both times, settled left unclear 17 → 10 of 101, verdicts right 0.90 both
+  times; the 22 human-labelled rows stay at 15 right, the model-labelled rows go 82 → 88 of 101. USD 0.55.
+- RQ2 test split read once for the graph line, a frozen system (the finder unchanged since 2026-10-03, judge v2 unchanged):
+  `20261104T005955Z-graph-rag-rq2` → `graph/promise-window-trajectory-test`, vote 0.736 (184 of 250), κ 0.57, macro-F1
+  0.548, verdict on 11 of 64 gold-unclear, 51 of 186 settled left unclear, verdicts right 131 of 146 (0.90), all 7
+  `disappeared` read as unclear, 44 unstable; 11.6 statements, retrieval p50 220 ms, USD 1.00. The hybrid baseline run
+  again on the same machine at the same time (`20261104T005711Z-baseline-rag-rq2` → `baseline/promise-window-hybrid-test`):
+  0.708 (177), κ 0.53, 18 of 64, 49 of 186, 131 of 155 (0.85), 39 unstable; 20 statements, p50 932 ms, USD 1.24.
+  Paired finder against baseline: +20 / −13, p = 0.30.
+- The agentic batch's hybrid baseline under v2 scored 0.768 on this split on 2026-10-31 against 0.708 here for the same
+  configuration (15 promises, more than the dev run-to-run spread of 0.016), on another machine on another day, so test
+  rows are paired within a batch only. Model naming, decided the same day: the chat model is named `gpt-5.6-luna` in
+  every document and published copy; runs on this machine since 2026-10-29 were made under the gateway's cheaper alias
+  `gpt-5.6-luna` (`.env`), which the group judged indistinguishable in performance, and the local manifests under
+  `artifacts/runs/` record that alias.
+- Judge v3 on the two test evidence files (`--evidence`, no retrieval): a first attempt, both at once, was stopped by the
+  machine's memory pressure after two of three repeats (graph) and one (hybrid); nothing was read, the partial directories
+  were removed. Re-run one after the other: finder `20261104T022653Z-graph-rag-rq2` →
+  `graph/promise-window-trajectory-test-v3`, vote 0.804 (201 of 250), κ 0.67, macro-F1 0.668, verdict on 18 of 64
+  gold-unclear, 27 of 186 settled left unclear, verdicts right 155 of 177 (0.88), 36 unstable, USD 1.14; baseline
+  `20261104T024056Z-baseline-rag-rq2` → `baseline/promise-window-hybrid-test-v3`, 0.748 (187), κ 0.58, 27 of 64,
+  33 of 186, 150 of 180 (0.83), 46 unstable, USD 1.41. Paired: finder v2 → v3 +26 / −9, p = 0.006; baseline v2 → v3
+  +28 / −18, p = 0.18; under v3 finder against baseline +24 / −10, p = 0.024. On the group's 115 rows the finder 85 → 88,
+  the baseline 81 → 83; on the 135 model-labelled rows 99 → 113 and 96 → 104.
+- Harness: two runs of one system started in the same second shared one run directory (`<timestamp>-<system>-<task>`),
+  which happened when the dev re-judge and the test run were launched together; `new_run_dir` now appends `-2`, `-3`
+  on collision (`4999af0d`).
+- Report: the agentic method and its RQ1 dev results on the statement store, judge v3, the RQ2 dev table with every arm
+  and judge, and the RQ2 test section with the frozen comparisons, the graph line's rows and the pairing within batches.

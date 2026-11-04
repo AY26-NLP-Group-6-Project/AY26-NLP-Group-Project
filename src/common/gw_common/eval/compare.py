@@ -41,8 +41,9 @@ def _best(metrics: dict) -> str | None:
     return max(ok, key=lambda c: ok[c]["majority"]["action"]["macro_f1"]) if ok else None
 
 
-def compare(run_a: Path, run_b: Path) -> str:
-    ma = json.loads((run_a / "metrics.json").read_text(encoding="utf-8"))
+def compare(run_a: Path, run_b: Path, pairs: list[tuple[str, str]] | None = None) -> str:
+    """`pairs` adds (condition of A, condition of B) rows, so two arms of one run can be compared too."""
+    ma =json.loads((run_a / "metrics.json").read_text(encoding="utf-8"))
     mb = json.loads((run_b / "metrics.json").read_text(encoding="utf-8"))
     man_a = json.loads((run_a / "manifest.json").read_text(encoding="utf-8"))
     man_b = json.loads((run_b / "manifest.json").read_text(encoding="utf-8"))
@@ -98,7 +99,11 @@ def compare(run_a: Path, run_b: Path) -> str:
     best_a, best_b = _best(ma), _best(mb)
     if best_a and best_b and (best_a, best_b) not in rows:
         rows.append((best_a, best_b))
+    rows += [p for p in pairs or [] if p not in rows]
     for ca, cb in rows:
+        if ca not in va or cb not in vb:
+            lines.append(f"| {ca} | {cb} | 0 | — | — | — | condition not in the run |")
+            continue
         result = paired(ca, cb)
         if result is None:
             lines.append(f"| {ca} | {cb} | 0 | — | — | — | no shared items |")
