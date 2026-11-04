@@ -9,6 +9,7 @@ the reference and the record.
 | `baseline.md` | the ordinary-RAG arm every other arm is measured against, and the knowledge base it retrieves from: every statement, with the passage store as the granularity ablation |
 | `graph.md` | the temporal claim graph: why, what is in it, how it is built, what aspect extraction and canonicalisation achieved, what the graph arms retrieve |
 | `promises.md` | following dated commitments through later reports: extraction, the outcome judge, the evidence, the two human checks, the reporting convention |
+| `agentic.md` | the agentic arm: what it does on each question, what it achieved on dev and why, the frozen test hypotheses and how to run them |
 | `case-studies.md` | ten commitments followed page by page through the reports |
 | `results.md` | the findings in one place, with what can and cannot be claimed |
 | `history.md` | the dated log of every experiment, with run ids and the numbers as they were first measured |

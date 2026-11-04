@@ -228,6 +228,39 @@ of the former notes index.
   the same count as the trajectory finder's evidence; the two differ on 13 promises, 5 right each way,
   McNemar p = 1.00; over-commitment 4 of 22, under-commitment 20 of 101, verdict precision 0.92.
 
+## 2026-10-31 · The agentic arm, on dev
+
+- `src/agentic-rag` rebuilt as a bounded planner over `gw_common.corpus.load("statements")` with a policy per
+  question and a fence in code (`agentic.md`). Harness: `company_agentic`, `GW_RETRIEVAL_WORKERS`, an agent block in
+  run reports, `--compare --pairs`. It does not read the graph, by decision.
+- RQ2 first, because it looked like the case for an agent. Audit of `20261031T053204Z-baseline-rag-rq2` (vote 0.805,
+  24 errors): a phrase of the answer was already shown in 14 of the 17 errors checkable by regular expression. Ceiling
+  test `20261031T053208Z` (k = 40): shown 16 of 17, vote 0.772, +3 / −7, p = 0.34. Below the stopping line set
+  beforehand (fewer than 10 errors from retrieval), so the RQ2 planner prompt was not iterated.
+- RQ2 arms: fixed budget `20261031T054118Z` 0.813 (11.6 statements), planner `20261031T054802Z` 0.789 (14.3 statements,
+  1.30 calls), p ≥ 0.45 pairwise with hybrid and each other.
+- RQ1 `20261031T054130Z`, six arms in one run: `company_agentic` 0.7645, `sentence_only` 0.7686 (+11 / −8, p = 0.65),
+  `cross_year_rrf` 0.7988 (+19 / −12, p = 0.28), `local` 0.7745. The gate gave 262 of 331 sentences no evidence. The text
+  rule committed in `320a4f1`, before this run started and unchanged since, gave `local` +9 / −0 on its 75 sentences
+  (p = 0.004).
+  One round of ablations (`20261031T061753Z`, `T061754Z`, `T062526Z`, `T062533Z`) stayed inside the noise.
+- Configuration and hypotheses committed in `4a3d35f`. The test attempt stopped when the API account ran out of credit
+  (HTTP 429, `credit_balance_exhausted`, chat and embeddings on one key); no metrics written, no test label read.
+  Finished runs cost USD 6.20. To resume: `agentic.md`, section 6.
+- Judge v3 (`39ffb79`), written after reading the dev errors and notes, on the same statements with a new API key:
+  fixed budget `20261031T074640Z` 0.870 (v2 0.813, +9 / −2, p = 0.065), agent `T074637Z` 0.837 (0.789, +9 / −3, p = 0.15), hybrid
+  `T074643Z` 0.813 (0.805, +6 / −5, p = 1.00), agent at 500 characters `T074646Z` 0.854. Agent against fixed budget under v3 +2 /
+  −6, p = 0.29. Of the 195 statements the planner's actions added, the judge gave a result label to 1. Test still unread;
+  v3 is not in the freeze of `4a3d35f`. USD 2.4.
+- Two more on dev, then tuning stopped: the agent's evidence keeping only statements the judge's labels used
+  (`20261031T081040Z`, simulated verifier) 0.862, fixed budget at five repeats (`20261031T081043Z`) 0.862, against 0.870 at three
+  (p = 1.00 for both). USD 1.5.
+- RQ2 test split read once (`bfd27d6`, clean; the pipeline, a choice of the project made on those dev numbers, and comparisons T1–T5, Q1–Q3
+  committed first). Hybrid v2 `20261031T085152Z` 0.768, v3 `T091251Z` 0.816; fixed budget v2 `T085149Z` 0.764, v3 `T090719Z` 0.808; agent v2
+  `T085145Z` 0.784, v3 `T091030Z` 0.840; chosen pipeline `T092745Z` 0.808. Nothing frozen reaches 0.05: T1 +28 / −18, p = 0.18; T3 +5 / −13,
+  p = 0.096; T4 p = 0.090; T5 p = 0.065. The filter that looked useful on dev lost. USD 8.5. Cost figures in earlier notes were per judgement;
+  per promise at three judgements they are three times the judge's part (`agentic.md`, section 6). RQ1 not run on test.
+
 ## 2026-11-03 · Report draft; five timed queries; corpus statistics
 
 - Report draft in the ACL template under `report/` (`main.tex`, `references.bib`, the ACL style files,

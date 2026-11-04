@@ -29,7 +29,7 @@ def export_queries(
     """One line per item: what a retriever is allowed to know, plus the filters it must honour."""
     with out.open("w", encoding="utf-8") as f:
         for it in items:
-            cross_year = condition.value.startswith("cross_year")
+            cross_year = condition.value.startswith("cross_year") or condition.value == "company_agentic"
             f.write(json.dumps({
                 "item_id": it.item_id,
                 "condition": condition.value,

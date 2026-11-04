@@ -76,6 +76,23 @@ def _grounding_section(results: dict[str, dict]) -> list[str]:
     return lines
 
 
+def agent_section(results: dict[str, dict]) -> list[str]:
+    """What an agent did: how much it planned, why it stopped, and whether its evidence differs from
+    what the first search alone would have found."""
+    rows = [(c, b["agent"]) for c, b in results.items() if b.get("status") == "ok" and b.get("agent")]
+    if not rows:
+        return []
+    lines = ["", "## Agent", "",
+             "| condition | planner calls / item | tokens in / out / item | evidence from later hops"
+             " | items with no evidence | stop reasons |",
+             "|---|---|---|---|---|---|"]
+    for cond, a in rows:
+        lines.append(f"| {cond} | {a['planner_calls_per_item']:.2f} "
+                     f"| {a['input_tokens_per_item']:.0f} / {a['output_tokens_per_item']:.0f} "
+                     f"| {a['later_hop_share']:.3f} | {a['no_evidence_share']:.3f} | {a['stop']} |")
+    return lines
+
+
 def write_report(run_dir: Path, manifest: RunManifest, results: dict[str, dict]) -> Path:
     lines = [f"# {manifest.run_id}", ""]
     if manifest.label_source != "human_majority":
@@ -139,6 +156,7 @@ def write_report(run_dir: Path, manifest: RunManifest, results: dict[str, dict])
             lines.append(f"| {cond} | {ev['coverage']:.2f} | {ev['mean_spans']:.2f} "
                          f"| {ev['target_dropped']} | {ev['by_source']} |")
 
+    lines += agent_section(results)
     lines += _speed_cost_section(results)
     lines += _grounding_section(results)
 
