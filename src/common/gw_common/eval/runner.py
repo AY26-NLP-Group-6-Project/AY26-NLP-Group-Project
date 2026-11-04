@@ -51,6 +51,19 @@ EVIDENCE_K = 3
 SLICE_REPORT_KEYS = ("row_type", "aspect_source", "category", "agreement", "gold")
 
 
+def new_run_dir(root: Path, run_id: str) -> Path:
+    """Create the run directory, with a numeric suffix when another run of the same system started in
+    the same second: two runs must never write into one directory."""
+    for n in range(1, 100):
+        candidate = root / (run_id if n == 1 else f"{run_id}-{n}")
+        try:
+            candidate.mkdir(parents=True, exist_ok=False)
+            return candidate
+        except FileExistsError:
+            continue
+    raise FileExistsError(f"no free run directory for {run_id} under {root}")
+
+
 def _git() -> tuple[str, bool]:
     try:
         sha = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=REPO_ROOT, text=True).strip()
@@ -238,9 +251,8 @@ def run_task(
 
     wanted = conditions or system.supported_conditions()
     supported = set(system.supported_conditions())
-    run_id = f"{started:%Y%m%dT%H%M%SZ}-{system_name}-{task}"
-    run_dir = (out_root or RUNS_DIR) / run_id
-    run_dir.mkdir(parents=True, exist_ok=True)
+    run_dir = new_run_dir(out_root or RUNS_DIR, f"{started:%Y%m%dT%H%M%SZ}-{system_name}-{task}")
+    run_id = run_dir.name
 
     try:
         from gw_common.llm import LLMSettings

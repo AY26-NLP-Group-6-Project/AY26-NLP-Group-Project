@@ -28,7 +28,7 @@ from gw_common import datasets
 from gw_common.eval import ops
 from gw_common.eval.exchange import read_evidence
 from gw_common.eval.report import agent_section
-from gw_common.eval.runner import RUNS_DIR, _git, retrieval_map
+from gw_common.eval.runner import RUNS_DIR, _git, new_run_dir, retrieval_map
 from gw_common.judges import promise as J
 from gw_common.registry import load as load_system
 from gw_common.schemas import EvidenceCondition, EvidenceSpan, Query, RunManifest
@@ -224,9 +224,8 @@ def run_rq2(
         raise ValueError("no promises selected: check --split / --sample")
     gold = [r["outcome"] for r in rows]
 
-    run_id = f"{started:%Y%m%dT%H%M%SZ}-{system_name}-rq2"
-    run_dir = (out_root or RUNS_DIR) / run_id
-    run_dir.mkdir(parents=True, exist_ok=True)
+    run_dir = new_run_dir(out_root or RUNS_DIR, f"{started:%Y%m%dT%H%M%SZ}-{system_name}-rq2")
+    run_id = run_dir.name
     if client is None:
         from gw_common.llm import LLMClient
 

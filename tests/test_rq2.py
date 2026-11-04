@@ -201,3 +201,13 @@ def test_run_rq2_writes_a_run_the_index_and_compare_can_read(gold_dir, tmp_path,
     assert manifest["config"]["retriever"] == {"evidence_from": run_dir.name}
     metrics = json.loads((again / "metrics.json").read_text(encoding="utf-8"))
     assert metrics["conditions"]["promise_window"]["evidence"]["coverage"] == pytest.approx(4 / 5)
+
+
+def test_new_run_dir_never_shares_a_directory(tmp_path):
+    from gw_common.eval.runner import new_run_dir
+
+    first = new_run_dir(tmp_path, "20261104T005711Z-graph-rag-rq2")
+    second = new_run_dir(tmp_path, "20261104T005711Z-graph-rag-rq2")
+    assert first.name == "20261104T005711Z-graph-rag-rq2"
+    assert second.name == "20261104T005711Z-graph-rag-rq2-2"
+    assert first.is_dir() and second.is_dir() and first != second
