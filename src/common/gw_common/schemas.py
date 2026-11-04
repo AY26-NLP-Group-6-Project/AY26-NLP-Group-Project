@@ -29,6 +29,9 @@ class EvidenceCondition(StrEnum):
     CROSS_YEAR_GRAPH = "cross_year_graph"
     CROSS_YEAR_FUSED = "cross_year_fused"
     CROSS_YEAR_AGENTIC = "cross_year_agentic"
+    # The agent over every report of the company, its own report included: a reference is mostly resolved
+    # next to the sentence, which the cross-year arm cannot see.
+    COMPANY_AGENTIC = "company_agentic"
     # RQ2: the evidence for a dated commitment, from every report after the one that made it up to the
     # year after its deadline (`year_from` .. `year_to` on the query); the shared judge reads what comes back.
     PROMISE_WINDOW = "promise_window"

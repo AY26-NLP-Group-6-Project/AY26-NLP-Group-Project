@@ -177,6 +177,11 @@ achieved 172, failed 62, unclear 125, disappeared 15 (USD 1.9). As on RQ1, struc
 retrieval are not distinguishable on this split; what the finder adds is the shorter, ordered reading
 (11.7 statements against 20) and the lower cost per judgement.
 
+On the test split, read once on 2026-11-04 for this frozen system (`graph/promise-window-trajectory-test`,
+`baseline/promise-window-hybrid-test`; `results.md`): the finder 0.736 against the baseline 0.708, +20 / −13,
+p = 0.30; verdicts right 0.90 against 0.85, settled promises left unclear 27 % and 26 %. Judge v3 (section 5)
+on the finder's stored dev evidence: 0.789 → 0.837, +8 / −2, p = 0.11 (`graph/promise-window-trajectory-v3`).
+
 ## 5. The judge
 
 ### Version 1, and its failure
@@ -223,6 +228,12 @@ outcome in the same reply reaches 0.81, so the rule adds to the questions, mostl
 judge is not deterministic: about 16 % of promises (58 of 374) do not get the same outcome three
 times, almost always a verdict against `unclear`. Cost: USD 1.5 for three runs over the 374 promises
 on trajectory evidence.
+
+### Version 3, on dev only
+
+A later judge keeps this design and adds labels for a differently worded measure of the same commitment, a stated part
+delivery and a figure compared in code; `--judge v3` selects it, v2 stays the default and every number in this file is
+v2. It has no human check of its own. Results and limits: `agentic.md`.
 
 ## 6. Results of the held-out check
 
@@ -345,7 +356,7 @@ Distribution over the 373: achieved 206, failed 68, unclear 86, disappeared 13.
 | achieved / failed / unclear / disappeared | 61 / 34 / 22 / 6 | 145 / 34 / 64 / 7 |
 | labelled by the group / by the model pair | 22 / 101 | 115 / 135 |
 
-Tune on dev; test is opened once, for the report, and has not been. On dev the judge of section 5
+Tune on dev; test is opened once, for the report, and has been, for the arms in `agentic.md` section 6. On dev the judge of section 5
 agrees with the gold on 96 of 123 (0.780, κ 0.67): precision / recall achieved 0.94 / 0.84, failed
 0.88 / 0.65, unclear 0.49 / 0.77, disappeared 0.67 / 1.00; it gives a verdict on 5 of the 22
 gold-unclear promises (23 %), leaves 18 of the 101 settled ones unclear (18 %), and 90 % of its

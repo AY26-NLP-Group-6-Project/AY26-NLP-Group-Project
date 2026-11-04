@@ -145,7 +145,7 @@ statements of 110,314.
 | store = DuckDB + networkx, no Neo4j service | one implementation, the Protocol stays |
 | the graph is built over the whole corpus (240 reports) rather than the evaluation companies only | the stores the baseline and the graph retrieve from are the same statements |
 | aspects outside the annotated sentences come from an LLM, gated | gate passed; see above |
-| the agentic arm belongs in the main comparison, with cost and latency as first-class metrics | not built; a stub remains |
+| the agentic arm belongs in the main comparison, with cost and latency as first-class metrics | built over the statement store rather than the graph (`agentic.md`); the `agentic-graph-rag` stub remains |
 
 Status of the original phase plan:
 
@@ -158,7 +158,7 @@ Status of the original phase plan:
 | retrieval arm in the RQ1 ablation | done; same accuracy as hybrid retrieval, faster |
 | trajectories | done as the promise pipeline, judged against human checks (`promises.md`) |
 | serving | FastAPI app exists (`evaluation.md`); a Streamlit demo front end over the dev split (`frontend/`) |
-| agentic arm | stub |
+| agentic arm over the graph | stub; the agentic arm that exists reads the statement store (`agentic.md`) |
 
 Risks that materialised: canonicalisation was the whole ball game for cross-year aspect edges, and it
 failed its gate; extraction noise from tables and ligatures reached the promise pipeline and had to be

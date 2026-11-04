@@ -1,0 +1,101 @@
+{
+  "run_id": "20261031T062526Z-agentic-rag-rq1",
+  "system": "agentic-rag",
+  "task": "rq1",
+  "conditions": [
+    "company_agentic"
+  ],
+  "dataset_id": "gw1000",
+  "dataset_hash": "3e18cc14e648",
+  "label_source": "human_majority",
+  "n_items": 331,
+  "git_sha": "c3a297f8f65e26112751fa1af11eb565d8644c33",
+  "git_dirty": false,
+  "graph_build_id": null,
+  "llm": {
+    "chat_model": "gpt-5.6-luna",
+    "chat_base_url": "https://api.openai.com/v1",
+    "embed_model": "text-embedding-3-small",
+    "embed_base_url": "https://api.openai.com/v1",
+    "temperature": 0.0,
+    "reasoning_effort": "low",
+    "cache": false,
+    "prices_usd_per_mtok": {
+      "chat_in": 0.2,
+      "chat_out": 1.2,
+      "embed": 0.02
+    }
+  },
+  "repeats": 3,
+  "seed": 20260929,
+  "started_at": "2026-10-31T06:25:26.870990+00:00",
+  "finished_at": "2026-10-31T06:31:12.859015+00:00",
+  "wall_seconds": 345.9877161000004,
+  "config": {
+    "split": "dev",
+    "slices": {},
+    "sample": null,
+    "limit": null,
+    "evidence_k": 3,
+    "baseline": "sentence_only",
+    "selection": {
+      "split": {
+        "dev": 331
+      },
+      "row_type": {
+        "aspect": 266,
+        "no_aspect": 65
+      },
+      "gold": {
+        "implemented": 136,
+        "indeterminate": 72,
+        "none": 57,
+        "planning": 66
+      }
+    },
+    "classifier": {
+      "style": "cited",
+      "prompt": "action_classifier_cited.md",
+      "prompt_sha256": "f79137d448e4",
+      "workers": 8,
+      "max_evidence": 3,
+      "evidence_chars": 800,
+      "agent": {
+        "store": "statements",
+        "chunks_sha256": "d8a62bfe40c6",
+        "unit": "statement",
+        "chunks": 108376,
+        "mode": "rrf",
+        "backend": "files",
+        "corpus": "statements",
+        "max_hops": 1,
+        "timeout_s": 90.0,
+        "select": "verified",
+        "prompts": {
+          "rq1_gate": "05cc23d5a014",
+          "rq1_verify": "704bc413c655",
+          "rq2_plan": "8a60f9ec4134"
+        },
+        "trace_file": "traces-20261031T142531-16000.jsonl"
+      }
+    },
+    "retriever": {
+      "store": "statements",
+      "chunks_sha256": "d8a62bfe40c6",
+      "unit": "statement",
+      "chunks": 108376,
+      "mode": "rrf",
+      "backend": "files",
+      "corpus": "statements",
+      "max_hops": 1,
+      "timeout_s": 90.0,
+      "select": "verified",
+      "prompts": {
+        "rq1_gate": "05cc23d5a014",
+        "rq1_verify": "704bc413c655",
+        "rq2_plan": "8a60f9ec4134"
+      },
+      "trace_file": "traces-20261031T142531-16000.jsonl"
+    }
+  }
+}

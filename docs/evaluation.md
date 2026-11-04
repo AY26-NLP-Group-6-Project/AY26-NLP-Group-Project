@@ -35,7 +35,7 @@ manifest, so a changed annotation cannot be mistaken for the same data.
 | aspect / no-aspect rows | 266 / 65 | 537 / 132 |
 | implemented / indeterminate / planning / none | 136 / 72 / 66 / 57 | 281 / 150 / 125 / 113 |
 
-Tune on dev. Test is opened once, for the report; so far nothing has been run on it.
+Tune on dev. Test is opened once, for the report; so far nothing on this set has been scored on it.
 
 Label sources: `human_majority` (the gold), `llm_pre_{claude,deepseek,gpt}` (pre-annotations, for
 label-noise analysis only; they agree with the human majority 0.79–0.80 and are never a system input),
@@ -55,7 +55,8 @@ of every dated commitment, achieved / failed / unclear / disappeared, with who l
 calibrated on those rows and adjudicated, 236 rows), both annotators' labels and notes, and the split:
 **dev 123 / test 250**, stratified by outcome × source, the 75 promises the judge prompt was tuned on
 pinned to dev. The one promise the annotators settled as not a promise is listed in the build report and
-left out. Same rule: tune on dev, open test once. `promises.md` section 8 has the protocol
+left out. Same rule: tune on dev, open test once; it has been opened for the arms in `agentic.md` section 6, so a change made
+from here on can no longer be checked on it. `promises.md` section 8 has the protocol
 and the calibration; `gw-graph promise-gold` rebuilds the file, `gw-graph promise-gold-score
 --gold-split dev` scores a judge output against it.
 
@@ -72,7 +73,8 @@ evidence they hand it: at most `k = 3` spans of at most 800 characters each.
 | `cross_year_rrf` | retrieved from the **same company, other years** | the system's retriever |
 | `cross_year_graph` | statements reached through the claim graph | graph-rag |
 | `cross_year_fused` | graph first, BM25 over the company's other-year statements fills to k | graph-rag |
-| `cross_year_agentic` | bounded plan–retrieve–stop loop | not built |
+| `cross_year_agentic` | the agent, other years only: no evidence unless the sentence has a gap, then only passages verified to close it | agentic-rag (`agentic.md`) |
+| `company_agentic` | the same over every report of the company, starting next to the sentence | agentic-rag |
 | `promise_window` | RQ2 (`--task rq2`): at most k = 20 statements from the company's reports after the one that made the commitment, up to the year after its deadline; read by the shared judge, not the classifier | the system's retriever |
 
 The harness drops any returned span that *is* the target sentence (same company and year, text equal
@@ -175,7 +177,15 @@ uv run gw-eval --compare results/baseline/statement-hybrid-cited results/graph/g
 `--publish` copies the manifest, metrics and report (not the per-item files) into `results/<group>/<name>/`
 and regenerates `results/README.md`. `--compare` pairs the two runs' majority votes on the items both
 scored and reports flips and McNemar p per condition; it refuses runs on different snapshots, and an
-RQ2 run is only compared with another RQ2 run (same promises, the four outcomes as labels).
+RQ2 run is only compared with another RQ2 run (same promises, the four outcomes as labels). It reads the
+votes from `predictions.jsonl`, so give it run directories (`artifacts/runs/<run_id>`): a published folder
+holds summaries only. `--pairs condA:condB,...` adds pairs of conditions, so two arms of one run can be compared.
+
+On RQ2, `--judge v1|v2|v3` picks the judge (default v2; v3 in `agentic.md`), and `--evidence <run>/evidence.jsonl` judges
+an earlier run's statements again with no retrieval, so two judges compare on one evidence.
+
+`GW_RETRIEVAL_WORKERS` (default 1) sets the threads that collect evidence. An agent mostly waits on the network, so
+its runs use 8; a retrieval latency then includes queueing, so latencies compare only between runs at one worker.
 
 ## 8. Plugging in a system
 

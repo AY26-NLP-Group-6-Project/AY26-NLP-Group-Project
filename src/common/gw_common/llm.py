@@ -284,9 +284,10 @@ class LLMClient:
         for start in range(0, len(todo), batch_size):
             batch = todo[start:start + batch_size]
             resp = self._embed_transport().embeddings.create(model=model, input=[texts[i] for i in batch])
-            self.usage["embed_calls"] = self.usage.get("embed_calls", 0) + 1
-            self.usage["embed_tokens"] = self.usage.get("embed_tokens", 0) + (
-                getattr(getattr(resp, "usage", None), "prompt_tokens", 0) or 0)
+            with self._usage_lock:
+                self.usage["embed_calls"] = self.usage.get("embed_calls", 0) + 1
+                self.usage["embed_tokens"] = self.usage.get("embed_tokens", 0) + (
+                    getattr(getattr(resp, "usage", None), "prompt_tokens", 0) or 0)
             for i, item in zip(batch, resp.data, strict=True):
                 vec = np.asarray(item.embedding, dtype=np.float32)
                 out[i] = vec

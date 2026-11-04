@@ -22,6 +22,7 @@ import statistics
 import subprocess
 import time
 from collections import Counter
+from concurrent.futures import ThreadPoolExecutor
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -32,6 +33,7 @@ from gw_common.eval.exchange import align, read_evidence, read_predictions
 from gw_common.eval.report import write_report
 from gw_common.eval.select import SLICERS, describe, select
 from gw_common.evidence import drop_target
+from gw_common.llm import load_env
 from gw_common.registry import load as load_system
 from gw_common.schemas import (
     EvidenceCondition,
@@ -49,6 +51,19 @@ EVIDENCE_K = 3
 SLICE_REPORT_KEYS = ("row_type", "aspect_source", "category", "agreement", "gold")
 
 
+def new_run_dir(root: Path, run_id: str) -> Path:
+    """Create the run directory, with a numeric suffix when another run of the same system started in
+    the same second: two runs must never write into one directory."""
+    for n in range(1, 100):
+        candidate = root / (run_id if n == 1 else f"{run_id}-{n}")
+        try:
+            candidate.mkdir(parents=True, exist_ok=False)
+            return candidate
+        except FileExistsError:
+            continue
+    raise FileExistsError(f"no free run directory for {run_id} under {root}")
+
+
 def _git() -> tuple[str, bool]:
     try:
         sha = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=REPO_ROOT, text=True).strip()
@@ -58,17 +73,30 @@ def _git() -> tuple[str, bool]:
         return "unknown", True
 
 
+def retrieval_map(fn, items: list) -> list:
+    """`fn` over `items`, in order, on `GW_RETRIEVAL_WORKERS` threads (default 1). An agent waits on the
+    network for most of an item, so it runs with more; with more than one worker a retrieval latency
+    includes queueing, so latencies are only compared between runs at one worker."""
+    load_env()
+    workers = max(1, int(os.getenv("GW_RETRIEVAL_WORKERS", "1")))
+    if workers == 1:
+        return [fn(it) for it in items]
+    with ThreadPoolExecutor(max_workers=workers) as pool:
+        return list(pool.map(fn, items))
+
+
 def build_query(item: GoldItem, condition: EvidenceCondition) -> Query:
-    cross_year = condition.value.startswith("cross_year")
+    any_year = condition.value.startswith("cross_year") or condition is EvidenceCondition.COMPANY_AGENTIC
     return Query(
         text=item.text,
         company=item.company,
         aspect=item.aspect,
-        year_from=None if cross_year else item.year,
-        year_to=None if cross_year else item.year,
+        year_from=None if any_year else item.year,
+        year_to=None if any_year else item.year,
         anchor_year=item.year,
         target_text=item.text,
         condition=condition,
+        meta={"page": item.page},
     )
 
 
@@ -86,14 +114,19 @@ def collect_evidence(
     retriever = getattr(system, "retriever", lambda: None)()
     if retriever is None or condition in (EvidenceCondition.SENTENCE_ONLY, EvidenceCondition.LOCAL):
         return {}, 0
-    evidence, dropped = {}, 0
-    for it in items:
+
+    def one(it: GoldItem) -> tuple[list[EvidenceSpan], int, float]:
         q = build_query(it, condition)
         t0 = time.perf_counter()
         returned = retriever.retrieve(q, k=k)
-        if timings_ms is not None:
-            timings_ms[it.item_id] = (time.perf_counter() - t0) * 1000
+        ms = (time.perf_counter() - t0) * 1000
         spans, n = drop_target(returned, q)
+        return spans, n, ms
+
+    evidence, dropped = {}, 0
+    for it, (spans, n, ms) in zip(items, retrieval_map(one, items), strict=True):
+        if timings_ms is not None:
+            timings_ms[it.item_id] = ms
         evidence[it.item_id] = spans
         dropped += n
     return evidence, dropped
@@ -218,9 +251,8 @@ def run_task(
 
     wanted = conditions or system.supported_conditions()
     supported = set(system.supported_conditions())
-    run_id = f"{started:%Y%m%dT%H%M%SZ}-{system_name}-{task}"
-    run_dir = (out_root or RUNS_DIR) / run_id
-    run_dir.mkdir(parents=True, exist_ok=True)
+    run_dir = new_run_dir(out_root or RUNS_DIR, f"{started:%Y%m%dT%H%M%SZ}-{system_name}-{task}")
+    run_id = run_dir.name
 
     try:
         from gw_common.llm import LLMSettings
@@ -328,6 +360,9 @@ def run_task(
             }
             if evidence:
                 block["evidence"] = evidence_stats(items, evidence, target_dropped)
+                agent_stats = getattr(getattr(system, "_retriever", None), "stats", None)
+                if agent_stats is not None and (stats := agent_stats(cond.value)):
+                    block["agent"] = stats
             if cond is baseline:
                 baseline_runs = runs
             elif baseline_runs is not None:
