@@ -318,9 +318,15 @@ of the former notes index.
   every document and published copy; runs on this machine since 2026-10-29 were made under the gateway's cheaper alias
   `gpt-5.6-luna` (`.env`), which the group judged indistinguishable in performance, and the local manifests under
   `artifacts/runs/` record that alias.
-- Judge v3 on the two test evidence files (`--evidence`, no retrieval) started and was stopped by the machine's memory
-  pressure after two of three repeats (graph) and one (hybrid); nothing was read from them, the partial directories were
-  removed, and both are to be re-run.
+- Judge v3 on the two test evidence files (`--evidence`, no retrieval): a first attempt, both at once, was stopped by the
+  machine's memory pressure after two of three repeats (graph) and one (hybrid); nothing was read, the partial directories
+  were removed. Re-run one after the other: finder `20261104T022653Z-graph-rag-rq2` →
+  `graph/promise-window-trajectory-test-v3`, vote 0.804 (201 of 250), κ 0.67, macro-F1 0.668, verdict on 18 of 64
+  gold-unclear, 27 of 186 settled left unclear, verdicts right 155 of 177 (0.88), 36 unstable, USD 1.14; baseline
+  `20261104T024056Z-baseline-rag-rq2` → `baseline/promise-window-hybrid-test-v3`, 0.748 (187), κ 0.58, 27 of 64,
+  33 of 186, 150 of 180 (0.83), 46 unstable, USD 1.41. Paired: finder v2 → v3 +26 / −9, p = 0.006; baseline v2 → v3
+  +28 / −18, p = 0.18; under v3 finder against baseline +24 / −10, p = 0.024. On the group's 115 rows the finder 85 → 88,
+  the baseline 81 → 83; on the 135 model-labelled rows 99 → 113 and 96 → 104.
 - Harness: two runs of one system started in the same second shared one run directory (`<timestamp>-<system>-<task>`),
   which happened when the dev re-judge and the test run were launched together; `new_run_dir` now appends `-2`, `-3`
   on collision (`4999af0d`).

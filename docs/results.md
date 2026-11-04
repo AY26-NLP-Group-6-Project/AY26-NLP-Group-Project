@@ -177,7 +177,8 @@ judge gave a result label to 1. Over eight v3 repeats on the fixed budget's evid
 | chosen pipeline: agent, filter, v3 twice | v3 | 0.808 | 22 / 64 | 23 / 186 | 160 / 185 | 10.26 |
 | trajectory finder, graph (`graph/promise-window-trajectory-test`, 2026-11-04) | v2 | 0.736 | 11 / 64 | 51 / 186 | 131 / 146 | 4.00 |
 | hybrid, top 20, second run (`baseline/promise-window-hybrid-test`, 2026-11-04) | v2 | 0.708 | 18 / 64 | 49 / 186 | 131 / 155 | 4.98 |
-| finder and second baseline run, judge v3 on the same evidence | v3 | pending: stopped by memory pressure, to be re-run | | | | |
+| trajectory finder, graph, judge v3 on the same evidence (`graph/promise-window-trajectory-test-v3`) | v3 | 0.804 | 18 / 64 | 27 / 186 | 155 / 177 | 4.56 |
+| hybrid, top 20, second run, judge v3 on the same evidence (`baseline/promise-window-hybrid-test-v3`) | v3 | 0.748 | 27 / 64 | 33 / 186 | 150 / 180 | 5.64 |
 
 No frozen comparison reaches 0.05: the chosen pipeline against the baseline is +28 / −18 (p = 0.18), against the fixed budget with v3
 +5 / −5 (p = 1.00), and its filter loses to no filter +5 / −13 (p = 0.096). v3 against v2 is the one change in one direction on every
@@ -188,8 +189,13 @@ against the baseline (p = 0.011 uncorrected), but it is a best of seven picked a
 The graph line, read once on 2026-11-04 as a frozen system (the finder unchanged since 2026-10-03, judge v2): the
 finder 0.736 against the hybrid baseline run again the same day 0.708, paired +20 / −13, p = 0.30; both more cautious
 than on dev (settled promises left unclear 27 % and 26 %), the finder's verdicts right 0.90 against 0.85, on 11.6
-statements against 20. The same hybrid configuration scored 0.768 in the 2026-10-31 batch and 0.708 here, on another machine on
-another day, so test rows are paired within a batch only (`history.md`, 2026-11-04).
+statements against 20. Judge v3 on the same stored evidence: the finder 0.736 → 0.804 (+26 / −9, p = 0.006), the baseline
+0.708 → 0.748 (+28 / −18, p = 0.18); under v3 the finder is ahead of the baseline, +24 / −10, p = 0.024 (one of four
+comparisons in this batch, about 0.1 corrected), holding verdict precision at 0.88 where the baseline's falls to 0.83
+because v3 doubles its verdicts on gold-unclear promises (18 → 27 of 64). On the group's 115 rows the finder goes 85 → 88
+and the baseline 81 → 83; on the 135 model-labelled rows 99 → 113 and 96 → 104. The same hybrid configuration scored
+0.768 in the 2026-10-31 batch and 0.708 here, on another machine on another day, so test rows are paired within a batch
+only (`history.md`, 2026-11-04).
 
 ### Case studies
 

@@ -180,7 +180,9 @@ retrieval are not distinguishable on this split; what the finder adds is the sho
 On the test split, read once on 2026-11-04 for this frozen system (`graph/promise-window-trajectory-test`,
 `baseline/promise-window-hybrid-test`; `results.md`): the finder 0.736 against the baseline 0.708, +20 / −13,
 p = 0.30; verdicts right 0.90 against 0.85, settled promises left unclear 27 % and 26 %. Judge v3 (section 5)
-on the finder's stored dev evidence: 0.789 → 0.837, +8 / −2, p = 0.11 (`graph/promise-window-trajectory-v3`).
+on the same stored evidence: dev 0.789 → 0.837 (+8 / −2, p = 0.11, `graph/promise-window-trajectory-v3`); test
+0.736 → 0.804 (+26 / −9, p = 0.006, `graph/promise-window-trajectory-test-v3`) against the baseline's 0.708 → 0.748
+(`baseline/promise-window-hybrid-test-v3`), the finder ahead under v3 by +24 / −10, p = 0.024.
 
 ## 5. The judge
 
