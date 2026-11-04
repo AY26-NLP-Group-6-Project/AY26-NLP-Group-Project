@@ -295,3 +295,34 @@ of the former notes index.
   evidence, shared prompts and default `k`; cached model responses are off by default so timings are
   real. `frontend/core.py` holds the non-UI part, tested in `tests/test_frontend.py` with a fake system.
 
+
+## 2026-11-04 · The graph line on the RQ2 test split; judge v3 on its dev evidence; merges
+
+- `origin/feat/frontend-demo` merged (`3cfb559`); `origin/dev/agentic-rq2` merged on the branch `merge/agentic-rq2`
+  (`ac21acf`, PR #8): the rebuilt agentic arm, judge v3, the agentic batch's published runs and its RQ2 test read of
+  2026-10-31. Four doc conflicts resolved by keeping both sides; the agentic branch's `tests/test_agentic.py` taken whole.
+- Judge v3 on the trajectory finder's stored dev evidence (`20261104T010004Z-graph-rag-rq2`, published as
+  `graph/promise-window-trajectory-v3`, no new retrieval): vote 0.837 against 0.789 under v2, +8 / −2, p = 0.11; κ 0.75,
+  macro-F1 0.788; verdict on 5 of 22 gold-unclear both times, settled left unclear 17 → 10 of 101, verdicts right 0.90 both
+  times; the 22 human-labelled rows stay at 15 right, the model-labelled rows go 82 → 88 of 101. USD 0.55.
+- RQ2 test split read once for the graph line, a frozen system (the finder unchanged since 2026-10-03, judge v2 unchanged):
+  `20261104T005955Z-graph-rag-rq2` → `graph/promise-window-trajectory-test`, vote 0.736 (184 of 250), κ 0.57, macro-F1
+  0.548, verdict on 11 of 64 gold-unclear, 51 of 186 settled left unclear, verdicts right 131 of 146 (0.90), all 7
+  `disappeared` read as unclear, 44 unstable; 11.6 statements, retrieval p50 220 ms, USD 1.00. The hybrid baseline run
+  again on the same machine at the same time (`20261104T005711Z-baseline-rag-rq2` → `baseline/promise-window-hybrid-test`):
+  0.708 (177), κ 0.53, 18 of 64, 49 of 186, 131 of 155 (0.85), 39 unstable; 20 statements, p50 932 ms, USD 1.24.
+  Paired finder against baseline: +20 / −13, p = 0.30.
+- The agentic batch's hybrid baseline under v2 scored 0.768 on this split on 2026-10-31 against 0.708 here for the same
+  configuration (15 promises, more than the dev run-to-run spread of 0.016). The two batches' manifests record different
+  chat-model identifiers: `gpt-5.6-luna` in the 2026-10-31 batch, `gpt-6-luna` in every run made on this machine since
+  2026-10-29 (`.env`); the published copies of the 2026-10-29/30 runs under `results/` name `gpt-5.6-luna` while their
+  local manifests under `artifacts/runs/` name `gpt-6-luna`. Which identifier the gateway served is to be settled by the
+  group; until then test rows are paired within a batch only.
+- Judge v3 on the two test evidence files (`--evidence`, no retrieval) started and was stopped by the machine's memory
+  pressure after two of three repeats (graph) and one (hybrid); nothing was read from them, the partial directories were
+  removed, and both are to be re-run.
+- Harness: two runs of one system started in the same second shared one run directory (`<timestamp>-<system>-<task>`),
+  which happened when the dev re-judge and the test run were launched together; `new_run_dir` now appends `-2`, `-3`
+  on collision (`4999af0d`).
+- Report: the agentic method and its RQ1 dev results on the statement store, judge v3, the RQ2 dev table with every arm
+  and judge, and the RQ2 test section with the frozen comparisons, the graph line's rows and the pairing within batches.

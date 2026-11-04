@@ -177,6 +177,11 @@ achieved 172, failed 62, unclear 125, disappeared 15 (USD 1.9). As on RQ1, struc
 retrieval are not distinguishable on this split; what the finder adds is the shorter, ordered reading
 (11.7 statements against 20) and the lower cost per judgement.
 
+On the test split, read once on 2026-11-04 for this frozen system (`graph/promise-window-trajectory-test`,
+`baseline/promise-window-hybrid-test`; `results.md`): the finder 0.736 against the baseline 0.708, +20 / −13,
+p = 0.30; verdicts right 0.90 against 0.85, settled promises left unclear 27 % and 26 %. Judge v3 (section 5)
+on the finder's stored dev evidence: 0.789 → 0.837, +8 / −2, p = 0.11 (`graph/promise-window-trajectory-v3`).
+
 ## 5. The judge
 
 ### Version 1, and its failure

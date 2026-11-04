@@ -1,0 +1,1 @@
+RQ2 test split, 2026-11-04: the hybrid baseline's top 20 inside the promise window, shared judge v2, three repeats; a second read of the configuration agentic/rq2-test-hybrid-v2 ran on 2026-10-31, run here so the graph line is paired on the same machine and model name

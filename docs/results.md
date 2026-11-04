@@ -158,7 +158,10 @@ same hybrid configuration scored 0.789 and 0.805 on two days, which is the noise
 
 Judge v3 on those same statements (`agentic/rq2-dev-v3-*`, `agentic.md`): adds a differently worded measure of the same
 commitment, a stated part delivery and a figure compared in code. Fixed budget 0.813 → 0.870 (+9 / −2, p = 0.065), agent
-0.789 → 0.837 (+9 / −3, p = 0.15), hybrid 0.805 → 0.813 (+6 / −5, p = 1.00). Settled promises left unclear on the fixed budget
+0.789 → 0.837 (+9 / −3, p = 0.15), hybrid 0.805 → 0.813 (+6 / −5, p = 1.00). The trajectory finder, judged with v3 on its stored dev evidence
+(`graph/promise-window-trajectory-v3`, 2026-11-04): 0.789 → 0.837 (+8 / −2, p = 0.11), settled promises left
+unclear 17 → 10 of 101, a verdict on 5 of 22 gold-unclear promises both times, verdict precision 0.90 both times;
+the 22 human-labelled rows stay at 15 right and the gain is on the model-labelled rows (82 → 88 of 101). Settled promises left unclear on the fixed budget
 fall from 16 to 8 of 101, with verdicts where the gold is unclear 3 → 4 of 22. Designed on this split, so optimistic. The
 planner still adds nothing (agent against fixed budget +2 / −6, p = 0.29): of the 195 statements its own actions added, the
 judge gave a result label to 1. Over eight v3 repeats on the fixed budget's evidence the mean is about 0.85, single repeats
@@ -172,12 +175,22 @@ judge gave a result label to 1. Over eight v3 repeats on the fixed budget's evid
 | fixed budget, no planner | v3 | 0.808 | 21 / 64 | 25 / 186 | 159 / 182 | 4.52 |
 | agent, two hops | v3 | 0.840 | 18 / 64 | 20 / 186 | 164 / 184 | 5.72 |
 | chosen pipeline: agent, filter, v3 twice | v3 | 0.808 | 22 / 64 | 23 / 186 | 160 / 185 | 10.26 |
+| trajectory finder, graph (`graph/promise-window-trajectory-test`, 2026-11-04) | v2 | 0.736 | 11 / 64 | 51 / 186 | 131 / 146 | 4.00 |
+| hybrid, top 20, second run (`baseline/promise-window-hybrid-test`, 2026-11-04) | v2 | 0.708 | 18 / 64 | 49 / 186 | 131 / 155 | 4.98 |
+| finder and second baseline run, judge v3 on the same evidence | v3 | pending: stopped by memory pressure, to be re-run | | | | |
 
 No frozen comparison reaches 0.05: the chosen pipeline against the baseline is +28 / −18 (p = 0.18), against the fixed budget with v3
 +5 / −5 (p = 1.00), and its filter loses to no filter +5 / −13 (p = 0.096). v3 against v2 is the one change in one direction on every
 arm (fixed budget +23 / −12, p = 0.090; hybrid +24 / −12, p = 0.065), at more verdicts where the gold is unclear. The gain lies on the
 model-labelled rows (fixed budget 99 → 111 of 135; on the group's 115 rows 92 → 91). The unfiltered agent with v3 came top, at +32 / −14
 against the baseline (p = 0.011 uncorrected), but it is a best of seven picked after the fact and test is spent.
+
+The graph line, read once on 2026-11-04 as a frozen system (the finder unchanged since 2026-10-03, judge v2): the
+finder 0.736 against the hybrid baseline run again the same day 0.708, paired +20 / −13, p = 0.30; both more cautious
+than on dev (settled promises left unclear 27 % and 26 %), the finder's verdicts right 0.90 against 0.85, on 11.6
+statements against 20. The same hybrid configuration scored 0.768 in the 2026-10-31 batch and 0.708 here, and the two
+batches' manifests record different chat-model identifiers (`gpt-5.6-luna` there, `gpt-6-luna` here), so test rows are
+paired within a batch only (`history.md`, 2026-11-04).
 
 ### Case studies
 

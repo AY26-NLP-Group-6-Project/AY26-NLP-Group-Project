@@ -1,0 +1,1 @@
+RQ2 test split, read once on 2026-11-04 for the trajectory finder (unchanged since 2026-10-03): its evidence under promise_window, shared judge v2, three repeats; paired with baseline/promise-window-hybrid-test
