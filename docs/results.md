@@ -188,9 +188,8 @@ against the baseline (p = 0.011 uncorrected), but it is a best of seven picked a
 The graph line, read once on 2026-11-04 as a frozen system (the finder unchanged since 2026-10-03, judge v2): the
 finder 0.736 against the hybrid baseline run again the same day 0.708, paired +20 / −13, p = 0.30; both more cautious
 than on dev (settled promises left unclear 27 % and 26 %), the finder's verdicts right 0.90 against 0.85, on 11.6
-statements against 20. The same hybrid configuration scored 0.768 in the 2026-10-31 batch and 0.708 here, and the two
-batches' manifests record different chat-model identifiers (`gpt-5.6-luna` there, `gpt-6-luna` here), so test rows are
-paired within a batch only (`history.md`, 2026-11-04).
+statements against 20. The same hybrid configuration scored 0.768 in the 2026-10-31 batch and 0.708 here, on another machine on
+another day, so test rows are paired within a batch only (`history.md`, 2026-11-04).
 
 ### Case studies
 

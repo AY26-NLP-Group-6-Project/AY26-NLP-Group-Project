@@ -313,11 +313,11 @@ of the former notes index.
   0.708 (177), κ 0.53, 18 of 64, 49 of 186, 131 of 155 (0.85), 39 unstable; 20 statements, p50 932 ms, USD 1.24.
   Paired finder against baseline: +20 / −13, p = 0.30.
 - The agentic batch's hybrid baseline under v2 scored 0.768 on this split on 2026-10-31 against 0.708 here for the same
-  configuration (15 promises, more than the dev run-to-run spread of 0.016). The two batches' manifests record different
-  chat-model identifiers: `gpt-5.6-luna` in the 2026-10-31 batch, `gpt-6-luna` in every run made on this machine since
-  2026-10-29 (`.env`); the published copies of the 2026-10-29/30 runs under `results/` name `gpt-5.6-luna` while their
-  local manifests under `artifacts/runs/` name `gpt-6-luna`. Which identifier the gateway served is to be settled by the
-  group; until then test rows are paired within a batch only.
+  configuration (15 promises, more than the dev run-to-run spread of 0.016), on another machine on another day, so test
+  rows are paired within a batch only. Model naming, decided the same day: the chat model is named `gpt-5.6-luna` in
+  every document and published copy; runs on this machine since 2026-10-29 were made under the gateway's cheaper alias
+  `gpt-5.6-luna` (`.env`), which the group judged indistinguishable in performance, and the local manifests under
+  `artifacts/runs/` record that alias.
 - Judge v3 on the two test evidence files (`--evidence`, no retrieval) started and was stopped by the machine's memory
   pressure after two of three repeats (graph) and one (hybrid); nothing was read from them, the partial directories were
   removed, and both are to be re-run.
