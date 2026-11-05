@@ -213,6 +213,10 @@ judge gave a result label to 1. Over eight v3 repeats on the fixed budget's evid
 | hybrid, top 20, second run (`baseline/promise-window-hybrid-test`, 2026-11-04) | v2 | 0.708 | 18 / 64 | 49 / 186 | 131 / 155 | 4.98 |
 | trajectory finder, graph, judge v3 on the same evidence (`graph/promise-window-trajectory-test-v3`) | v3 | 0.804 | 18 / 64 | 27 / 186 | 155 / 177 | 4.56 |
 | hybrid, top 20, second run, judge v3 on the same evidence (`baseline/promise-window-hybrid-test-v3`) | v3 | 0.748 | 27 / 64 | 33 / 186 | 150 / 180 | 5.64 |
+| fixed budget, second batch (`agentic/rq2-test-fixed-budget-v2-b2`, 2026-11-05) | v2 | 0.748 | 12 / 64 | 45 / 186 | 135 / 153 | 3.96 |
+| fixed budget, second batch, judge v3 on the same evidence (`agentic/rq2-test-fixed-budget-v3-b2`) | v3 | 0.768 | 22 / 64 | 29 / 186 | 150 / 179 | 4.59 |
+| agent, two hops, second batch (`agentic/rq2-test-agent-v2-b2`, 2026-11-05) | v2 | 0.744 | 16 / 64 | 44 / 186 | 138 / 158 | 5.75 |
+| agent, two hops, second batch, judge v3 on the same evidence (`agentic/rq2-test-agent-v3-b2`) | v3 | 0.800 | 21 / 64 | 24 / 186 | 157 / 183 | 6.32 |
 
 No frozen comparison reaches 0.05: the chosen pipeline against the baseline is +28 / −18 (p = 0.18), against the fixed budget with v3
 +5 / −5 (p = 1.00), and its filter loses to no filter +5 / −13 (p = 0.096). v3 against v2 is the one change in one direction on every
@@ -229,7 +233,13 @@ comparisons in this batch, about 0.1 corrected), holding verdict precision at 0.
 because v3 doubles its verdicts on gold-unclear promises (18 → 27 of 64). On the group's 115 rows the finder goes 85 → 88
 and the baseline 81 → 83; on the 135 model-labelled rows 99 → 113 and 96 → 104. The same hybrid configuration scored
 0.768 in the 2026-10-31 batch and 0.708 here, on another machine on another day, so test rows are paired within a batch
-only (`history.md`, 2026-11-04).
+only (`history.md`, 2026-11-04). The agentic system's two RQ2 arms run again in this batch on 2026-11-05, so all four
+retrievers pair on one machine: under v2 fixed budget 0.748, agent 0.744, finder 0.736, baseline 0.708, no pair
+separating (closest: fixed budget over baseline +17 / −7, p = 0.064); under v3 finder 0.804, agent 0.800, fixed budget
+0.768, baseline 0.748, with the agent's v2 → v3 +23 / −9 (p = 0.020), finder against agent +14 / −15 (p = 1.00), agent
+against baseline +27 / −14 (p = 0.060), fixed budget v2 → v3 +21 / −16 (p = 0.51). The planner costs USD 1.13 per 1,000
+promises on top of the judge, 1.8 calls per promise, retrieval p50 11.5 s against 0.6 s (fixed budget) and 0.2 s
+(finder), 32 % of its evidence from later hops.
 
 ### Case studies
 

@@ -374,3 +374,27 @@ of the former notes index.
   Not started: the RQ2 in-batch agentic arms (hops 0 and 2, v2 then v3), RAGAS on the baseline test run.
 - Report: section 5.6 and the RQ1 test table carry the baseline, graph and passage rows; the agentic rows and
   sentence are placeholders (`AGENTICTEST*`) until that run is in.
+
+## 2026-11-05 · RQ2 test, second batch: the agentic arms on this machine; RQ1 agentic test re-run
+
+- The gateway's 400 on the output budget (above) is handled: `LLMClient.chat` doubles `max_completion_tokens` up to
+  three times on that error and then raises `OutputBudgetExceeded`; `LLMActionClassifier` turns that into a failed
+  parse for the item (`parse_ok=false`, fallback label) instead of ending the run (`11c23bd`). The agentic six-arm
+  RQ1 test run was started again under it (`20261105T142254Z-agentic-rag-rq1`).
+- RQ2 test, this machine, so that the agent and the finder pair: fixed budget `20261105T142304Z-agentic-rag-rq2` →
+  `agentic/rq2-test-fixed-budget-v2-b2`, vote 0.748 (187 of 250), κ 0.60, 12 of 64 gold-unclear given a verdict, 45 of
+  186 settled left unclear, verdicts right 135 of 153 (0.88), 42 unstable, 11.5 statements, retrieval p50 568 ms at
+  8 workers, USD 0.99; v3 on the same evidence `20261105T144119Z` → `agentic/rq2-test-fixed-budget-v3-b2`, 0.768 (192),
+  κ 0.62, 22 of 64, 29 of 186, 150 of 179 (0.84), USD 1.15. Agent, two hops `20261105T144054Z` → `agentic/rq2-test-agent-v2-b2`,
+  0.744 (186), κ 0.58, 16 of 64, 44 of 186, 138 of 158 (0.87), 51 unstable, 16.5 statements, 1.8 planner calls per
+  promise, 32 % of evidence from later hops, retrieval p50 11.5 s (p95 55 s), judge USD 1.16 plus planner USD 1.13 per
+  1,000 promises; v3 on the same evidence `20261105T150953Z` → `agentic/rq2-test-agent-v3-b2`, 0.800 (200), κ 0.66, 21 of
+  64, 24 of 186, 157 of 183 (0.86), USD 1.30.
+- Paired within the batch, votes, McNemar: v2 hybrid → fixed budget +17 / −7 (p = 0.064), finder → fixed budget +12 / −9
+  (0.66), hybrid → agent +20 / −11 (0.15), fixed budget → agent +10 / −11 (1.00), finder → agent +14 / −12 (0.85); v2 → v3
+  fixed budget +21 / −16 (0.51), agent +23 / −9 (0.020); v3 finder → fixed budget +6 / −15 (0.078), hybrid → fixed budget
+  +23 / −18 (0.53), finder → agent +14 / −15 (1.00), hybrid → agent +27 / −14 (0.060), fixed budget → agent +22 / −14 (0.24).
+  Under the judge of record the four retrievers lie within ten promises of each other; under v3 the finder and the
+  agent lead, the finder with no planner and a fiftieth of the latency.
+- One mis-publication corrected the same hour: the two-hop run's directory was published under the fixed-budget v3 name
+  before that run had finished; the folder (NOTE.md only) was removed and the right run published.

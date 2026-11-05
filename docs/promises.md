@@ -182,7 +182,9 @@ On the test split, read once on 2026-11-04 for this frozen system (`graph/promis
 p = 0.30; verdicts right 0.90 against 0.85, settled promises left unclear 27 % and 26 %. Judge v3 (section 5)
 on the same stored evidence: dev 0.789 → 0.837 (+8 / −2, p = 0.11, `graph/promise-window-trajectory-v3`); test
 0.736 → 0.804 (+26 / −9, p = 0.006, `graph/promise-window-trajectory-test-v3`) against the baseline's 0.708 → 0.748
-(`baseline/promise-window-hybrid-test-v3`), the finder ahead under v3 by +24 / −10, p = 0.024.
+(`baseline/promise-window-hybrid-test-v3`), the finder ahead under v3 by +24 / −10, p = 0.024. The agentic system's fixed budget and two-hop planner, run in the same batch on 2026-11-05: 0.748 / 0.744
+under v2 and 0.768 / 0.800 under v3; the finder and the agent tie under v3 (+14 / −15, p = 1.00) and the finder
+does it with no planner, 11.6 statements against 16.5 and a retrieval p50 of 0.2 s against 11.5 s (`results.md`).
 
 ## 5. The judge
 
