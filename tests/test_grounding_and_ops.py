@@ -100,3 +100,16 @@ def test_grounding_counts_evidence_use():
     assert g["items_with_evidence"] == 2 and g["evidence_use_rate"] == 0.5
     assert g["evidence_spans_cited_share"] == pytest.approx(1 / 4)
     assert ops.mean_of([{"a": {"b": 1.0}}, {"a": {"b": 3.0}}, {"a": {}}], "a", "b") == 2.0
+
+
+def test_a_reply_the_gateway_will_not_finish_is_a_failed_parse_not_a_dead_run():
+    from gw_common.llm import OutputBudgetExceeded
+
+    class _Refusing:
+        def chat(self, messages, **_):
+            raise OutputBudgetExceeded("max_tokens or model output limit was reached")
+
+    clf = LLMActionClassifier(client=_Refusing(), workers=1, style="cited")
+    pred = clf.classify([ITEM], condition=EvidenceCondition.CROSS_YEAR_RRF, evidence={"1": SPANS})[0]
+    assert pred.parse_ok is False and pred.label is Label.INDETERMINATE
+    assert pred.evidence_ids == ["s1", "s2"] and "output budget" in pred.rationale

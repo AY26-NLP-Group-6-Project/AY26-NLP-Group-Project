@@ -24,7 +24,7 @@ from collections.abc import Mapping, Sequence
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
-from gw_common.llm import REPO_ROOT, LLMClient
+from gw_common.llm import REPO_ROOT, LLMClient, OutputBudgetExceeded
 from gw_common.schemas import Citation, EvalItem, EvidenceCondition, EvidenceSpan, Label, Prediction
 
 PROMPTS = {
@@ -158,7 +158,24 @@ class LLMActionClassifier:
         def one(item: EvalItem) -> Prediction:
             ev = list(evidence.get(item.item_id, []))[: self.max_evidence]
             t0 = time.perf_counter()
-            r = self.client.chat(self.build_messages(item, condition, ev), max_tokens=512)
+            try:
+                r = self.client.chat(self.build_messages(item, condition, ev), max_tokens=512)
+            except OutputBudgetExceeded as exc:
+                # One reply the gateway would not finish is a failed parse for that item, not the end of
+                # a run of thousands; it is counted in `parse_ok` and scored as the fallback label.
+                return Prediction(
+                    item_id=item.item_id,
+                    label=parse_label(""),
+                    evidence_ids=[e.statement_id for e in ev],
+                    rationale=f"no reply within the output budget: {exc}"[:300],
+                    citations=[],
+                    invalid_citations=0,
+                    parse_ok=False,
+                    latency_ms=(time.perf_counter() - t0) * 1000,
+                    input_tokens=0,
+                    output_tokens=0,
+                    llm_calls=1,
+                )
             if self.style == "cited":
                 label, rationale, refs, parsed = parse_cited(r.text)
                 has_context = condition is EvidenceCondition.LOCAL and bool(
