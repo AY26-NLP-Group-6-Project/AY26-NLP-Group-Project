@@ -398,3 +398,20 @@ of the former notes index.
   agent lead, the finder with no planner and a fiftieth of the latency.
 - One mis-publication corrected the same hour: the two-hop run's directory was published under the fixed-budget v3 name
   before that run had finished; the folder (NOTE.md only) was removed and the right run published.
+
+## 2026-11-06 · RQ1 test: the agentic arms; RAGAS on the baseline test run
+
+- `agentic-rag`, six arms, `20261105T142254Z-agentic-rag-rq1` → `agentic/rq1-test-all-arms` (669 items, three repeats,
+  8 retrieval workers, 97 minutes, no reply hit the output budget). Votes: sentence_only 0.7706, local 0.7858,
+  same_report_rrf 0.7642, cross_year_rrf 0.7564, cross_year_agentic 0.7644, company_agentic 0.7734. Against
+  sentence_only on the votes: local +23 / −42 (p = 0.025), same_report +21 / −46 (0.003), cross_year_rrf +16 / −41
+  (0.001), cross_year_agentic +15 / −26 (0.117), company_agentic +19 / −30 (0.152): every evidence arm loses accuracy
+  through `none` detection (none F1 0.843 without evidence, 0.659–0.796 with). The gate opened on 155 of 669 sentences
+  (coverage 0.08 and 0.16); the agent's spans are cited on 12–18 % of the items given evidence against 2–8 % for plain
+  retrieval; USD 0.47–0.48 per 1,000 items against 0.21–0.26.
+- The frozen comparisons: R1 company_agentic against sentence_only +19 / −30 (p = 0.15); R2 company_agentic against
+  cross_year_rrf +31 / −17 (p = 0.059); R3 cross_year_agentic against cross_year_rrf +31 / −17 (p = 0.059), both because
+  the agent shows evidence on a sixth of the items and the hybrid on nine tenths. R4, the text rule's slice (133 of 669
+  sentences): local against sentence_only +8 / −8 (p = 1.00, macro-F1 0.781 → 0.810) against +9 / −0 on dev; on the other
+  536 sentences +15 / −34 (p = 0.009). R5, routing by the rule to local: 0.7706 → 0.7763, +8 / −8 (p = 1.00). R6, routing
+  by the gate to the agent: +6 / −17 (p = 0.035, worse). The dev finding on the text rule does not replicate on test.

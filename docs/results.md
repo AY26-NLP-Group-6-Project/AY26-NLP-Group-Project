@@ -96,7 +96,12 @@ three repeats; flips and p are McNemar against the run's own `sentence_only`.
 | neighbouring sentences | same | 0.7704 (0.732–0.807) | 0.697 | +29 / −44 | 0.101 | — | 0.244 |
 | passages, same report | same | 0.7385 (0.697–0.776) | 0.704 | +24 / −55 | 0.001 | 1,124 ms | 0.280 |
 | passages, other years | same | 0.7740 (0.736–0.812) | 0.719 | +31 / −45 | 0.135 | 832 ms | 0.293 |
-| agentic arms | `agentic/rq1-test-all-arms` | pending: run in progress | | | | | |
+| sentence only | `agentic/rq1-test-all-arms` | 0.7706 (0.731–0.807) | 0.843 | — | — | — | 0.211 |
+| neighbouring sentences | same | 0.7858 (0.747–0.824) | 0.659 | +23 / −42 | 0.025 | — | 0.247 |
+| hybrid, same report | same | 0.7642 (0.724–0.801) | 0.693 | +21 / −46 | 0.003 | 2.8 s (8 workers) | 0.259 |
+| hybrid, other years | same | 0.7564 (0.717–0.795) | 0.733 | +16 / −41 | 0.001 | 1.6 s | 0.253 |
+| agent, other years (`cross_year_agentic`) | same | 0.7644 (0.726–0.803) | 0.796 | +15 / −26 | 0.117 | 2.9 s | 0.468 |
+| agent, every report (`company_agentic`) | same | 0.7734 (0.735–0.809) | 0.761 | +19 / −30 | 0.152 | 2.3 s | 0.484 |
 
 Across runs on the same items: sentence only against sentence only +13 / −13 (p = 1.00); hybrid other years against
 graph other years +32 / −15 (p = 0.019, the graph arm ahead), against fused +16 / −13 (p = 0.71); statements against
@@ -109,6 +114,14 @@ nothing for 58 % of items, which is why it is ahead of the hybrid arm on the sam
 every item, gives that back. On the granularity ablation the direction holds and the detail moves: on dev the
 cross-year comparison separated the units (p = 0.043), on test the same-report one (p = 0.017); statements are never
 worse and are cheaper. Evidence is cited in 1.3–8.1 % of items, as on dev.
+
+The agentic arms, run as frozen (`agentic.md` section 6, R1–R6): the gate opens on 155 of 669 sentences; the spans it
+hands over are cited on 12–18 % of the items given evidence against 2–8 % for plain retrieval, at USD 0.47–0.48 per
+1,000 items. R1 `company_agentic` against `sentence_only` +19 / −30 (p = 0.15); R2 and R3, each agentic arm against
+`cross_year_rrf`, +31 / −17 (p = 0.059), the agent ahead because it shows evidence on a sixth of the items. R4, the
+text rule's slice (133 sentences): `local` against `sentence_only` +8 / −8 (p = 1.00) where dev had +9 / −0; R5, routing
+by the rule, 0.7706 → 0.7763 (+8 / −8); R6, routing by the gate to the agent, +6 / −17 (p = 0.035, worse). **The text-rule
+finding of dev does not replicate; no arm of any system improves the label on test.**
 
 ## 2. What became of dated commitments? (RQ2)
 
@@ -268,8 +281,9 @@ admitted; one issuer both ways; partial delivery not reconciled; never mentioned
    to beat the hybrid baseline (0.808 against 0.768, p = 0.18) at twice the cost. A judge that reads more wordings as this
    commitment moves every arm by 11 to 14 promises of 250, more than any retrieval change, short of significance and mainly on
    model-labelled rows.
-7. RQ1, on dev only: letting an LLM plan the retrieval does not improve the label and costs more. What helps is narrower: the
-   neighbouring sentences, for sentences that a text rule marks as depending on their context. Test not read.
+7. RQ1, on dev and test: letting an LLM plan the retrieval does not improve the label and costs more. The one narrower
+   gain seen on dev, the neighbouring sentences for sentences that a text rule marks as depending on their context, does
+   not replicate on test (+8 / −8); on test every shown span costs `none` detection.
 
 ## 4. Limits
 

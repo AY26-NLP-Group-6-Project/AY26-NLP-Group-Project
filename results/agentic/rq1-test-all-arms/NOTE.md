@@ -1,0 +1,1 @@
+RQ1 test split, read once on 2026-11-05/06: the agentic system's six arms frozen at 4a3d35f (two hops, verified selection, 8 retrieval workers), cited classifier, three repeats; R1-R6 of docs/agentic.md section 6
