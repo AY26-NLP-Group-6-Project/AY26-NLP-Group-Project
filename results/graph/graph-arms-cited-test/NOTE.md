@@ -1,0 +1,1 @@
+RQ1 test split, read once on 2026-11-05: graph and graph+BM25 fused retrieval over every statement (graph build dev), cited classifier, three repeats; the configuration of graph/graph-arms-cited unchanged

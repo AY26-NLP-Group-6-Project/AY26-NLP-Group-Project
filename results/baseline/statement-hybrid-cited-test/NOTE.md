@@ -1,0 +1,1 @@
+RQ1 test split, read once on 2026-11-05: hybrid retrieval over the statement store (d8a62bfe40c6), cited classifier, three repeats; the configuration of baseline/statement-hybrid-cited unchanged

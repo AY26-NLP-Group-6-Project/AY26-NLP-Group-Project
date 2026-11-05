@@ -347,3 +347,25 @@ of the former notes index.
 - RQ2, in this batch: the agentic system's fixed budget (hops 0) and planner (hops 2) on test, judged with v2 and,
   on the same evidence, v3, so the agent and the finder are paired on one machine; the comparisons are Q1–Q3
   and G1–G4 of `results.md`.
+
+## 2026-11-05 · RQ1 test read, in progress (paused here)
+
+- `baseline-rag` (`20261105T103924Z-baseline-rag-rq1` → `baseline/statement-hybrid-cited-test`) and `graph-rag`
+  (`20261105T103927Z-graph-rag-rq1` → `graph/graph-arms-cited-test`), 669 items, three repeats, run together. Votes:
+  sentence_only 0.7644 / 0.7663 (+13 / −13 between runs, p = 1.00); local 0.7701 / 0.7769; same_report_rrf 0.7731;
+  cross_year_rrf 0.7662; cross_year_graph 0.7708; cross_year_fused 0.7582. Against each run's own sentence_only on the
+  votes: local +23 / −40 (p = 0.043) and +20 / −34 (0.076); same_report +21 / −33 (0.134); cross_year_rrf +20 / −36
+  (0.044); cross_year_graph +12 / −11 (1.00); fused +16 / −29 (0.072). Evidence costs `none` detection: none F1 0.833
+  without evidence, 0.693–0.774 with, 0.831 for the graph arm (coverage 0.42). Cross-system on the same items:
+  cross_year_rrf against cross_year_graph +32 / −15 (p = 0.019, the graph arm ahead, largely by showing nothing on
+  58 % of items), against cross_year_fused +16 / −13 (0.71). Retrieval p50: hybrid 173–500 ms, graph 6–9 ms; USD
+  0.21–0.26 per 1,000 items. Evidence cited in 1.3–8.1 % of items.
+- `agentic-rag` six arms on test (`20261105T111858Z-agentic-rag-rq1`, 8 retrieval workers) stopped at prediction 5,352
+  of 12,042 with HTTP 400 from the gateway, "max_tokens or model output limit was reached" on one classifier call
+  (max_tokens 512): the run aborts on one over-long reply instead of recording a parse failure. Nothing was scored;
+  the directory holds evidence and partial predictions. To be fixed in `llm_action.classify` (catch the 400, retry
+  with a larger budget or record `parse_ok=false`) and re-run.
+- The passage store under the baseline on test (`20261105T112934Z-baseline-rag-rq1`) was still running when work
+  paused. Not started: the RQ2 in-batch agentic arms (hops 0 and 2, v2 then v3), RAGAS on the baseline test run.
+- Report: section 5.6 and the RQ1 test table carry the baseline and graph rows; the passage and agentic rows and
+  sentences are placeholders (`PASSAGESTEST*`, `AGENTICTEST*`) until those runs are in.

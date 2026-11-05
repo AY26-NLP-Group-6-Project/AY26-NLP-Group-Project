@@ -371,7 +371,7 @@ hybrid, other years (B) & 0.7676 $\pm$ 0.004 & \textbf{0.7767} & 0.721--0.828 & 
 graph, other years (G) & 0.7472 $\pm$ 0.010 & 0.7449 & 0.688--0.799 & 0.731 & 0.77 & 9 ms & 0.227 \\
 graph + BM25 fused (G) & 0.7708 $\pm$ 0.006 & 0.7668 & 0.713--0.818 & 0.711 & 1.00 & 20 ms & 0.253 \\
 \midrule
-any arm, test split (669 items) & \multicolumn{7}{l}{\pending{}} \\
+test split (669 items) & \multicolumn{7}{l}{Table~\ref{tab:rq1-test}} \\
 \bottomrule
 \end{tabular}
 \caption{RQ1 on the development split (331 items, cited classifier, three uncached repeats). Runs: (B) \run{baseline/statement-hybrid-cited}, (G) \run{graph/graph-arms-cited}, (P) \run{baseline/passage-hybrid-cited}. Macro-F1 over the three action labels; the vote is the majority over repeats with its bootstrap 95\% interval; $p$ is the paired McNemar test of the arm's vote against the sentence-only vote of the same run; retrieval latency is p50 per item with three runs sharing one machine; cost at 0.20 / 1.20 USD per million input / output tokens.}
@@ -522,6 +522,35 @@ graph + BM25 fused & 20/88 & 3152/4918 & 2.39 & 0.253 \\
 \caption{Latency (ms per item), throughput and cost (runs \run{baseline/statement-hybrid-cited} and \run{graph/graph-arms-cited}; three runs shared one machine).}
 \label{tab:rq1-cost}
 \end{table}
+
+\subsection{On the test split}
+\label{sec:rq1-test}
+The RQ1 test split (669 items: implemented 281, indeterminate 150, planning 125, none 113) was read once on 2026-11-05, with the configurations published from dev unchanged and the comparisons recorded beforehand: every arm against its own run's sentence-only vote, the best hybrid arm against the best graph arm, statements against passages, and the agentic arms as frozen by their author. Table~\ref{tab:rq1-test} gives every arm. The picture of dev holds, with one sharpening. No evidence condition raises action macro-F1 beyond the noise: the two sentence-only votes are 0.764 and 0.766 ($+13 / {-13}$, $p = 1.00$), and every evidence arm lies within $\pm 0.013$ of its own sentence-only. What evidence does on test is cost \emph{none} detection. A span shown from the neighbouring sentences, from the same report or from other years lowers the \emph{none} F1 from 0.83 to 0.69--0.77, and on 669 items that is a significant loss of accuracy for the neighbouring sentences ($+23 / {-40}$ against sentence-only on the votes, $p = 0.043$) and for cross-year hybrid evidence ($+20 / {-36}$, $p = 0.044$): shown something, the model more often reads a pair into a sentence the annotators said has none. The graph arm, which reaches 42\% of the items and shows nothing for the rest, keeps the \emph{none} F1 at 0.83 and is the one arm ahead of the hybrid cross-year arm on the same items ($+32 / {-15}$, $p = 0.019$), largely because it shows evidence less often; the fused arm, which fills every item to three spans, gives that back ($+16 / {-29}$ against its sentence-only, $p = 0.072$). Best hybrid against best graph, cross-year hybrid against fused: $+16 / {-13}$, $p = 0.71$. The classifier cites a retrieved span in 1--8\% of items, as on dev. PASSAGESTESTSENTENCE AGENTICTESTSENTENCE
+
+\begin{table*}[t]
+\centering\scriptsize
+\setlength{\tabcolsep}{3.5pt}
+\begin{tabular}{@{}lrrrrrrrr@{}}
+\toprule
+arm (run) & macro-F1 mean $\pm$ sd & vote & 95\% CI & none F1 & flips vs own S-only & $p$ & retr.\ p50 & USD/1k \\
+\midrule
+sentence only (B) & 0.7620 $\pm$ 0.012 & 0.7644 & 0.725--0.800 & 0.833 & -- & -- & -- & 0.211 \\
+neighbouring sentences (B) & 0.7639 $\pm$ 0.007 & 0.7701 & 0.731--0.807 & 0.693 & $+23 / {-40}$ & 0.043 & -- & 0.247 \\
+hybrid, same report (B) & 0.7672 $\pm$ 0.008 & \textbf{0.7731} & 0.735--0.809 & 0.723 & $+21 / {-33}$ & 0.134 & 500 ms & 0.257 \\
+hybrid, other years (B) & 0.7577 $\pm$ 0.007 & 0.7662 & 0.726--0.803 & 0.730 & $+20 / {-36}$ & 0.044 & 173 ms & 0.253 \\
+sentence only (G) & 0.7677 $\pm$ 0.002 & 0.7663 & 0.727--0.803 & 0.833 & -- & -- & -- & 0.211 \\
+neighbouring sentences (G) & 0.7698 $\pm$ 0.009 & \textbf{0.7769} & 0.739--0.813 & 0.701 & $+20 / {-34}$ & 0.076 & -- & 0.245 \\
+graph, other years (G) & 0.7646 $\pm$ 0.003 & 0.7708 & 0.733--0.807 & 0.831 & $+12 / {-11}$ & 1.00 & 6 ms & 0.225 \\
+graph + BM25 fused (G) & 0.7549 $\pm$ 0.008 & 0.7582 & 0.718--0.793 & 0.774 & $+16 / {-29}$ & 0.072 & 9 ms & 0.248 \\
+\midrule
+PASSAGESTESTROWS
+\midrule
+AGENTICTESTROWS
+\bottomrule
+\end{tabular}
+\caption{RQ1 on the test split (669 items, cited classifier, three uncached repeats; read once on 2026-11-05). Runs: (B) \run{baseline/statement-hybrid-cited-test}, (G) \run{graph/graph-arms-cited-test}PASSAGESTESTCAP AGENTICTESTCAP. Flips and $p$ are McNemar of the majority votes against the run's own sentence-only; cross-system pairs on the same items: sentence-only B against G $+13 / {-13}$ ($p = 1.00$), hybrid other years against graph other years $+32 / {-15}$ ($p = 0.019$), against fused $+16 / {-13}$ ($p = 0.71$). B and G ran on one machine at the same time.}
+\label{tab:rq1-test}
+\end{table*}
 
 % =============================================================================================
 \section{Results for RQ2}

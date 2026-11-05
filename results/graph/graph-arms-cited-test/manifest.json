@@ -1,0 +1,74 @@
+{
+  "run_id": "20261105T103927Z-graph-rag-rq1",
+  "system": "graph-rag",
+  "task": "rq1",
+  "conditions": [
+    "sentence_only",
+    "local",
+    "cross_year_graph",
+    "cross_year_fused"
+  ],
+  "dataset_id": "gw1000",
+  "dataset_hash": "3e18cc14e648",
+  "label_source": "human_majority",
+  "n_items": 669,
+  "git_sha": "12d04c7b9c0dadd6a16b50b7f42a8a9797920e9c",
+  "git_dirty": true,
+  "graph_build_id": null,
+  "llm": {
+    "chat_model": "gpt-6-luna",
+    "chat_base_url": "https://api.openai.com/v1",
+    "embed_model": "text-embedding-3-small",
+    "embed_base_url": "https://api.openai.com/v1",
+    "temperature": 0.0,
+    "reasoning_effort": "low",
+    "cache": false,
+    "prices_usd_per_mtok": {
+      "chat_in": 0.2,
+      "chat_out": 1.2,
+      "embed": 0.02
+    }
+  },
+  "repeats": 3,
+  "seed": 20260929,
+  "started_at": "2026-11-05T10:39:27.034886+00:00",
+  "finished_at": "2026-11-05T11:18:41.310066+00:00",
+  "wall_seconds": 2354.2741469000175,
+  "config": {
+    "split": "test",
+    "slices": {},
+    "sample": null,
+    "limit": null,
+    "evidence_k": 3,
+    "baseline": "sentence_only",
+    "selection": {
+      "split": {
+        "test": 669
+      },
+      "row_type": {
+        "aspect": 537,
+        "no_aspect": 132
+      },
+      "gold": {
+        "implemented": 281,
+        "indeterminate": 150,
+        "none": 113,
+        "planning": 125
+      }
+    },
+    "classifier": {
+      "style": "cited",
+      "prompt": "action_classifier_cited.md",
+      "prompt_sha256": "f79137d448e4",
+      "workers": 8,
+      "max_evidence": 3,
+      "evidence_chars": 800
+    },
+    "retriever": {
+      "store": "graph",
+      "graph_build_id": "dev",
+      "statements": 110314,
+      "unit": "statement"
+    }
+  }
+}
