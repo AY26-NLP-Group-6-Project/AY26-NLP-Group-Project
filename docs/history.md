@@ -365,7 +365,12 @@ of the former notes index.
   (max_tokens 512): the run aborts on one over-long reply instead of recording a parse failure. Nothing was scored;
   the directory holds evidence and partial predictions. To be fixed in `llm_action.classify` (catch the 400, retry
   with a larger budget or record `parse_ok=false`) and re-run.
-- The passage store under the baseline on test (`20261105T112934Z-baseline-rag-rq1`) was still running when work
-  paused. Not started: the RQ2 in-batch agentic arms (hops 0 and 2, v2 then v3), RAGAS on the baseline test run.
-- Report: section 5.6 and the RQ1 test table carry the baseline and graph rows; the passage and agentic rows and
-  sentences are placeholders (`PASSAGESTEST*`, `AGENTICTEST*`) until those runs are in.
+- The passage store under the baseline on test (`20261105T112934Z-baseline-rag-rq1` →
+  `baseline/passage-hybrid-cited-test`): votes sentence_only 0.7642, local 0.7704, same_report_rrf 0.7385 (+24 / −55
+  against its own sentence_only, p = 0.001, none F1 0.70), cross_year_rrf 0.7740 (+31 / −45, p = 0.135). Paired
+  passages → statements on the same items: same_report +42 / −22 (p = 0.017, statements ahead), cross_year +27 / −28
+  (p = 1.00), local +15 / −16, sentence_only +16 / −15; on dev it was the cross-year comparison that separated the
+  units (p = 0.043), on test the same-report one. Retrieval p50 1,124 / 832 ms, USD 0.28–0.29 per 1,000 items.
+  Not started: the RQ2 in-batch agentic arms (hops 0 and 2, v2 then v3), RAGAS on the baseline test run.
+- Report: section 5.6 and the RQ1 test table carry the baseline, graph and passage rows; the agentic rows and
+  sentence are placeholders (`AGENTICTEST*`) until that run is in.

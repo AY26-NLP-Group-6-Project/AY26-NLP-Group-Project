@@ -1,0 +1,1 @@
+RQ1 test split, read once on 2026-11-05: hybrid retrieval over the passage store (c80d0ab23191), cited classifier, three repeats; the granularity ablation, paired against baseline/statement-hybrid-cited-test
