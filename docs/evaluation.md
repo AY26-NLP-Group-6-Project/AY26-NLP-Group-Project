@@ -35,7 +35,8 @@ manifest, so a changed annotation cannot be mistaken for the same data.
 | aspect / no-aspect rows | 266 / 65 | 537 / 132 |
 | implemented / indeterminate / planning / none | 136 / 72 / 66 / 57 | 281 / 150 / 125 / 113 |
 
-Tune on dev. Test is opened once, for the report; so far nothing on this set has been scored on it.
+Tune on dev. Test is opened once, for the report: it was read on 2026-11-05 for the arms published from dev
+(`results.md`, "On the test split"), so a change made from here on can no longer be checked on it.
 
 Label sources: `human_majority` (the gold), `llm_pre_{claude,deepseek,gpt}` (pre-annotations, for
 label-noise analysis only; they agree with the human majority 0.79–0.80 and are never a system input),

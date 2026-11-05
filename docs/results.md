@@ -1,8 +1,9 @@
 # Results
 
 The findings in one place; the RQ2 summary for reading is `results/rq2-final/README.md`. Every number names the published run (`results/<group>/<name>/`) or the
-check sheet (`kb/annotation/spotchecks/`) it comes from. Dev split unless a section says test: RQ2 has been read on
-its test split once, for the hybrid, fixed-budget and agentic arms ("On the test split" below); RQ1's has not been read.
+check sheet (`kb/annotation/spotchecks/`) it comes from. Dev split unless a section says test: each question's test split has been read once, RQ2's on
+2026-10-31 and 2026-11-04 and RQ1's on 2026-11-05, with the comparisons recorded in `history.md` before the read
+("On the test split" in each section).
 Classifier `gpt-5.6-luna`, reasoning effort low, three uncached repeats per condition
 unless stated; "vote" is the majority over the repeats. Every arm retrieves over the same knowledge
 base: every statement of the parsed reports with five words or more (`baseline.md`).
@@ -75,6 +76,39 @@ hands over 0.18 spans per item against 2.66, and 18.0 % of them are cited agains
 agent: on the 75 sentences a text rule frozen in advance marks as depending on their context, the neighbouring
 sentences go +9 / −0 against `sentence_only` (p = 0.004, macro-F1 0.663 to 0.771), and +12 / −14 on the rest.
 One of ten slice comparisons, on dev.
+
+### On the test split (669 items, read once on 2026-11-05)
+
+Configurations as published from dev, comparisons recorded in `history.md` before the read. Majority votes over
+three repeats; flips and p are McNemar against the run's own `sentence_only`.
+
+| arm | run | vote macro-F1 (95 % CI) | none F1 | flips vs own sentence only | p | retrieval p50 | USD / 1k |
+|---|---|---|---|---|---|---|---|
+| sentence only | `baseline/statement-hybrid-cited-test` | 0.7644 (0.725–0.800) | 0.833 | — | — | — | 0.211 |
+| neighbouring sentences | same | 0.7701 (0.731–0.807) | 0.693 | +23 / −40 | 0.043 | — | 0.247 |
+| hybrid, same report | same | 0.7731 (0.735–0.809) | 0.723 | +21 / −33 | 0.134 | 500 ms | 0.257 |
+| hybrid, other years | same | 0.7662 (0.726–0.803) | 0.730 | +20 / −36 | 0.044 | 173 ms | 0.253 |
+| sentence only | `graph/graph-arms-cited-test` | 0.7663 (0.727–0.803) | 0.833 | — | — | — | 0.211 |
+| neighbouring sentences | same | 0.7769 (0.739–0.813) | 0.701 | +20 / −34 | 0.076 | — | 0.245 |
+| graph, other years | same | 0.7708 (0.733–0.807) | 0.831 | +12 / −11 | 1.00 | 6 ms | 0.225 |
+| graph + BM25 fused | same | 0.7582 (0.718–0.793) | 0.774 | +16 / −29 | 0.072 | 9 ms | 0.248 |
+| sentence only | `baseline/passage-hybrid-cited-test` | 0.7642 (0.723–0.801) | 0.830 | — | — | — | 0.211 |
+| neighbouring sentences | same | 0.7704 (0.732–0.807) | 0.697 | +29 / −44 | 0.101 | — | 0.244 |
+| passages, same report | same | 0.7385 (0.697–0.776) | 0.704 | +24 / −55 | 0.001 | 1,124 ms | 0.280 |
+| passages, other years | same | 0.7740 (0.736–0.812) | 0.719 | +31 / −45 | 0.135 | 832 ms | 0.293 |
+| agentic arms | `agentic/rq1-test-all-arms` | pending: run in progress | | | | | |
+
+Across runs on the same items: sentence only against sentence only +13 / −13 (p = 1.00); hybrid other years against
+graph other years +32 / −15 (p = 0.019, the graph arm ahead), against fused +16 / −13 (p = 0.71); statements against
+passages, same report +42 / −22 (p = 0.017, statements ahead), other years +27 / −28 (p = 1.00). **Dev holds: no
+evidence condition raises action macro-F1 beyond the noise (every evidence arm within ±0.013 of its own sentence
+only), and what evidence does on test is cost `none` detection**: shown a span, the model more often reads a pair
+into a sentence the annotators said has none (none F1 0.83 → 0.69–0.77), a significant loss of accuracy for the
+neighbouring sentences and for cross-year hybrid evidence. The graph arm keeps none F1 at 0.83 because it shows
+nothing for 58 % of items, which is why it is ahead of the hybrid arm on the same items; the fused arm, which fills
+every item, gives that back. On the granularity ablation the direction holds and the detail moves: on dev the
+cross-year comparison separated the units (p = 0.043), on test the same-report one (p = 0.017); statements are never
+worse and are cheaper. Evidence is cited in 1.3–8.1 % of items, as on dev.
 
 ## 2. What became of dated commitments? (RQ2)
 
@@ -240,8 +274,10 @@ admitted; one issuer both ways; partial delivery not reconciled; never mentioned
   the stricter second check); targets that exist only inside tables are not extracted.
 - Aspect canonicalisation failed its gate, so cross-year aspect edges rely on exact normalised matches.
 - Retrieval latencies were measured with three runs sharing one machine.
-- RQ1's test split unread, RQ2's read once and now spent; graph arms not run on it, so cited unpaired and from dev. Retrieval
-  metrics need pooled judgements that were not collected; the front end (`frontend/`) is a demo over single dev items, not
-  a source of numbers; the stock-price analysis is a literature screen only.
+- Both test splits have been read once and are spent (RQ1 on 2026-11-05; RQ2 on 2026-10-31 for the agentic batch and
+  2026-11-04 for the graph line and a second baseline run), so a change made from here on cannot be checked on them;
+  the two RQ2 test batches ran on different machines on different days and are paired within a batch only. Retrieval
+  metrics need pooled judgements that were not collected; the front end (`frontend/`) is a demo over single dev items,
+  not a source of numbers; the stock-price analysis is a literature screen only.
 - The agentic arm reads the statement store, so it cannot see the 1,938 statements under five words, one-word result
-  cells among them; the graph arms are cited unpaired.
+  cells among them.
