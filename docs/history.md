@@ -332,3 +332,18 @@ of the former notes index.
   on collision (`4999af0d`).
 - Report: the agentic method and its RQ1 dev results on the statement store, judge v3, the RQ2 dev table with every arm
   and judge, and the RQ2 test section with the frozen comparisons, the graph line's rows and the pairing within batches.
+
+## 2026-11-05 · RQ1 test split: what is read, committed before the first label is read
+
+- Read once, with the configurations published from dev unchanged: `baseline-rag` (sentence_only, local,
+  same_report_rrf, cross_year_rrf; statement store `d8a62bfe40c6`), `graph-rag` (sentence_only, local,
+  cross_year_graph, cross_year_fused; graph build `dev`), `agentic-rag` (the six arms frozen at `4a3d35f`:
+  hops 2, verified selection, 8 retrieval workers), and the passage store (`c80d0ab23191`) under the baseline;
+  cited classifier, k = 3, 800 characters, three uncached repeats, 669 items.
+- Comparisons, as on dev: every arm against its own run's sentence_only; the best hybrid arm (cross_year_rrf)
+  against the best graph arm (cross_year_fused); statements against passages under same_report_rrf and
+  cross_year_rrf; the agentic R1–R6 of `agentic.md` section 6. Nothing is tuned after the read; an arm that
+  loses is reported as losing.
+- RQ2, in this batch: the agentic system's fixed budget (hops 0) and planner (hops 2) on test, judged with v2 and,
+  on the same evidence, v3, so the agent and the finder are paired on one machine; the comparisons are Q1–Q3
+  and G1–G4 of `results.md`.
