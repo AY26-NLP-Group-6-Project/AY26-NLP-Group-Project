@@ -543,9 +543,9 @@ neighbouring sentences (G) & 0.7698 $\pm$ 0.009 & \textbf{0.7769} & 0.739--0.813
 graph, other years (G) & 0.7646 $\pm$ 0.003 & 0.7708 & 0.733--0.807 & 0.831 & $+12 / {-11}$ & 1.00 & 6 ms & 0.225 \\
 graph + BM25 fused (G) & 0.7549 $\pm$ 0.008 & 0.7582 & 0.718--0.793 & 0.774 & $+16 / {-29}$ & 0.072 & 9 ms & 0.248 \\
 \midrule
-PASSAGESTESTROWS
+passage store (P) & \multicolumn{8}{l}{PASSAGESTESTROWS} \\
 \midrule
-AGENTICTESTROWS
+agentic arms (A) & \multicolumn{8}{l}{AGENTICTESTROWS} \\
 \bottomrule
 \end{tabular}
 \caption{RQ1 on the test split (669 items, cited classifier, three uncached repeats; read once on 2026-11-05). Runs: (B) \run{baseline/statement-hybrid-cited-test}, (G) \run{graph/graph-arms-cited-test}PASSAGESTESTCAP AGENTICTESTCAP. Flips and $p$ are McNemar of the majority votes against the run's own sentence-only; cross-system pairs on the same items: sentence-only B against G $+13 / {-13}$ ($p = 1.00$), hybrid other years against graph other years $+32 / {-15}$ ($p = 0.019$), against fused $+16 / {-13}$ ($p = 0.71$). B and G ran on one machine at the same time.}
