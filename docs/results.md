@@ -41,7 +41,9 @@ with other-year evidence from either retriever. The RAG-metric judge (`baseline/
 the retrieved statements relevant (0.37 same report, 0.29 other years; precision 0.50 and 0.37). A
 human calibration of that judge (`ragas-check.result.json`, 186 rows from an earlier run) found it
 strict on faithfulness (agreement 0.976) and lenient on relevance by about 1.7× (agreement 0.831, 9
-passages called relevant that the person did not), so the corrected relevance is about 0.22 and 0.17.
+passages called relevant that the person did not), so the corrected relevance is about 0.22 and 0.17. On the test split the same judge gives the same picture
+(`baseline/statement-hybrid-cited-test`, repeat 0, 669 items): faithfulness 0.970–0.980, answer relevance 0.563–0.570,
+context precision 0.527 same report / 0.335 other years, context relevance 0.402 / 0.273.
 Relevant sentences are often there and still not needed: for labelling what a sentence says, the
 sentence carries the answer.
 

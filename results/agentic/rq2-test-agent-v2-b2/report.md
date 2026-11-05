@@ -2,7 +2,7 @@
 
 - system: `agentic-rag` · task: `rq2` · condition: `promise_window`, k = 20
 - gold: `rq2promises` @ `a6f35618dd6e` · n = 250 · split: `test` · repeats: 3
-- judge: `v2` · prompt `promise_outcome_v2.md` @ `d7592a1f3210` · model: `gpt-6-luna` · effort: `low`
+- judge: `v2` · prompt `promise_outcome_v2.md` @ `d7592a1f3210` · model: `gpt-5.6-luna` · effort: `low`
 - retriever: `{"store": "statements", "chunks_sha256": "d8a62bfe40c6", "unit": "statement", "chunks": 108376, "mode": "rrf", "backend": "files", "corpus": "statements", "max_hops": 2, "timeout_s": 90.0, "select": "verified", "prompts": {"rq1_gate": "05cc23d5a014", "rq1_verify": "704bc413c655", "rq2_plan": "8a60f9ec4134"}, "trace_file": "traces-20261105T224057-28196.jsonl"}`
 - git: `b8868d3a` (dirty) · wall: 1720.0s
 

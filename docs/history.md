@@ -415,3 +415,8 @@ of the former notes index.
   sentences): local against sentence_only +8 / −8 (p = 1.00, macro-F1 0.781 → 0.810) against +9 / −0 on dev; on the other
   536 sentences +15 / −34 (p = 0.009). R5, routing by the rule to local: 0.7706 → 0.7763, +8 / −8 (p = 1.00). R6, routing
   by the gate to the agent: +6 / −17 (p = 0.035, worse). The dev finding on the text rule does not replicate on test.
+- RAGAS on the baseline's test run (`baseline/statement-hybrid-cited-test`, repeat 0, 669 items, `--ragas`): faithfulness
+  0.970 / 0.977 / 0.980 / 0.975 (sentence_only / local / same_report / cross_year), answer relevance 0.563–0.570,
+  context precision 0.527 same report and 0.335 other years, context relevance 0.402 and 0.273; the dev picture.
+- Published copies of every run of this batch name the model `gpt-5.6-luna` by the group's convention of
+  2026-11-04; the local manifests record the alias `gpt-6-luna`.

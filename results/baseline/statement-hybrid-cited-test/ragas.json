@@ -1,0 +1,115 @@
+{
+  "run_id": "20261105T103924Z-baseline-rag-rq1",
+  "rep": 0,
+  "n_scored": 2676,
+  "judge": {
+    "chat_model": "gpt-6-luna",
+    "chat_base_url": "https://api.openai.com/v1",
+    "embed_model": "text-embedding-3-small",
+    "embed_base_url": "https://api.openai.com/v1",
+    "temperature": 0.0,
+    "reasoning_effort": "low",
+    "cache": true,
+    "prices_usd_per_mtok": {
+      "chat_in": 0.2,
+      "chat_out": 1.2,
+      "embed": 0.02
+    }
+  },
+  "prompt": "rag_judge.md",
+  "note": "LLM-judged; see the spot-check for agreement with human judgement",
+  "conditions": {
+    "cross_year_rrf": {
+      "n": 669,
+      "faithfulness": 0.9748380667663178,
+      "faithfulness_n": 669,
+      "answer_relevance": 0.5685648462652982,
+      "answer_relevance_n": 669,
+      "context_precision": 0.3349972268441486,
+      "context_precision_n": 601,
+      "context_relevance": 0.27343316694398223,
+      "context_relevance_n": 601,
+      "statements_per_answer": 2.179372197309417,
+      "noncommittal_rate": 0.0,
+      "when_correct": {
+        "n": 492,
+        "faithfulness": 0.9788279132791328,
+        "answer_relevance": 0.571627159438886
+      },
+      "when_wrong": {
+        "n": 177,
+        "faithfulness": 0.9637476459510358,
+        "answer_relevance": 0.5600526537149865
+      }
+    },
+    "local": {
+      "n": 669,
+      "faithfulness": 0.9770802192326855,
+      "faithfulness_n": 669,
+      "answer_relevance": 0.563156245765427,
+      "answer_relevance_n": 669,
+      "context_precision": null,
+      "context_precision_n": 0,
+      "context_relevance": null,
+      "context_relevance_n": 0,
+      "statements_per_answer": 2.094170403587444,
+      "noncommittal_rate": 0.0,
+      "when_correct": {
+        "n": 493,
+        "faithfulness": 0.9817444219066938,
+        "answer_relevance": 0.5659931633241118
+      },
+      "when_wrong": {
+        "n": 176,
+        "faithfulness": 0.9640151515151515,
+        "answer_relevance": 0.5552096528311571
+      }
+    },
+    "same_report_rrf": {
+      "n": 669,
+      "faithfulness": 0.9800697558545092,
+      "faithfulness_n": 669,
+      "answer_relevance": 0.566756821081124,
+      "answer_relevance_n": 669,
+      "context_precision": 0.5269058295964125,
+      "context_precision_n": 669,
+      "context_relevance": 0.4020926756352765,
+      "context_relevance_n": 669,
+      "statements_per_answer": 2.186846038863976,
+      "noncommittal_rate": 0.0,
+      "when_correct": {
+        "n": 498,
+        "faithfulness": 0.9849397590361446,
+        "answer_relevance": 0.5685102706513252
+      },
+      "when_wrong": {
+        "n": 171,
+        "faithfulness": 0.96588693957115,
+        "answer_relevance": 0.5616502837363275
+      }
+    },
+    "sentence_only": {
+      "n": 669,
+      "faithfulness": 0.9698056801195813,
+      "faithfulness_n": 669,
+      "answer_relevance": 0.5699648356402045,
+      "answer_relevance_n": 669,
+      "context_precision": null,
+      "context_precision_n": 0,
+      "context_relevance": null,
+      "context_relevance_n": 0,
+      "statements_per_answer": 2.0373692077727954,
+      "noncommittal_rate": 0.0,
+      "when_correct": {
+        "n": 508,
+        "faithfulness": 0.9733595800524933,
+        "answer_relevance": 0.5688278077859578
+      },
+      "when_wrong": {
+        "n": 161,
+        "faithfulness": 0.958592132505176,
+        "answer_relevance": 0.5735524763231692
+      }
+    }
+  }
+}

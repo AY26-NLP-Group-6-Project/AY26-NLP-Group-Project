@@ -432,7 +432,7 @@ arm & label & P & R & F1 \\
 
 \subsection{Why so little: the classifier rarely uses what it is given}
 \label{sec:rq1-why}
-The classifier cites a retrieved span in 9\% of items with same-report evidence and about 1\% with other-year evidence from either retriever. The RAG-metric judge (Table~\ref{tab:ragas}) finds the rationales faithful (0.96--0.98 of their atomic statements supported by the sources shown) and a minority of the retrieved statements relevant (context relevance 0.37 same report, 0.29 other years; context precision 0.50 and 0.37). A human calibration of that judge on a blind sheet of 186 rows found it strict on faithfulness (agreement 0.976; it never called supported what the person called unsupported) and lenient on relevance by about 1.7$\times$ (agreement 0.831; nine passages called relevant that the person did not), so the corrected context relevance is about 0.22 and 0.17. Relevant sentences are often there and still not needed: for labelling what a sentence says, the sentence carries the answer.
+The classifier cites a retrieved span in 9\% of items with same-report evidence and about 1\% with other-year evidence from either retriever. The RAG-metric judge (Table~\ref{tab:ragas}) finds the rationales faithful (0.96--0.98 of their atomic statements supported by the sources shown) and a minority of the retrieved statements relevant (context relevance 0.37 same report, 0.29 other years; context precision 0.50 and 0.37). A human calibration of that judge on a blind sheet of 186 rows found it strict on faithfulness (agreement 0.976; it never called supported what the person called unsupported) and lenient on relevance by about 1.7$\times$ (agreement 0.831; nine passages called relevant that the person did not), so the corrected context relevance is about 0.22 and 0.17. On the test split the same judge gives the same picture (faithfulness 0.97--0.98, context relevance 0.40 same report and 0.27 other years, about 0.24 and 0.16 corrected). Relevant sentences are often there and still not needed: for labelling what a sentence says, the sentence carries the answer.
 
 \begin{table}[t]
 \centering\scriptsize
@@ -446,11 +446,16 @@ local & 0.961 & 0.573 & -- & -- \\
 hybrid, same report & 0.976 & 0.563 & 0.497 & 0.369 \\
 hybrid, other years & 0.973 & 0.568 & 0.371 & 0.286 \\
 \midrule
+sentence only, test & 0.970 & 0.570 & -- & -- \\
+local, test & 0.977 & 0.563 & -- & -- \\
+hybrid, same report, test & 0.980 & 0.567 & 0.527 & 0.402 \\
+hybrid, other years, test & 0.975 & 0.569 & 0.335 & 0.273 \\
+\midrule
 judge--human agreement & 0.976 & -- & -- & 0.831 \\
 judge lenient by & -- & -- & -- & 1.7$\times$ \\
 \bottomrule
 \end{tabular}
-\caption{Answer-level RAG metrics (run \run{baseline/statement-hybrid-cited}, repeat 0, 331 items, LLM-judged) and the human calibration of the judge (186 rows). Answer relevance is comparable across conditions, not against 1.0.}
+\caption{Answer-level RAG metrics, LLM-judged on repeat 0: dev (run \run{baseline/statement-hybrid-cited}, 331 items) and test (\run{baseline/statement-hybrid-cited-test}, 669 items), and the human calibration of the judge (186 dev rows). Answer relevance is comparable across conditions, not against 1.0.}
 \label{tab:ragas}
 \end{table}
 

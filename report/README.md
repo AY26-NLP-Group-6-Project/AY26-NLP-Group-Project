@@ -20,5 +20,6 @@ cd report && latexmk -pdf main.tex
 Every number in the report names the published run under `results/` or the check sheet under
 `kb/annotation/spotchecks/` it comes from; `docs/results.md` is the source of the findings, `docs/history.md`
 the dated record. Placeholders to fill before submission: the six names, matriculation numbers and emails;
-the two links; every `[Pending Result]` (test splits, the agentic RQ2 arm, the retrieval qrels, the front end).
+the two links; the one `[Pending Result]` left, the rank-aware retrieval metrics, which need pooled human
+relevance judgements (`docs/evaluation.md`, section 8).
 The submission file must be named after the group number (`6.pdf`).

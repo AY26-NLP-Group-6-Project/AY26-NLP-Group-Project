@@ -4,7 +4,7 @@
 
 - system: `baseline-rag` · task: `rq1`
 - dataset: `gw1000` @ `3e18cc14e648` · n = 669 · labels: `human_majority` · split: `test` · repeats: 3
-- model: `gpt-6-luna` · effort: `low` · temperature: 0.0 · cache: False
+- model: `gpt-5.6-luna` · effort: `low` · temperature: 0.0 · cache: False
 - classifier: `cited` · prompt `action_classifier_cited.md` @ `f79137d448e4`
 - git: `12d04c7b` (dirty) · wall: 2990.7s
 
