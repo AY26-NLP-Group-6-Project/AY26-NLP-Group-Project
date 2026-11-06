@@ -3,7 +3,7 @@
   "rep": 0,
   "n_scored": 2676,
   "judge": {
-    "chat_model": "gpt-6-luna",
+    "chat_model": "gpt-5.6-luna",
     "chat_base_url": "https://api.openai.com/v1",
     "embed_model": "text-embedding-3-small",
     "embed_base_url": "https://api.openai.com/v1",
