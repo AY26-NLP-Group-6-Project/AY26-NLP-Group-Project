@@ -420,3 +420,33 @@ of the former notes index.
   context precision 0.527 same report and 0.335 other years, context relevance 0.402 and 0.273; the dev picture.
 - Published copies of every run of this batch name the model `gpt-5.6-luna` by the group's convention of
   2026-11-04; the local manifests record the alias `gpt-6-luna`.
+
+## 2026-11-06 · Rank-aware retrieval metrics on a pooled, model-judged query set
+
+- Decision (the user, this morning): the pooled relevance judgements the brief's P@K / R@K / MRR / nDCG need are made by
+  the model, not collected from people, and the report says so in its limits, with a note on every part of the
+  evaluation that rests on a model's judgement.
+- Harness (`b38c7da`): `gw-eval --task retrieval` gained `--build-queries` (a seeded query set from the dev split: 30
+  dev sentences with company and aspect asked cross-year, 30 (company, aspect) pairs over every year, 20 topic queries
+  written by the group), `<system>:<mode>` configurations so the graph system's two conditions pool with the baseline's
+  four modes, `--judge-pool` (the model grades the blind sheet 0–3 under `configs/prompts/relevance_judge.md`, ten
+  statements a call, every grade with a reason, written as qrels), `--min-grade`, and a scored run directory with a
+  manifest, metrics, report, rankings and the qrels that `--publish` accepts. Query set, pool and judgements are
+  versioned under `data/eval/retrieval.*`. Seven tests (`tests/test_retrieval.py`); 139 pass.
+- Pool: 80 queries, six configurations at k = 10, 1,658 (query, statement) pairs; 78 queries judged (two 2023 sentences
+  from Wee Hur and VICOM, issuers with one report in the store, got nothing from any cross-year configuration). The
+  judge graded 644 highly relevant, 437 relevant, 380 marginal, 197 not relevant (65 % relevant at grade ≥ 2; by type
+  49 % claims, 67 % aspects, 85 % topics); 201 calls, 192k input / 73k output tokens, USD 0.13, two minutes.
+- Run `20261106T013739Z-retrieval-pooled` → `retrieval/dev-pooled-model-judged` (grade ≥ 2). nDCG@10 over 78 queries:
+  bm25 0.706, dense 0.793, rrf 0.782, rrf+rerank 0.800, graph 0.209 (1.7 statements returned), fused 0.547 (nothing on
+  the topic queries, which need a company). Against rrf+rerank on the 58 company queries, paired bootstrap of nDCG@10:
+  bm25 −0.106 [−0.150, −0.061], dense −0.013 [−0.056, +0.032], rrf −0.014 [−0.048, +0.018], graph −0.487 [−0.561,
+  −0.414], fused −0.033 [−0.094, +0.026]. MRR: rerank 0.934, rrf 0.913, dense 0.900, bm25 0.886; the graph arm 0.90 on
+  the aspect queries. Wrong-company@10 is 0 everywhere. At grade ≥ 1 the hybrid configurations score 0.89–0.96 and the
+  differences close.
+- The first scoring run (`20261106T013330Z`, dirty tree) was removed and the run repeated after the commit; the qrels
+  file names the judge `gpt-5.6-luna` by the convention of 2026-11-04 (the local client alias is `gpt-6-luna`).
+- Report: the `[Pending Result]` on rank-aware metrics is replaced (§3.4, a new results subsection with its table,
+  Table 1), the limits name both test splits as read and spent (the text still said RQ1 unread), and a `Model
+  judgements` paragraph in the discussion lists every measurement that rests on a model's verdict and how each was
+  checked; `results.md`, `evaluation.md` and the README updated.

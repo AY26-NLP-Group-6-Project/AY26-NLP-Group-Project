@@ -69,6 +69,42 @@ unit.
 USD 0.21–0.30 per 1,000 items with prices of 0.20 / 1.20 per million input / output tokens; about 540
 input and 89 output tokens per item without evidence, 660–990 and 86–105 with.
 
+### Rank-aware retrieval metrics (`retrieval/dev-pooled-model-judged`, pooled, model-judged)
+
+The retrievers measured on their own, on 80 development queries of three types (`evaluation.md`, section 8):
+30 dev sentences with their company and aspect, asked cross-year (the sentence's own year excluded); 30
+(company, aspect) pairs over every year of the company; 20 topic queries over the whole store. Six
+configurations contributed their top 10 to one pool of 1,658 (query, statement) pairs, graded 0–3 by the
+group's model under a fixed prompt, every grade with a reason (`data/eval/retrieval.*`); no human has graded
+the pool. Relevant means grade ≥ 2 (1,081 pairs, 65 %; 88 % at grade ≥ 1), recall is against the pool, and 78
+queries score: two 2023 sentences came from issuers with one report in the store, so no cross-year
+configuration could return anything. Run `20261106T013739Z-retrieval-pooled`.
+
+| configuration | returned / 10 | P@5 | R@10 | MRR | nDCG@10 | nDCG@10 claim (28) | aspect (30) | topic (20) | Δ nDCG@10 vs `rrf+rerank`, company queries (58) |
+|---|---|---|---|---|---|---|---|---|---|
+| `bm25` | 10.0 | 0.728 | 0.471 | 0.886 | 0.706 | 0.570 | 0.749 | 0.832 | −0.106 [−0.150, −0.061] |
+| `dense` | 10.0 | 0.805 | 0.564 | 0.900 | 0.793 | 0.699 | 0.809 | 0.902 | −0.013 [−0.056, +0.032] |
+| `rrf` | 10.0 | 0.785 | 0.543 | 0.913 | 0.782 | 0.677 | 0.826 | 0.862 | −0.014 [−0.048, +0.018] |
+| `rrf+rerank` | 10.0 | 0.797 | 0.555 | 0.934 | 0.800 | 0.705 | 0.827 | 0.891 | reference |
+| `graph-rag:graph` | 1.7 | 0.228 | 0.108 | 0.490 | 0.209 | 0.182 | 0.374 | — | −0.487 [−0.561, −0.414] |
+| `graph-rag:fused` | 7.4 | 0.567 | 0.409 | 0.664 | 0.547 | 0.653 | 0.812 | — | −0.033 [−0.094, +0.026] |
+
+The overall columns are over all 78 queries; the graph arms need a company and return nothing on the 20
+topic queries, so read them on the two company types. Wrong-company@10 is 0 for every configuration on the
+58 company queries: the metadata filters do what they are for. Under this judge the re-ranked hybrid is the
+best or tied-best configuration of the baseline and BM25 alone is behind it (−0.09 to −0.11 nDCG@10, the
+interval clear of zero); dense retrieval and plain fusion are within its interval, and the re-ranker's own
+gain over fusion is small (+0.018) and shows mostly in MRR (0.913 → 0.934; on the claims 0.809 → 0.896).
+The graph's edges are sparse rather than wrong: the graph arm returns 1.7 statements of 10, and when it
+returns anything the first is usually relevant (MRR 0.90 on the aspect queries), which is the dev coverage
+of 0.40 seen from the retrieval side; filled with BM25 over the company's other years it is within the
+interval of the re-ranked hybrid on company queries, with no embedding call. At grade ≥ 1 every hybrid
+configuration scores nDCG@10 0.89–0.96 and the differences close, so the stricter threshold is what separates
+them; the judge gave 65 % of the pooled statements a relevant grade, which is lenient, and the same judge
+family read context relevance 1.7 times more generously than a person on the RAG metrics. The agentic arms
+are not in the pool: they return a verified selection of at most three statements on a fraction of the
+items, which a rank metric at 10 does not describe.
+
 ### The agentic arm (`agentic/rq1-dev-all-arms`, `agentic.md`)
 
 A planner that first decides whether the sentence has a gap, then searches and verifies, does not improve the
@@ -286,6 +322,10 @@ admitted; one issuer both ways; partial delivery not reconciled; never mentioned
 7. RQ1, on dev and test: letting an LLM plan the retrieval does not improve the label and costs more. The one narrower
    gain seen on dev, the neighbouring sentences for sentences that a text rule marks as depending on their context, does
    not replicate on test (+8 / −8); on test every shown span costs `none` detection.
+8. Retrieval measured on its own, against pooled grades a model made: the re-ranked hybrid retriever is the best or
+   tied-best configuration (nDCG@10 0.80), BM25 alone is behind it by 0.09–0.11, dense retrieval and plain fusion
+   are within its interval, the company filter leaves no wrong-company hit, and the graph's edges are sparse rather
+   than wrong (1.7 statements returned of 10, the first usually relevant).
 
 ## 4. Limits
 
@@ -302,8 +342,15 @@ admitted; one issuer both ways; partial delivery not reconciled; never mentioned
 - Retrieval latencies were measured with three runs sharing one machine.
 - Both test splits have been read once and are spent (RQ1 on 2026-11-05; RQ2 on 2026-10-31 for the agentic batch and
   2026-11-04 for the graph line and a second baseline run), so a change made from here on cannot be checked on them;
-  the two RQ2 test batches ran on different machines on different days and are paired within a batch only. Retrieval
-  metrics need pooled judgements that were not collected; the front end (`frontend/`) is a demo over single dev items,
-  not a source of numbers; the stock-price analysis is a literature screen only.
+  the two RQ2 test batches ran on different machines on different days and are paired within a batch only. The front
+  end (`frontend/`) is a demo over single dev items, not a source of numbers; the stock-price analysis is a literature
+  screen only.
+- Three measurements are themselves model judgements, all by the group's chat model, which also writes the answers it
+  judges: the RQ2 outcome judge (checked by hand on 75 and 60 promises, section 2), the RAG metrics (one blind
+  calibration: strict on faithfulness, lenient by 1.7× on context relevance), and the relevance grades behind the
+  rank-aware retrieval metrics (no human has graded the pool; the blind sheet `data/eval/retrieval.pool.csv` is kept).
+  236 of the 373 RQ2 gold outcomes are model annotations of two families, calibrated on 40 human rows each. Read the
+  model-judged numbers as comparisons under one judge, not as absolute quality; the RQ1 labels are the system under
+  test, scored against human annotations, not a judgement.
 - The agentic arm reads the statement store, so it cannot see the 1,938 statements under five words, one-word result
   cells among them.
