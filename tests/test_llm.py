@@ -43,7 +43,8 @@ def test_chat_is_cached_and_accounted(tmp_path):
     assert first.text == second.text == "planning"
     assert (first.cached, second.cached) == (False, True)
     assert fake.chat_calls == 1
-    assert client.usage == {"calls": 1, "cache_hits": 1, "input_tokens": 12, "output_tokens": 1}
+    assert client.usage == {"calls": 1, "cache_hits": 1, "input_tokens": 12, "output_tokens": 1,
+                            "budget_raised": 0}
 
 
 def test_changing_temperature_is_a_different_request(tmp_path):
@@ -90,3 +91,31 @@ def test_temperature_rejection_is_retried_and_recorded(tmp_path):
     result = client.chat([{"role": "user", "content": "x"}])
     assert result.text == "planning"
     assert result.temperature_applied is False
+
+
+def test_output_budget_is_raised_on_a_gateway_400_then_given_up(tmp_path):
+    from gw_common.llm import OutputBudgetExceeded
+
+    client, fake = _client(tmp_path)
+    original, seen = fake._chat, []
+    message = ("Error code: 400 - Could not finish the message because max_tokens or model output "
+               "limit was reached. Please try again with higher max_tokens.")
+
+    def strict(**kwargs):
+        seen.append(kwargs.get("max_completion_tokens"))
+        if kwargs.get("max_completion_tokens", 0) < 2048:
+            raise ValueError(message)
+        return original(**kwargs)
+
+    fake.chat = SimpleNamespace(completions=SimpleNamespace(create=strict))
+    result = client.chat([{"role": "user", "content": "x"}], max_tokens=512)
+    assert result.text == "planning"
+    assert seen == [512, 1024, 2048]
+    assert client.usage["budget_raised"] == 2
+
+    def never(**kwargs):
+        raise ValueError(message)
+
+    fake.chat = SimpleNamespace(completions=SimpleNamespace(create=never))
+    with pytest.raises(OutputBudgetExceeded):
+        client.chat([{"role": "user", "content": "y"}], max_tokens=512)

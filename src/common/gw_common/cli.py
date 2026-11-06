@@ -47,11 +47,19 @@ def eval_main(argv: list[str] | None = None) -> int:
     ap.add_argument("--export-queries", type=Path, metavar="OUT",
                     help="write the questions for one condition and exit")
     ap.add_argument("--queries", type=Path, help="retrieval task: query file (JSONL)")
-    ap.add_argument("--qrels", type=Path, help="retrieval task: judgements (JSONL)")
+    ap.add_argument("--build-queries", type=Path, metavar="OUT",
+                    help="retrieval task: write the seeded query set of --split (three types) and exit")
+    ap.add_argument("--qrels", type=Path, help="retrieval task: judgements (JSONL); with --judge-pool, where "
+                                              "the model's judgements are written")
     ap.add_argument("--export-pool", type=Path, metavar="OUT",
                     help="retrieval task: write a pooled judging sheet over --modes and exit")
+    ap.add_argument("--judge-pool", type=Path, metavar="POOL",
+                    help="retrieval task: grade a pooled sheet with the model and write --qrels")
+    ap.add_argument("--min-grade", type=int, default=2,
+                    help="retrieval task: the lowest grade that counts as relevant (0-3)")
     ap.add_argument("--modes", default="bm25,dense,rrf,rrf+rerank",
-                    help="retrieval task: retriever configurations to compare")
+                    help="retrieval task: configurations to compare; a bare mode belongs to --system, "
+                         "<system>:<mode> to another (graph-rag:graph, graph-rag:fused)")
     ap.add_argument("--ragas", type=Path, metavar="RUN_DIR",
                     help="score a finished run for faithfulness, answer relevance and context precision")
     ap.add_argument("--ragas-rep", type=int, default=0, help="which repeat's answers to score")
@@ -71,7 +79,7 @@ def eval_main(argv: list[str] | None = None) -> int:
                                    "e.g. baseline/statement-hybrid")
     args = ap.parse_args(argv)
     if args.k is None:
-        args.k = 20 if args.task == "rq2" else EVIDENCE_K
+        args.k = {"rq2": 20, "retrieval": retrieval_eval.DEFAULT_K}.get(args.task, EVIDENCE_K)
 
     if args.list:
         for name, target in sorted(registry.available().items()):
@@ -101,10 +109,10 @@ def eval_main(argv: list[str] | None = None) -> int:
         print(json.dumps(export_queries(chosen, conditions[0], args.export_queries, args.k), indent=2))
         return 0
 
-    if not args.system:
-        ap.error("--system is required (or use --list / --compare / --export-queries)")
     if args.task == "retrieval":
         return _retrieval(ap, args)
+    if not args.system:
+        ap.error("--system is required (or use --list / --compare / --export-queries)")
     if args.task == "rq2":
         from gw_common.eval import rq2
 
@@ -167,29 +175,62 @@ def _ragas(args) -> int:
 
 
 def _retrieval(ap: argparse.ArgumentParser, args) -> int:
-    """Rank-aware retrieval evaluation, run over one or more retriever configurations."""
+    """Rank-aware retrieval evaluation over one or more retriever configurations, judged on a pool.
+
+    Four steps, each its own call: build the query set; export the pool of every configuration's top-k;
+    grade the pool (a person, or the model with --judge-pool); score every configuration against the
+    grades, which writes a run directory `--publish` accepts.
+    """
+    if args.build_queries:
+        items, _ = datasets.load(args.dataset, args.labels)
+        chosen = select(items, split=args.split)
+        queries = retrieval_eval.build_queries(chosen)
+        print(json.dumps(retrieval_eval.write_queries(queries, args.build_queries), indent=2))
+        return 0
     if not args.queries:
         ap.error("--queries is required for --task retrieval")
     queries = retrieval_eval.load_queries(args.queries)
+
+    if args.judge_pool:
+        if not args.qrels:
+            ap.error("--judge-pool needs --qrels, the file the model's judgements are written to")
+        from gw_common.eval.relevance import RelevanceJudge, load_pool, write_qrels
+
+        judge = RelevanceJudge()
+        graded, summary = judge.judge(load_pool(args.judge_pool), queries)
+        write_qrels(graded, args.qrels, judge.describe())
+        print(json.dumps({**summary, "out": str(args.qrels)}, indent=2))
+        return 0
+
     modes = [m.strip() for m in args.modes.split(",") if m.strip()]
-    results = {}
-    for mode in modes:
+    results, retrievers = {}, {}
+    for spec in modes:
+        try:
+            system, mode, condition = retrieval_eval.parse_mode(spec, args.system)
+        except ValueError as exc:
+            ap.error(str(exc))
         os.environ["GW_BASELINE_MODE"] = mode          # systems that support modes read this
-        retriever = registry.load(args.system).retriever()
+        retriever = registry.load(system).retriever()
         if retriever is None:
-            ap.error(f"system {args.system!r} has no retriever")
-        results[mode] = retrieval_eval.run(retriever, queries, k=args.k)
+            ap.error(f"system {system!r} has no retriever")
+        results[spec] = retrieval_eval.run(retriever, queries, k=args.k, condition=condition)
+        if hasattr(retriever, "describe"):
+            retrievers[spec] = retriever.describe()
 
     if args.export_pool:
         print(json.dumps(retrieval_eval.export_pool(results, queries, args.export_pool), indent=2))
         return 0
     if not args.qrels:
         ap.error("--qrels is required to score retrieval (or use --export-pool first)")
-    qrels = retrieval_eval.load_qrels(args.qrels)
-    summary = {mode: {k: v for k, v in retrieval_eval.score(per_query, qrels, queries, args.k).items()
-                      if k != "per_query"}
-               for mode, per_query in results.items()}
-    print(json.dumps(summary, indent=2))
+    from gw_common.eval.relevance import load_qrels_meta
+
+    run_dir = retrieval_eval.write_run(
+        results, queries, retrieval_eval.load_qrels(args.qrels), queries_path=args.queries,
+        qrels_path=args.qrels, k=args.k, min_grade=args.min_grade, retrievers=retrievers,
+        judge_info=load_qrels_meta(args.qrels),
+    )
+    print((run_dir / "report.md").read_text(encoding="utf-8"))
+    print(f"run dir: {run_dir}")
     return 0
 
 

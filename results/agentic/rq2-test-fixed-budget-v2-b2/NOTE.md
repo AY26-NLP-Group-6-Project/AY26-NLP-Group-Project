@@ -1,0 +1,1 @@
+RQ2 test, second batch (2026-11-05, this machine): the agentic system's fixed budget per report year, no planner (AGENTIC_MAX_HOPS=0), judge v2, three repeats; pairs with graph/promise-window-trajectory-test and baseline/promise-window-hybrid-test

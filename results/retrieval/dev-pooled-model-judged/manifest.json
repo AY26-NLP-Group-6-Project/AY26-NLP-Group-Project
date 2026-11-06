@@ -1,0 +1,108 @@
+{
+  "run_id": "20261106T013739Z-retrieval-pooled",
+  "system": "baseline-rag+graph-rag",
+  "task": "retrieval",
+  "conditions": [],
+  "dataset_id": "retrieval-queries",
+  "dataset_hash": "d2d24bc70487",
+  "label_source": "llm",
+  "n_items": 80,
+  "git_sha": "b38c7da34091ef8eb316d7653147e43c309f8fd1",
+  "git_dirty": false,
+  "llm": {
+    "judge_model": "gpt-5.6-luna"
+  },
+  "repeats": 1,
+  "seed": 20260912,
+  "started_at": "2026-11-06T01:37:39.174208+00:00",
+  "finished_at": "2026-11-06T01:37:39.382721+00:00",
+  "config": {
+    "split": "dev",
+    "k": 10,
+    "min_grade": 2,
+    "reference": "rrf+rerank",
+    "queries": "data/eval/retrieval.queries.jsonl",
+    "qrels": "data/eval/retrieval.qrels.jsonl",
+    "query_counts": {
+      "company_claim": 30,
+      "cross_year_aspect": 30,
+      "generic": 20
+    },
+    "pool": {
+      "documents": 1658,
+      "relevant": 1081,
+      "relevant_lenient": 1461
+    },
+    "classifier": {
+      "style": "judge-relevance"
+    },
+    "retriever": {
+      "store": "statements",
+      "chunks_sha256": "d8a62bfe40c6",
+      "unit": "statement",
+      "chunks": 108376,
+      "mode": "bm25",
+      "backend": "files"
+    },
+    "retrievers": {
+      "bm25": {
+        "store": "statements",
+        "chunks_sha256": "d8a62bfe40c6",
+        "unit": "statement",
+        "chunks": 108376,
+        "mode": "bm25",
+        "backend": "files"
+      },
+      "dense": {
+        "store": "statements",
+        "chunks_sha256": "d8a62bfe40c6",
+        "unit": "statement",
+        "chunks": 108376,
+        "mode": "dense",
+        "backend": "files"
+      },
+      "rrf": {
+        "store": "statements",
+        "chunks_sha256": "d8a62bfe40c6",
+        "unit": "statement",
+        "chunks": 108376,
+        "mode": "rrf",
+        "backend": "files"
+      },
+      "rrf+rerank": {
+        "store": "statements",
+        "chunks_sha256": "d8a62bfe40c6",
+        "unit": "statement",
+        "chunks": 108376,
+        "mode": "rrf+rerank",
+        "backend": "files"
+      },
+      "graph-rag:graph": {
+        "store": "graph",
+        "graph_build_id": "dev",
+        "statements": 110314,
+        "unit": "statement"
+      },
+      "graph-rag:fused": {
+        "store": "graph",
+        "graph_build_id": "dev",
+        "statements": 110314,
+        "unit": "statement"
+      }
+    },
+    "judge": {
+      "judge": "llm",
+      "model": "gpt-5.6-luna",
+      "prompt": "relevance_judge.md",
+      "prompt_sha256": "6d266a3ce998",
+      "docs_per_call": 10,
+      "doc_chars": 600,
+      "grades": {
+        "0": "not relevant",
+        "1": "marginal",
+        "2": "relevant",
+        "3": "highly relevant"
+      }
+    }
+  }
+}

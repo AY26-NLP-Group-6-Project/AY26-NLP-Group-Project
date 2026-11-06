@@ -1,8 +1,9 @@
 # Results
 
 The findings in one place; the RQ2 summary for reading is `results/rq2-final/README.md`. Every number names the published run (`results/<group>/<name>/`) or the
-check sheet (`kb/annotation/spotchecks/`) it comes from. Dev split unless a section says test: RQ2 has been read on
-its test split once, for the hybrid, fixed-budget and agentic arms ("On the test split" below); RQ1's has not been read.
+check sheet (`kb/annotation/spotchecks/`) it comes from. Dev split unless a section says test: each question's test split has been read once, RQ2's on
+2026-10-31 and 2026-11-04 and RQ1's on 2026-11-05, with the comparisons recorded in `history.md` before the read
+("On the test split" in each section).
 Classifier `gpt-5.6-luna`, reasoning effort low, three uncached repeats per condition
 unless stated; "vote" is the majority over the repeats. Every arm retrieves over the same knowledge
 base: every statement of the parsed reports with five words or more (`baseline.md`).
@@ -40,7 +41,9 @@ with other-year evidence from either retriever. The RAG-metric judge (`baseline/
 the retrieved statements relevant (0.37 same report, 0.29 other years; precision 0.50 and 0.37). A
 human calibration of that judge (`ragas-check.result.json`, 186 rows from an earlier run) found it
 strict on faithfulness (agreement 0.976) and lenient on relevance by about 1.7× (agreement 0.831, 9
-passages called relevant that the person did not), so the corrected relevance is about 0.22 and 0.17.
+passages called relevant that the person did not), so the corrected relevance is about 0.22 and 0.17. On the test split the same judge gives the same picture
+(`baseline/statement-hybrid-cited-test`, repeat 0, 669 items): faithfulness 0.970–0.980, answer relevance 0.563–0.570,
+context precision 0.527 same report / 0.335 other years, context relevance 0.402 / 0.273.
 Relevant sentences are often there and still not needed: for labelling what a sentence says, the
 sentence carries the answer.
 
@@ -66,6 +69,42 @@ unit.
 USD 0.21–0.30 per 1,000 items with prices of 0.20 / 1.20 per million input / output tokens; about 540
 input and 89 output tokens per item without evidence, 660–990 and 86–105 with.
 
+### Rank-aware retrieval metrics (`retrieval/dev-pooled-model-judged`, pooled, model-judged)
+
+The retrievers measured on their own, on 80 development queries of three types (`evaluation.md`, section 8):
+30 dev sentences with their company and aspect, asked cross-year (the sentence's own year excluded); 30
+(company, aspect) pairs over every year of the company; 20 topic queries over the whole store. Six
+configurations contributed their top 10 to one pool of 1,658 (query, statement) pairs, graded 0–3 by the
+group's model under a fixed prompt, every grade with a reason (`data/eval/retrieval.*`); no human has graded
+the pool. Relevant means grade ≥ 2 (1,081 pairs, 65 %; 88 % at grade ≥ 1), recall is against the pool, and 78
+queries score: two 2023 sentences came from issuers with one report in the store, so no cross-year
+configuration could return anything. Run `20261106T013739Z-retrieval-pooled`.
+
+| configuration | returned / 10 | P@5 | R@10 | MRR | nDCG@10 | nDCG@10 claim (28) | aspect (30) | topic (20) | Δ nDCG@10 vs `rrf+rerank`, company queries (58) |
+|---|---|---|---|---|---|---|---|---|---|
+| `bm25` | 10.0 | 0.728 | 0.471 | 0.886 | 0.706 | 0.570 | 0.749 | 0.832 | −0.106 [−0.150, −0.061] |
+| `dense` | 10.0 | 0.805 | 0.564 | 0.900 | 0.793 | 0.699 | 0.809 | 0.902 | −0.013 [−0.056, +0.032] |
+| `rrf` | 10.0 | 0.785 | 0.543 | 0.913 | 0.782 | 0.677 | 0.826 | 0.862 | −0.014 [−0.048, +0.018] |
+| `rrf+rerank` | 10.0 | 0.797 | 0.555 | 0.934 | 0.800 | 0.705 | 0.827 | 0.891 | reference |
+| `graph-rag:graph` | 1.7 | 0.228 | 0.108 | 0.490 | 0.209 | 0.182 | 0.374 | — | −0.487 [−0.561, −0.414] |
+| `graph-rag:fused` | 7.4 | 0.567 | 0.409 | 0.664 | 0.547 | 0.653 | 0.812 | — | −0.033 [−0.094, +0.026] |
+
+The overall columns are over all 78 queries; the graph arms need a company and return nothing on the 20
+topic queries, so read them on the two company types. Wrong-company@10 is 0 for every configuration on the
+58 company queries: the metadata filters do what they are for. Under this judge the re-ranked hybrid is the
+best or tied-best configuration of the baseline and BM25 alone is behind it (−0.09 to −0.11 nDCG@10, the
+interval clear of zero); dense retrieval and plain fusion are within its interval, and the re-ranker's own
+gain over fusion is small (+0.018) and shows mostly in MRR (0.913 → 0.934; on the claims 0.809 → 0.896).
+The graph's edges are sparse rather than wrong: the graph arm returns 1.7 statements of 10, and when it
+returns anything the first is usually relevant (MRR 0.90 on the aspect queries), which is the dev coverage
+of 0.40 seen from the retrieval side; filled with BM25 over the company's other years it is within the
+interval of the re-ranked hybrid on company queries, with no embedding call. At grade ≥ 1 every hybrid
+configuration scores nDCG@10 0.89–0.96 and the differences close, so the stricter threshold is what separates
+them; the judge gave 65 % of the pooled statements a relevant grade, which is lenient, and the same judge
+family read context relevance 1.7 times more generously than a person on the RAG metrics. The agentic arms
+are not in the pool: they return a verified selection of at most three statements on a fraction of the
+items, which a rank metric at 10 does not describe.
+
 ### The agentic arm (`agentic/rq1-dev-all-arms`, `agentic.md`)
 
 A planner that first decides whether the sentence has a gap, then searches and verifies, does not improve the
@@ -75,6 +114,52 @@ hands over 0.18 spans per item against 2.66, and 18.0 % of them are cited agains
 agent: on the 75 sentences a text rule frozen in advance marks as depending on their context, the neighbouring
 sentences go +9 / −0 against `sentence_only` (p = 0.004, macro-F1 0.663 to 0.771), and +12 / −14 on the rest.
 One of ten slice comparisons, on dev.
+
+### On the test split (669 items, read once on 2026-11-05)
+
+Configurations as published from dev, comparisons recorded in `history.md` before the read. Majority votes over
+three repeats; flips and p are McNemar against the run's own `sentence_only`.
+
+| arm | run | vote macro-F1 (95 % CI) | none F1 | flips vs own sentence only | p | retrieval p50 | USD / 1k |
+|---|---|---|---|---|---|---|---|
+| sentence only | `baseline/statement-hybrid-cited-test` | 0.7644 (0.725–0.800) | 0.833 | — | — | — | 0.211 |
+| neighbouring sentences | same | 0.7701 (0.731–0.807) | 0.693 | +23 / −40 | 0.043 | — | 0.247 |
+| hybrid, same report | same | 0.7731 (0.735–0.809) | 0.723 | +21 / −33 | 0.134 | 500 ms | 0.257 |
+| hybrid, other years | same | 0.7662 (0.726–0.803) | 0.730 | +20 / −36 | 0.044 | 173 ms | 0.253 |
+| sentence only | `graph/graph-arms-cited-test` | 0.7663 (0.727–0.803) | 0.833 | — | — | — | 0.211 |
+| neighbouring sentences | same | 0.7769 (0.739–0.813) | 0.701 | +20 / −34 | 0.076 | — | 0.245 |
+| graph, other years | same | 0.7708 (0.733–0.807) | 0.831 | +12 / −11 | 1.00 | 6 ms | 0.225 |
+| graph + BM25 fused | same | 0.7582 (0.718–0.793) | 0.774 | +16 / −29 | 0.072 | 9 ms | 0.248 |
+| sentence only | `baseline/passage-hybrid-cited-test` | 0.7642 (0.723–0.801) | 0.830 | — | — | — | 0.211 |
+| neighbouring sentences | same | 0.7704 (0.732–0.807) | 0.697 | +29 / −44 | 0.101 | — | 0.244 |
+| passages, same report | same | 0.7385 (0.697–0.776) | 0.704 | +24 / −55 | 0.001 | 1,124 ms | 0.280 |
+| passages, other years | same | 0.7740 (0.736–0.812) | 0.719 | +31 / −45 | 0.135 | 832 ms | 0.293 |
+| sentence only | `agentic/rq1-test-all-arms` | 0.7706 (0.731–0.807) | 0.843 | — | — | — | 0.211 |
+| neighbouring sentences | same | 0.7858 (0.747–0.824) | 0.659 | +23 / −42 | 0.025 | — | 0.247 |
+| hybrid, same report | same | 0.7642 (0.724–0.801) | 0.693 | +21 / −46 | 0.003 | 2.8 s (8 workers) | 0.259 |
+| hybrid, other years | same | 0.7564 (0.717–0.795) | 0.733 | +16 / −41 | 0.001 | 1.6 s | 0.253 |
+| agent, other years (`cross_year_agentic`) | same | 0.7644 (0.726–0.803) | 0.796 | +15 / −26 | 0.117 | 2.9 s | 0.468 |
+| agent, every report (`company_agentic`) | same | 0.7734 (0.735–0.809) | 0.761 | +19 / −30 | 0.152 | 2.3 s | 0.484 |
+
+Across runs on the same items: sentence only against sentence only +13 / −13 (p = 1.00); hybrid other years against
+graph other years +32 / −15 (p = 0.019, the graph arm ahead), against fused +16 / −13 (p = 0.71); statements against
+passages, same report +42 / −22 (p = 0.017, statements ahead), other years +27 / −28 (p = 1.00). **Dev holds: no
+evidence condition raises action macro-F1 beyond the noise (every evidence arm within ±0.013 of its own sentence
+only), and what evidence does on test is cost `none` detection**: shown a span, the model more often reads a pair
+into a sentence the annotators said has none (none F1 0.83 → 0.69–0.77), a significant loss of accuracy for the
+neighbouring sentences and for cross-year hybrid evidence. The graph arm keeps none F1 at 0.83 because it shows
+nothing for 58 % of items, which is why it is ahead of the hybrid arm on the same items; the fused arm, which fills
+every item, gives that back. On the granularity ablation the direction holds and the detail moves: on dev the
+cross-year comparison separated the units (p = 0.043), on test the same-report one (p = 0.017); statements are never
+worse and are cheaper. Evidence is cited in 1.3–8.1 % of items, as on dev.
+
+The agentic arms, run as frozen (`agentic.md` section 6, R1–R6): the gate opens on 155 of 669 sentences; the spans it
+hands over are cited on 12–18 % of the items given evidence against 2–8 % for plain retrieval, at USD 0.47–0.48 per
+1,000 items. R1 `company_agentic` against `sentence_only` +19 / −30 (p = 0.15); R2 and R3, each agentic arm against
+`cross_year_rrf`, +31 / −17 (p = 0.059), the agent ahead because it shows evidence on a sixth of the items. R4, the
+text rule's slice (133 sentences): `local` against `sentence_only` +8 / −8 (p = 1.00) where dev had +9 / −0; R5, routing
+by the rule, 0.7706 → 0.7763 (+8 / −8); R6, routing by the gate to the agent, +6 / −17 (p = 0.035, worse). **The text-rule
+finding of dev does not replicate; no arm of any system improves the label on test.**
 
 ## 2. What became of dated commitments? (RQ2)
 
@@ -179,6 +264,10 @@ judge gave a result label to 1. Over eight v3 repeats on the fixed budget's evid
 | hybrid, top 20, second run (`baseline/promise-window-hybrid-test`, 2026-11-04) | v2 | 0.708 | 18 / 64 | 49 / 186 | 131 / 155 | 4.98 |
 | trajectory finder, graph, judge v3 on the same evidence (`graph/promise-window-trajectory-test-v3`) | v3 | 0.804 | 18 / 64 | 27 / 186 | 155 / 177 | 4.56 |
 | hybrid, top 20, second run, judge v3 on the same evidence (`baseline/promise-window-hybrid-test-v3`) | v3 | 0.748 | 27 / 64 | 33 / 186 | 150 / 180 | 5.64 |
+| fixed budget, second batch (`agentic/rq2-test-fixed-budget-v2-b2`, 2026-11-05) | v2 | 0.748 | 12 / 64 | 45 / 186 | 135 / 153 | 3.96 |
+| fixed budget, second batch, judge v3 on the same evidence (`agentic/rq2-test-fixed-budget-v3-b2`) | v3 | 0.768 | 22 / 64 | 29 / 186 | 150 / 179 | 4.59 |
+| agent, two hops, second batch (`agentic/rq2-test-agent-v2-b2`, 2026-11-05) | v2 | 0.744 | 16 / 64 | 44 / 186 | 138 / 158 | 5.75 |
+| agent, two hops, second batch, judge v3 on the same evidence (`agentic/rq2-test-agent-v3-b2`) | v3 | 0.800 | 21 / 64 | 24 / 186 | 157 / 183 | 6.32 |
 
 No frozen comparison reaches 0.05: the chosen pipeline against the baseline is +28 / −18 (p = 0.18), against the fixed budget with v3
 +5 / −5 (p = 1.00), and its filter loses to no filter +5 / −13 (p = 0.096). v3 against v2 is the one change in one direction on every
@@ -195,7 +284,13 @@ comparisons in this batch, about 0.1 corrected), holding verdict precision at 0.
 because v3 doubles its verdicts on gold-unclear promises (18 → 27 of 64). On the group's 115 rows the finder goes 85 → 88
 and the baseline 81 → 83; on the 135 model-labelled rows 99 → 113 and 96 → 104. The same hybrid configuration scored
 0.768 in the 2026-10-31 batch and 0.708 here, on another machine on another day, so test rows are paired within a batch
-only (`history.md`, 2026-11-04).
+only (`history.md`, 2026-11-04). The agentic system's two RQ2 arms run again in this batch on 2026-11-05, so all four
+retrievers pair on one machine: under v2 fixed budget 0.748, agent 0.744, finder 0.736, baseline 0.708, no pair
+separating (closest: fixed budget over baseline +17 / −7, p = 0.064); under v3 finder 0.804, agent 0.800, fixed budget
+0.768, baseline 0.748, with the agent's v2 → v3 +23 / −9 (p = 0.020), finder against agent +14 / −15 (p = 1.00), agent
+against baseline +27 / −14 (p = 0.060), fixed budget v2 → v3 +21 / −16 (p = 0.51). The planner costs USD 1.13 per 1,000
+promises on top of the judge, 1.8 calls per promise, retrieval p50 11.5 s against 0.6 s (fixed budget) and 0.2 s
+(finder), 32 % of its evidence from later hops.
 
 ### Case studies
 
@@ -224,8 +319,13 @@ admitted; one issuer both ways; partial delivery not reconciled; never mentioned
    to beat the hybrid baseline (0.808 against 0.768, p = 0.18) at twice the cost. A judge that reads more wordings as this
    commitment moves every arm by 11 to 14 promises of 250, more than any retrieval change, short of significance and mainly on
    model-labelled rows.
-7. RQ1, on dev only: letting an LLM plan the retrieval does not improve the label and costs more. What helps is narrower: the
-   neighbouring sentences, for sentences that a text rule marks as depending on their context. Test not read.
+7. RQ1, on dev and test: letting an LLM plan the retrieval does not improve the label and costs more. The one narrower
+   gain seen on dev, the neighbouring sentences for sentences that a text rule marks as depending on their context, does
+   not replicate on test (+8 / −8); on test every shown span costs `none` detection.
+8. Retrieval measured on its own, against pooled grades a model made: the re-ranked hybrid retriever is the best or
+   tied-best configuration (nDCG@10 0.80), BM25 alone is behind it by 0.09–0.11, dense retrieval and plain fusion
+   are within its interval, the company filter leaves no wrong-company hit, and the graph's edges are sparse rather
+   than wrong (1.7 statements returned of 10, the first usually relevant).
 
 ## 4. Limits
 
@@ -240,8 +340,17 @@ admitted; one issuer both ways; partial delivery not reconciled; never mentioned
   the stricter second check); targets that exist only inside tables are not extracted.
 - Aspect canonicalisation failed its gate, so cross-year aspect edges rely on exact normalised matches.
 - Retrieval latencies were measured with three runs sharing one machine.
-- RQ1's test split unread, RQ2's read once and now spent; graph arms not run on it, so cited unpaired and from dev. Retrieval
-  metrics need pooled judgements that were not collected; the front end (`frontend/`) is a demo over single dev items, not
-  a source of numbers; the stock-price analysis is a literature screen only.
+- Both test splits have been read once and are spent (RQ1 on 2026-11-05; RQ2 on 2026-10-31 for the agentic batch and
+  2026-11-04 for the graph line and a second baseline run), so a change made from here on cannot be checked on them;
+  the two RQ2 test batches ran on different machines on different days and are paired within a batch only. The front
+  end (`frontend/`) is a demo over single dev items, not a source of numbers; the stock-price analysis is a literature
+  screen only.
+- Three measurements are themselves model judgements, all by the group's chat model, which also writes the answers it
+  judges: the RQ2 outcome judge (checked by hand on 75 and 60 promises, section 2), the RAG metrics (one blind
+  calibration: strict on faithfulness, lenient by 1.7× on context relevance), and the relevance grades behind the
+  rank-aware retrieval metrics (no human has graded the pool; the blind sheet `data/eval/retrieval.pool.csv` is kept).
+  236 of the 373 RQ2 gold outcomes are model annotations of two families, calibrated on 40 human rows each. Read the
+  model-judged numbers as comparisons under one judge, not as absolute quality; the RQ1 labels are the system under
+  test, scored against human annotations, not a judgement.
 - The agentic arm reads the statement store, so it cannot see the 1,938 statements under five words, one-word result
-  cells among them; the graph arms are cited unpaired.
+  cells among them.

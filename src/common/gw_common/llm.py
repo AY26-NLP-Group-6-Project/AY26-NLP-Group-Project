@@ -128,6 +128,18 @@ class LLMSettings:
                                         "embed": self.price_embed}}
 
 
+class OutputBudgetExceeded(RuntimeError):
+    """The gateway refused to finish a reply within the output budget, even after it was raised."""
+
+
+_BUDGET_RAISES = 3   # double the output budget at most this many times on a gateway's "max_tokens" 400
+
+
+def _budget_error(exc: BaseException) -> bool:
+    s = str(exc).lower()
+    return "max_tokens" in s and ("output limit" in s or "finish the message" in s)
+
+
 @dataclass(slots=True)
 class ChatResult:
     text: str
@@ -179,7 +191,8 @@ class LLMClient:
         self._cache = _Cache(cache_path) if self.settings.use_cache else None
         self._chat_client = client            # injectable for tests
         self._embed_client = embed_client or client
-        self.usage = {"calls": 0, "cache_hits": 0, "input_tokens": 0, "output_tokens": 0}
+        self.usage = {"calls": 0, "cache_hits": 0, "input_tokens": 0, "output_tokens": 0,
+                      "budget_raised": 0}
         self._usage_lock = threading.Lock()
 
     # ----------------------------------------------------------------- transport
@@ -233,16 +246,29 @@ class LLMClient:
         # Models differ in which knobs they accept. Drop the rejected one and record that it did not
         # apply, rather than reporting a setting the model never honoured.
         applied = {"temperature": True, "reasoning_effort": effort is not None}
-        for _ in range(len(applied) + 1):
+        raised = 0
+        for _ in range(len(applied) + _BUDGET_RAISES + 1):
             try:
                 resp = self._chat_transport().chat.completions.create(**kwargs)
                 break
-            except Exception as exc:  # noqa: BLE001 - only unsupported-parameter errors are retried
+            except Exception as exc:  # noqa: BLE001 - only two kinds of error are retried
+                if _budget_error(exc):
+                    # Some gateways answer 400 instead of a truncated reply when the model runs past the
+                    # output budget. A reply that long is rare, so double the budget a few times; past
+                    # that, the caller decides, rather than one item ending a run of thousands.
+                    if raised < _BUDGET_RAISES and kwargs.get("max_completion_tokens"):
+                        kwargs["max_completion_tokens"] *= 2
+                        raised += 1
+                        continue
+                    raise OutputBudgetExceeded(str(exc)) from exc
                 rejected = next((p for p in applied if p in kwargs and p in str(exc).lower()), None)
                 if rejected is None:
                     raise
                 kwargs.pop(rejected)
                 applied[rejected] = False
+        if raised:
+            with self._usage_lock:
+                self.usage["budget_raised"] += raised
         temperature_applied, effort_applied = applied["temperature"], applied["reasoning_effort"]
         latency = (time.perf_counter() - t0) * 1000
         usage = getattr(resp, "usage", None)

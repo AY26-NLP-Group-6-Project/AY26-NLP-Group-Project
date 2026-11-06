@@ -35,7 +35,8 @@ manifest, so a changed annotation cannot be mistaken for the same data.
 | aspect / no-aspect rows | 266 / 65 | 537 / 132 |
 | implemented / indeterminate / planning / none | 136 / 72 / 66 / 57 | 281 / 150 / 125 / 113 |
 
-Tune on dev. Test is opened once, for the report; so far nothing on this set has been scored on it.
+Tune on dev. Test is opened once, for the report: it was read on 2026-11-05 for the arms published from dev
+(`results.md`, "On the test split"), so a change made from here on can no longer be checked on it.
 
 Label sources: `human_majority` (the gold), `llm_pre_{claude,deepseek,gpt}` (pre-annotations, for
 label-noise analysis only; they agree with the human majority 0.79–0.80 and are never a system input),
@@ -134,7 +135,7 @@ because A3CG pools over pairs.
 | grounding | replies in the asked format, with a rationale, citing the target; share of items that cite retrieved evidence; share of shown spans cited; invalid references | is the answer tied to sources, and is the retrieved text used at all |
 | speed | per-call latency p50/p95, retrieval p50/p95, end to end per item, items per second | the course asks for latency and throughput |
 | cost | input and output tokens per item, embedding tokens, USD per 1,000 items (when prices are set), cached calls | the course asks for cost; cached calls are flagged because they are neither slow nor billed |
-| retrieval (`--task retrieval`) | P@5, R@10, MRR, nDCG@10, wrong-company@10, by query type | needs pooled human judgements (section 8) |
+| retrieval (`--task retrieval`) | P@5, R@10, MRR, nDCG@10, wrong-company@10, by query type; paired bootstrap of nDCG@10 against a reference configuration | pooled judgements over every configuration's top-k (section 8); the judgements on file are model-made (`--judge-pool`), no human has graded the pool |
 | answer-level RAG (`--ragas`) | faithfulness, answer relevance, context precision, context relevance | is the rationale supported by what was shown, and was what was retrieved relevant |
 
 Re-running an identical configuration does not reproduce its macro-F1: independent runs differ by a
@@ -280,15 +281,35 @@ filter. With `--evidence` the `--system` only supplies the classifier; with `--p
 ### Retrieval only
 
 ```bash
-uv run gw-eval --task retrieval --system baseline-rag --queries queries.jsonl \
-               --modes bm25,dense,rrf,rrf+rerank --export-pool pool.csv     # judging sheet: union of every mode's top-k
-# fill `relevant` (0/1 or 0–3) -> qrels.jsonl {"query_id": ..., "relevant": {"<doc_id>": 1}}
-uv run gw-eval --task retrieval --system baseline-rag --queries queries.jsonl --qrels qrels.jsonl
+uv run gw-eval --task retrieval --build-queries data/eval/retrieval.queries.jsonl --split dev   # 80 queries, three types, seeded
+uv run gw-eval --task retrieval --system baseline-rag --queries data/eval/retrieval.queries.jsonl \
+               --modes bm25,dense,rrf,rrf+rerank,graph-rag:graph,graph-rag:fused \
+               --export-pool data/eval/retrieval.pool.csv                 # blind sheet: union of every configuration's top-k
+# grade the pool: a person fills `relevant` (0–3), or the model does it under configs/prompts/relevance_judge.md
+uv run gw-eval --task retrieval --judge-pool data/eval/retrieval.pool.csv \
+               --queries data/eval/retrieval.queries.jsonl --qrels data/eval/retrieval.qrels.jsonl
+uv run gw-eval --task retrieval --system baseline-rag --queries data/eval/retrieval.queries.jsonl \
+               --modes bm25,dense,rrf,rrf+rerank,graph-rag:graph,graph-rag:fused \
+               --qrels data/eval/retrieval.qrels.jsonl --min-grade 2       # scores; writes artifacts/runs/<id>-retrieval-pooled
 ```
 
 Queries: `{"query_id", "text", "company"?, "aspect"?, "anchor_year"?, "year_from"?, "year_to"?,
-"condition"?, "type": company_claim | cross_year_aspect | generic}`. Judge the pool, not one system's
-output, or the judged system wins by construction. No qrels have been collected yet.
+"condition"?, "type": company_claim | cross_year_aspect | generic}`. `--build-queries` draws them from the
+development split without reading a label: 30 dev sentences with their company and aspect (the RQ1 cross-year
+question, the sentence's own year excluded), 30 (company, aspect) pairs as short queries over every year of the
+company, and 20 topic queries over the whole store written by the group. A mode is a configuration of `--system`
+(`bm25`, `dense`, `rrf`, `rrf+rerank`), or `<system>:<mode>`; `graph-rag:graph` and `graph-rag:fused` run the
+graph system's two conditions. Judge the pool, not one system's output, or the judged system wins by construction.
+
+The judgements on file (`data/eval/retrieval.qrels.jsonl`, 1,658 pairs over 78 queries; two 2023 sentences from
+issuers with one report in the store got nothing from any cross-year configuration) were made by the group's model
+under `configs/prompts/relevance_judge.md`, grades 0–3 with a reason each, ten statements a call; the blind sheet
+is kept so that a person can grade a sample and the agreement be reported, and none has. `score` counts a document
+relevant from `--min-grade` (2 by default; the report also gives nDCG@10 at grade ≥ 1), recall is against the pool,
+and every configuration is compared with the reference (`rrf+rerank`) by a paired bootstrap over the same queries.
+The run directory holds `manifest.json`, `metrics.json`, `report.md`, `rankings.jsonl` and a copy of the qrels, and
+`--publish` accepts it (`results/retrieval/`). Quote these numbers as a comparison between configurations under one
+model judge, never as absolute retrieval quality.
 
 ## 9. Serving
 
