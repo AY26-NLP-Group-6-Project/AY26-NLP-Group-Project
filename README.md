@@ -78,6 +78,9 @@ uv run gw-eval --task rq2 --system baseline-rag --split dev --repeats 3     # RQ
 uv run gw-eval --publish artifacts/runs/<run_id> --name <group>/<what-it-is> --note "one line"
 uv run gw-eval --compare results/baseline/statement-hybrid-cited results/graph/graph-arms-cited
 uv run gw-eval --ragas artifacts/runs/<run_id>                               # RAG metrics, scored afterwards
+uv run gw-eval --task retrieval --system baseline-rag --queries data/eval/retrieval.queries.jsonl \
+    --modes bm25,dense,rrf,rrf+rerank,graph-rag:graph,graph-rag:fused \
+    --qrels data/eval/retrieval.qrels.jsonl                                  # P@5, R@10, MRR, nDCG@10 on the pooled judgements
 ```
 
 A run writes `artifacts/runs/<run_id>/` (manifest, predictions, evidence, metrics, report).

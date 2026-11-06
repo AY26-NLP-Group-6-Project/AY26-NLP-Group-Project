@@ -245,6 +245,8 @@ data/*
 data/eval/*
 !data/eval/gw1000.*
 !data/eval/rq2promises.*
+# the retrieval query set, its pooled judging sheet and the (model-made) judgements are versioned too
+!data/eval/retrieval.*
 
 # LaTeX build artefacts of the report (report/main.pdf stays tracked)
 report/*.aux
