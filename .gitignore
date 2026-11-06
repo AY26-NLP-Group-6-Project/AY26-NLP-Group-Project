@@ -219,7 +219,7 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
-
+docs/history.md
 docs/proposals/**/*.pdf
 
 # local scratch/working data
