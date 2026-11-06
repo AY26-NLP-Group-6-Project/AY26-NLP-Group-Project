@@ -450,3 +450,9 @@ of the former notes index.
   Table 1), the limits name both test splits as read and spent (the text still said RQ1 unread), and a `Model
   judgements` paragraph in the discussion lists every measurement that rests on a model's verdict and how each was
   checked; `results.md`, `evaluation.md` and the README updated.
+- The teammate's edits to the report (`tmp/AI6127_NLP_G6_Report.pdf`, compiled on 2026-11-06 from the branch head of
+  2026-11-04, without these commits) ported into `main.tex` from the PDF text, their source being unavailable: a
+  reader-facing abstract (its two unfinished fragments, `best nDCG@10` and `test result`, filled with the retrieval
+  and RQ1 test results, and one clause on judge v3 kept), the RQ1 definition in prose with the label semantics, a
+  `Contributions` paragraph, and a shorter `Related Work` in place of `Related Studies`, its `What is open` paragraph
+  folded into the contributions; the rest of their PDF matched ours sentence for sentence.
