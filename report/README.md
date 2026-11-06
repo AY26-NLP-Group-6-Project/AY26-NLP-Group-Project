@@ -6,7 +6,7 @@ https://github.com/acl-org/acl-style-files, fetched 2026-11-03).
 | file | what |
 |---|---|
 | `main.tex` | the report; the author block, the data and code links and the chat-model name are macros at the top |
-| `references.bib` | the reference list, every entry checked against Crossref by DOI on 2026-11-06 |
+| `references.bib` | the reference list; the six entries that had been flagged for checking were checked against Crossref by DOI on 2026-11-06 |
 | `queries/five_queries.{json,md}` | the five timed example queries of the brief (Question 2), every search mode, with every hit |
 | `figures/ui-rq1.png`, `figures/ui-rq2.png` | the demo front end (`frontend/`) after a run on one dev item of each question, captured headless on 2026-11-03 |
 | `acl.sty`, `acl_natbib.bst` | the ACL style |
