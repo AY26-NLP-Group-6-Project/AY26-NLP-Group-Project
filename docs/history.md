@@ -456,3 +456,8 @@ of the former notes index.
   and RQ1 test results, and one clause on judge v3 kept), the RQ1 definition in prose with the label semantics, a
   `Contributions` paragraph, and a shorter `Related Work` in place of `Related Studies`, its `What is open` paragraph
   folded into the contributions; the rest of their PDF matched ours sentence for sentence.
+- The six bibliography entries marked for checking were checked against Crossref by DOI: five were right (Wen et al.
+  TACL 13, 529–556; Voorhees IP&M 36(5), 697–716; Thomas et al. SIGIR 2024, 1930–1940; Faggioli et al. ICTIR 2023,
+  39–50; Soboroff IRR 1(1), 29–46); the Nature Climate Change article on emissions targets had wrong given names
+  (now Jiang, Xiaoyan; Kim, Shawn; Lu, Shirley; 15(3), 279–286). The `verify` fields are removed; the report's README
+  no longer mentions them.
