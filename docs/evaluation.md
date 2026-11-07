@@ -173,6 +173,7 @@ faithfulness and lenient on context relevance by a factor of about 1.7; see `res
 ```bash
 uv run gw-eval --publish artifacts/runs/<run_id> --name baseline/<what-it-is> --note "one line"
 uv run gw-eval --compare results/baseline/statement-hybrid-cited results/graph/graph-arms-cited
+uv run gw-eval --stages results/baseline/statement-hybrid-cited-test results/agentic/rq2-test-agent-v3-b2
 ```
 
 `--publish` copies the manifest, metrics and report (not the per-item files) into `results/<group>/<name>/`
@@ -181,6 +182,15 @@ scored and reports flips and McNemar p per condition; it refuses runs on differe
 RQ2 run is only compared with another RQ2 run (same promises, the four outcomes as labels). It reads the
 votes from `predictions.jsonl`, so give it run directories (`artifacts/runs/<run_id>`): a published folder
 holds summaries only. `--pairs condA:condB,...` adds pairs of conditions, so two arms of one run can be compared.
+
+`--stages RUN [RUN ...]` scores each run's majority votes one decision at a time, in the order both label
+schemes share, which is the order the course brief asks of a classification task with neutral content:
+presence (RQ1 `none` against a valid aspect; RQ2 `disappeared` against any later statement), decidability
+(`indeterminate` against a clear claim; `unclear` against a verdict) and direction (`implemented` against
+`planning`; `achieved` against `failed`). Each level scores the gold rows that reach it; a vote that left the
+cascade earlier counts as wrong there and as a miss for the gold class. It reports n, accuracy and two-class
+macro-F1 per level and condition, and follows a published folder to its local run through the manifest's run
+id (`gw_common/eval/stages.py`; the numbers are in `results.md`).
 
 On RQ2, `--judge v1|v2|v3` picks the judge (default v2; v3 in `agentic.md`), and `--evidence <run>/evidence.jsonl` judges
 an earlier run's statements again with no retrieval, so two judges compare on one evidence. `--rq2-baseline majority|direct`

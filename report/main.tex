@@ -240,6 +240,10 @@ The \emph{trajectory finder} ranks every statement of every later report with BM
 \paragraph{Judge.}
 The judge asks of each statement whether it is about this target, only its metric, or neither; whether it reports the deadline year's result as met or missed; and whether it moves the target to a later date or drops it. Beyond literal restatements, three readings count a statement as being about the target: the company's own account of the same matter in other words (\texttt{proxy}), a stated part delivery (\texttt{partial}, counted as a miss) and the deadline year's figure compared with the target in code (\texttt{figure}). A fixed rule then decides: a \emph{met} and no \emph{missed} on this target $\to$ achieved; otherwise a later or no date on a non-annual target $\to$ failed (revised); otherwise a \emph{missed} $\to$ failed; otherwise any statement on the target or its metric from the deadline year on $\to$ unclear; otherwise disappeared. The outcome is the majority of three runs (no majority: unclear). The questions, the rule and the three readings were settled on the development split's errors, so development numbers are optimistic and the test split is the measure.
 
+\paragraph{The three decisions inside each label.}
+\label{sec:decisions}
+Both label schemes answer, in order, the questions the brief asks of a classification task whose data contains neutral content: whether there is anything to decide, whether it can be decided, and which way it goes. In RQ1 these are \emph{none} against a valid aspect, \emph{indeterminate} against a clear action claim, and \emph{implemented} against \emph{planning}; the classifier takes all three in one call, with the indeterminate sub-rules as its neutrality test, and the two neutral classes hold 39\% of the gold. In RQ2 the judge takes them in sequence, as the rule above shows: \emph{disappeared} when no later statement concerns the target, \emph{unclear} when statements do but none settles the deadline, and only then \emph{achieved} against \emph{failed}; 27\% of the gold is neutral. Table~\ref{tab:stages} scores each decision on its own. In the brief's terms the pipeline is hybrid: a language model labels sentences and statements, a fixed rule and a coded comparison of figures decide, and the claim graph is a symbolic index over the same corpus.
+
 \subsection{User interface and five timed queries}
 \label{sec:serving}
 
@@ -501,10 +505,10 @@ Figure~\ref{fig:outcomes} gives the outcome shares three ways: about half met, o
 \label{sec:discussion}
 
 \paragraph{What the results say.}
-Evidence did not help the ellipsis and attribution cases it targeted: the hard errors are pragmatic (hedging read as implementation), and the classifier rarely uses what even a good ranker hands it. The design lesson: evidence should be opt-in for single-sentence labelling, since arms that showed evidence on most items lost \emph{none} detection, the graph arm (evidence on 42\% of items) kept it, and the agent's gate did not recover it; retrieval pays off on cross-year questions (RQ2). Agentic retrieval added cost without accuracy, matching \citet{ferrazzi2026agentic}.
+Evidence did not help the ellipsis and attribution cases it targeted: the hard errors are pragmatic (hedging read as implementation), and the classifier rarely uses what even a good ranker hands it. The design lesson: evidence should be opt-in for single-sentence labelling, since arms that showed evidence on most items lost \emph{none} detection, the graph arm (evidence on 42\% of items) kept it, and the agent's gate did not recover it; retrieval pays off on cross-year questions (RQ2). Scored one decision at a time (Table~\ref{tab:stages}), evidence left RQ1's implemented-or-planning direction where it was and moved only the two neutral decisions, while RQ2's gain over the floors and over plain hybrid retrieval lies in telling a settled promise from an unsettled one. Agentic retrieval added cost without accuracy, matching \citet{ferrazzi2026agentic}.
 
 \paragraph{Limitations.}
-950 of the 1,000 RQ1 sentences carry one label, and the RQ2 gold rests on two humans for 137 promises and on calibrated model annotators for 236. The RQ2 judge was checked by hand on 135 promises and the RAG metrics once, but the retrieval grades are the model's alone (a human grading is future work) and the RAG judge is the model that writes the answers, so we read model-judged numbers as comparisons between configurations, never as absolute quality \citep{faggioli2023perspectives,soboroff2025dont}. The two RQ2 test batches differ by 15 promises on an identical configuration and are paired within a batch only; promise extraction misses targets that exist only inside tables; both test splits are spent. Everything is assistive screening: a postponement can have a good reason, and an unmentioned pledge may have been kept.
+950 of the 1,000 RQ1 sentences carry one label, and the RQ2 gold rests on two humans for 137 promises and on calibrated model annotators for 236. The RQ2 judge was checked by hand on 135 promises and the RAG metrics once, but the retrieval grades are the model's alone (a human grading is future work) and the RAG judge is the model that writes the answers, so we read model-judged numbers as comparisons between configurations, never as absolute quality \citep{faggioli2023perspectives,soboroff2025dont}. The two RQ2 test batches differ by 17 promises on an identical configuration and are paired within a batch only; promise extraction misses targets that exist only inside tables; both test splits are spent. Everything is assistive screening: a postponement can have a good reason, and an unmentioned pledge may have been kept.
 
 % =============================================================================================
 \section{Conclusion}
@@ -794,6 +798,44 @@ agent $\to$ pipeline$^{*}$ & 210 $\to$ 202 & $+5 / {-13}$ & 0.096 \\
 \end{tabular*}
 \caption{Paired comparisons on the test split under the shared judge (majority votes, McNemar, uncorrected); $^{*}$ marks comparisons frozen before test was read. The floors ran on the batch-2 machine and pair with its arms; batch 2 pairs HT$'$, GT, FT$'$ and AT$'$; batch 1 pairs FT, AT and the chosen pipeline (Table~\ref{tab:rq2-test}). Against the judge's stricter predecessor on the same stored evidence, every arm gains 5 to 17 promises (finder $+26 / {-9}$, $p = 0.006$; agent, batch 2, $+23 / {-9}$, $p = 0.020$; hybrid and fixed budget $p \ge 0.065$); those pairs are in the run records.}
 \label{tab:rq2-test-pairs}
+\end{table}
+
+\FloatBarrier
+
+\subsection{The three decisions scored separately}
+\label{app:stages}
+Table~\ref{tab:stages} scores the three decisions of Section~\ref{sec:decisions} one at a time on the test votes of the main arms. Each level scores the gold rows that reach it (RQ1: 669, then 556 with a valid aspect, then 406 with a clear claim; RQ2: 250, then 243 not disappeared, then 179 settled); a vote that left the cascade earlier, such as \emph{none} on a \emph{planning} sentence, counts as wrong at that level and as a miss for the gold class. Two readings follow. In RQ1, evidence moves only the two neutral decisions: every evidence arm loses presence against sentence-only (0.951 to 0.919--0.942, the \emph{none} loss of Table~\ref{tab:rq1-summary}; the graph arm, with evidence on 42\% of items, keeps 0.951), the decidability of a claim gains at most 0.012, and the direction, implemented or planning, stays within 0.850--0.874 in every arm, lowest in the three cross-year arms. In RQ2, retrieval earns its accuracy on decidability: the floors fail there (the majority class never abstains, the closed-book model always does), while the finder and the agent decide 0.819--0.823 of the promises that were not dropped correctly, against 0.765 for the top-20 hybrid; once a verdict is given, its direction is right 0.82--0.87 of the time in every arm.
+
+\begin{table}[!htbp]
+\centering\footnotesize
+\setlength{\tabcolsep}{4pt}
+\begin{tabular*}{\linewidth}{@{}l@{\extracolsep{\fill}}rrrrrr@{}}
+\toprule
+ & \multicolumn{2}{c}{presence} & \multicolumn{2}{c}{decidability} & \multicolumn{2}{c}{direction} \\
+\cmidrule(lr){2-3}\cmidrule(lr){4-5}\cmidrule(l){6-7}
+arm (test) & acc. & F1 & acc. & F1 & acc. & F1 \\
+\midrule
+\multicolumn{7}{@{}l}{\emph{RQ1: none vs a valid aspect (669) $\to$ indeterminate vs a clear claim (556) $\to$ implemented vs planning (406)}} \\
+sentence only (B) & 0.951 & 0.902 & 0.851 & 0.789 & 0.867 & 0.875 \\
+neighbouring sentences (B) & 0.919 & 0.823 & 0.856 & 0.796 & 0.874 & 0.878 \\
+hybrid, same report (B) & 0.927 & 0.840 & 0.860 & 0.801 & 0.874 & 0.878 \\
+hybrid, other years (B) & 0.928 & 0.844 & 0.863 & 0.808 & 0.855 & 0.857 \\
+graph, other years (G) & 0.951 & 0.901 & 0.863 & 0.812 & 0.850 & 0.857 \\
+graph + BM25 fused (G) & 0.937 & 0.869 & 0.854 & 0.796 & 0.852 & 0.857 \\
+agent, other years (A) & 0.942 & 0.881 & 0.851 & 0.791 & 0.860 & 0.871 \\
+agent, every report (A) & 0.934 & 0.861 & 0.856 & 0.798 & 0.872 & 0.879 \\
+\midrule
+\multicolumn{7}{@{}l}{\emph{RQ2: disappeared vs any later statement (250) $\to$ unclear vs a verdict (243) $\to$ achieved vs failed (179)}} \\
+majority class & 0.972 & 0.493 & 0.737 & 0.424 & 0.810 & 0.448 \\
+model, no evidence & 0.972 & 0.493 & 0.292 & 0.254 & 0.045 & 0.052 \\
+hybrid top-20 & 0.940 & 0.627 & 0.765 & 0.716 & 0.821 & 0.859 \\
+trajectory finder (graph) & 0.948 & 0.644 & 0.819 & 0.791 & 0.849 & 0.891 \\
+fixed budget & 0.944 & 0.635 & 0.794 & 0.758 & 0.821 & 0.854 \\
+agent, two hops & 0.956 & 0.622 & 0.823 & 0.785 & 0.866 & 0.875 \\
+\bottomrule
+\end{tabular*}
+\caption{The three decisions inside each label scheme, scored separately on the test votes (majority of three repeats): accuracy and two-class macro-F1 at each level, on the gold rows that reach it. Runs as in Tables~\ref{tab:rq1-test} and~\ref{tab:rq2-test}: (B) \run{baseline/statement-hybrid-cited-test}, (G) \run{graph/graph-arms-cited-test}, (A) \run{agentic/rq1-test-all-arms}; the RQ2 floors and the batch-2 arms. With 7 disappeared and 34 failed test promises, the RQ2 F1 columns rest on few items.}
+\label{tab:stages}
 \end{table}
 
 \FloatBarrier

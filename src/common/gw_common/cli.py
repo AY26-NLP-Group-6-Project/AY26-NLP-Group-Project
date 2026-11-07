@@ -13,6 +13,7 @@ from pathlib import Path
 
 from gw_common import datasets, registry
 from gw_common.eval import retrieval as retrieval_eval
+from gw_common.eval import stages
 from gw_common.eval.compare import compare, publish
 from gw_common.eval.exchange import export_queries
 from gw_common.eval.runner import EVIDENCE_K, REPO_ROOT, run_task
@@ -75,6 +76,9 @@ def eval_main(argv: list[str] | None = None) -> int:
     ap.add_argument("--compare", nargs=2, metavar=("RUN_A", "RUN_B"),
                     help="paired comparison of two runs' majority votes on the same items")
     ap.add_argument("--pairs", help="with --compare: extra condition pairs, condA:condB,condA:condB")
+    ap.add_argument("--stages", nargs="+", type=Path, metavar="RUN_DIR",
+                    help="score each run's majority votes one decision at a time: presence, "
+                         "decidability, direction (docs/evaluation.md section 7)")
     ap.add_argument("--publish", type=Path, metavar="RUN_DIR",
                     help="copy manifest, metrics and reports of a run into results/ (versioned)")
     ap.add_argument("--note", default="", help="with --publish: one line on what the run was for")
@@ -87,6 +91,9 @@ def eval_main(argv: list[str] | None = None) -> int:
     if args.list:
         for name, target in sorted(registry.available().items()):
             print(f"{name:22s} {target}")
+        return 0
+    if args.stages:
+        print(stages.report_md([stages.score_run(run) for run in args.stages]))
         return 0
     if args.compare:
         pairs = [tuple(p.split(":", 1)) for p in (args.pairs or "").split(",") if p]
@@ -115,7 +122,8 @@ def eval_main(argv: list[str] | None = None) -> int:
     if args.task == "retrieval":
         return _retrieval(ap, args)
     if not args.system and not (args.task == "rq2" and args.rq2_baseline):
-        ap.error("--system is required (or use --list / --compare / --export-queries / --rq2-baseline)")
+        ap.error("--system is required (or use --list / --compare / --stages / --export-queries / "
+                 "--rq2-baseline)")
     if args.task == "rq2":
         from gw_common.eval import rq2
 

@@ -306,6 +306,44 @@ delivered on time; delivered late and disclosed; deadline moved then exceeded; m
 still open; a dated commitment dissolving into intent; a milestone slipping a year per report; missed and
 admitted; one issuer both ways; partial delivery not reconciled; never mentioned again.
 
+### The three decisions scored separately (`gw-eval --stages`, test votes)
+
+Both label schemes answer, in order, the questions the course brief asks of a classification task whose
+data contains neutral content: is there anything to decide, can it be decided, which way does it go. For
+RQ1 that is none vs a valid aspect → indeterminate vs a clear claim → implemented vs planning; for RQ2
+disappeared vs any later statement → unclear vs a verdict → achieved vs failed. The classifier takes the
+three in one call, the judge takes them in sequence. Each level scores the gold rows that reach it
+(RQ1: 669 → 556 → 406; RQ2: 250 → 243 → 179); a vote that left the cascade earlier counts as wrong
+there and as a miss for the gold class. Accuracy / two-class macro-F1:
+
+| arm (test) | presence | decidability | direction |
+|---|---|---|---|
+| sentence only (B) | 0.951 / 0.902 | 0.851 / 0.789 | 0.867 / 0.875 |
+| neighbouring sentences (B) | 0.919 / 0.823 | 0.856 / 0.796 | 0.874 / 0.878 |
+| hybrid, same report (B) | 0.927 / 0.840 | 0.860 / 0.801 | 0.874 / 0.878 |
+| hybrid, other years (B) | 0.928 / 0.844 | 0.863 / 0.808 | 0.855 / 0.857 |
+| graph, other years (G) | 0.951 / 0.901 | 0.863 / 0.812 | 0.850 / 0.857 |
+| graph + BM25 fused (G) | 0.937 / 0.869 | 0.854 / 0.796 | 0.852 / 0.857 |
+| agent, other years (A) | 0.942 / 0.881 | 0.851 / 0.791 | 0.860 / 0.871 |
+| agent, every report (A) | 0.934 / 0.861 | 0.856 / 0.798 | 0.872 / 0.879 |
+| RQ2 majority class | 0.972 / 0.493 | 0.737 / 0.424 | 0.810 / 0.448 |
+| RQ2 model, no evidence | 0.972 / 0.493 | 0.292 / 0.254 | 0.045 / 0.052 |
+| RQ2 hybrid top-20 | 0.940 / 0.627 | 0.765 / 0.716 | 0.821 / 0.859 |
+| RQ2 trajectory finder (graph) | 0.948 / 0.644 | 0.819 / 0.791 | 0.849 / 0.891 |
+| RQ2 fixed budget | 0.944 / 0.635 | 0.794 / 0.758 | 0.821 / 0.854 |
+| RQ2 agent, two hops | 0.956 / 0.622 | 0.823 / 0.785 | 0.866 / 0.875 |
+
+Runs: (B) `baseline/statement-hybrid-cited-test`, (G) `graph/graph-arms-cited-test`, (A)
+`agentic/rq1-test-all-arms`; RQ2 floors `baseline/rq2-majority-test`, `baseline/rq2-direct-test` and the
+batch-2 arms `baseline/promise-window-hybrid-test-v3`, `graph/promise-window-trajectory-test-v3`,
+`agentic/rq2-test-fixed-budget-v3-b2`, `agentic/rq2-test-agent-v3-b2`. With 7 disappeared and 34 failed
+test promises, the RQ2 F1 columns rest on few items. Reading: in RQ1 evidence never moves the
+implemented-or-planning direction (0.850–0.874 in every arm, lowest in the three cross-year arms) and
+moves only the two neutral decisions, presence down (the `none` loss) and decidability up by at most
+0.012; in RQ2 the floors fail on decidability (the majority class never abstains, the closed-book model
+always does), the finder and the agent settle 0.819–0.823 of the undropped promises correctly against
+0.765 for hybrid top-20, and a verdict's direction is right 0.82–0.87 of the time in every arm.
+
 ## 3. What can be claimed
 
 1. Statement-level evidence from the company's own reports neither helps nor hurts action
@@ -333,6 +371,10 @@ admitted; one issuer both ways; partial delivery not reconciled; never mentioned
    tied-best configuration (nDCG@10 0.80), BM25 alone is behind it by 0.09–0.11, dense retrieval and plain fusion
    are within its interval, the company filter leaves no wrong-company hit, and the graph's edges are sparse rather
    than wrong (1.7 statements returned of 10, the first usually relevant).
+9. Scored one decision at a time (presence → decidability → direction, the brief's neutral-first then
+   polarity order): evidence leaves RQ1's implemented-or-planning direction where it is and moves only the
+   two neutral decisions; RQ2's gain over the floors and over plain hybrid retrieval lies in telling a
+   settled promise from an unsettled one, not in the direction of the verdict.
 
 ## 4. Limits
 
