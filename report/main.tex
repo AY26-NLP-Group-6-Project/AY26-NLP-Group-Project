@@ -185,55 +185,26 @@ Every checkable promise (Section~\ref{sec:promises}) carries a settled outcome. 
 
 \begin{figure*}[t]
 \centering
-\resizebox{\textwidth}{!}{%
-\begin{tikzpicture}[
-  font=\footnotesize, node distance=3mm and 5mm,
-  box/.style={draw, rounded corners=2pt, align=center, inner sep=3pt, minimum height=7mm, fill=gray!8},
-  store/.style={box, fill=blue!6},
-  sys/.style={box, fill=orange!10},
-  outbox/.style={box, fill=green!8},
-  arr/.style={-{Latex[length=2mm]}, thick}]
-  \node[box] (pdf) at (0,0) {240 PDFs\\manifest with\\source URLs};
-  \node[store] (stm) at (3.4,0) {parsed statements\\110,314 in DuckDB\\\{company, year, page\}};
-  \node[store] (chunks) at (7.8,0) {chunk stores + vectors\\statements 108,376\\passages 18,839 (ablation)};
-  \node[store] (graph) at (12.3,0) {temporal claim graph\\aspects, mentions, follows\_up\\promise tables};
-  \node[sys] (hyb) at (5.0,-2.2) {hybrid retriever\\BM25 + dense + RRF + rerank\\company / year filters};
-  \node[sys] (ag) at (9.4,-2.2) {agentic retriever\\plan--retrieve--stop\\over the corpus tools};
-  \node[sys] (gr) at (13.4,-2.2) {graph retriever\\join (company, aspect, year)\\trajectory finder};
-  \node[outbox, text width=7.6cm] (cons) at (8.4,-4.1) {shared cited classifier (RQ1, $\le 3$ spans)\\label, rationale, citations\\shared promise judge (RQ2, $\le 20$ statements)\\per-statement labels, then a rule};
-  \node[box] (harness) at (14.6,-4.1) {evaluation harness\\gold, metrics,\\manifests, API};
-  \draw[arr] (pdf) -- (stm);
-  \draw[arr] (stm) -- (chunks);
-  \draw[arr] (stm.north) -- ++(0,0.45) -| (graph.north);
-  \draw[arr] (chunks.south) -- (hyb.north);
-  \draw[arr] (chunks.south) -- (ag.north);
-  \draw[arr] (graph.south) -- (ag.north);
-  \draw[arr] (graph.south) -- (gr.north);
-  \draw[arr] (hyb.south) -- (cons.north -| hyb.south);
-  \draw[arr] (ag.south) -- (cons.north -| ag.south);
-  \draw[arr] (gr.south) -- ($(cons.north east)+(-0.6,0)$);
-  \draw[arr] (cons.east) -- (harness.west);
-\end{tikzpicture}%
-}
-\caption{Architecture. Every retriever reads the same parsed statements; every RQ1 arm hands at most three spans to one classifier, every RQ2 arm at most twenty to one judge; the harness owns the data, the gold labels, the metrics and the run manifests.}
+\includegraphics[width=\textwidth]{figures/flowchart.png}
+\caption{From the reports to the two task contexts. One DuckDB table of 110,314 statements (sentences, table rows and metric lines alike) feeds the statement store (chunks and their vectors; the 200-word passage store of the ablation is not shown) and the temporal claim graph; the three retrievers read them and return one kind of evidence record; RQ1 hands at most three spans, the target sentence dropped, to the shared classifier, RQ2 at most twenty statements in report order to the shared judge. The agentic retriever reads the statement store only, never the graph.}
 \label{fig:arch}
 \end{figure*}
 
-Figure~\ref{fig:arch} shows the pipeline. The reports are parsed once into statements, which feed the chunk stores and a temporal claim graph; three retrievers read from these; every RQ1 arm hands at most three spans to one shared classifier and every RQ2 arm at most twenty statements to one shared judge.
+Figure~\ref{fig:arch} shows the pipeline: the reports are parsed once into statements, which feed the chunk stores and the claim graph; three retrievers read them and hand one shared classifier (RQ1) or one shared judge (RQ2) the same kind of evidence record.
 
 \subsection{Retrievers}
 
 \paragraph{Hybrid retriever.}
 \label{sec:hybrid}
-The baseline is built from parts, not a hosted service: an in-process Okapi BM25 index ($k_1 = 1.5$, $b = 0.75$) over the contextualised chunks; cosine search over L2-normalised \embmodel{} vectors (pgvector HNSW in the shared deployment); reciprocal rank fusion of the top 50 of each ($k_0 = 60$); and a cross-encoder (\reranker{}, ONNX on CPU) over the fused top 20. A mode switch (\texttt{bm25}, \texttt{dense}, \texttt{rrf}, \texttt{rrf+rerank}) runs the ablation through one code path. Metadata filters restrict retrieval to the same report, the same company excluding the target's year, or a year window, and the target sentence is never returned.
+The baseline (Figure~\ref{fig:arch}, left) is built from parts, not a hosted service: an in-process Okapi BM25 index ($k_1 = 1.5$, $b = 0.75$) over the contextualised chunks and cosine search over the L2-normalised vectors (pgvector HNSW in the shared deployment), the top 50 of each fused by reciprocal rank fusion and the fused top 20 re-ranked by the cross-encoder on CPU. A mode switch (\texttt{bm25}, \texttt{dense}, \texttt{rrf}, \texttt{rrf+rerank}) runs the ablation through one code path; metadata filters restrict retrieval to the same report, the same company excluding the target's year, or a year window, and the target sentence is never returned.
 
 \paragraph{Temporal claim graph.}
 \label{sec:graph}
-Finding the same company's statements on an aspect in other years, following a commitment forward and detecting a dropped target are joins, not similarity problems (without a company filter, templated ESG prose retrieves other companies' sentences: Q5 in Table~\ref{tab:five-queries}). The DuckDB graph holds 56 companies, 240 reports, 110,314 statements, 7,503 aspects, 29,637 statement$\to$aspect mentions and 8,524 \texttt{follows\_up} edges to later statements of the same company and aspect. LLM extraction passed its gate on the gold sentences (partial-match F1 0.649, category accuracy 0.903), but canonicalising the free-text aspects did not (best pairwise precision 0.597 against a gate of 0.80), so cross-year edges rest on morphological normalisation only. The graph arms return page-cited statements: \cond{cross\_year\_graph} joins the item's aspect to the company's other-year statements (coverage 0.40 on dev, 9\,ms), and \cond{cross\_year\_fused} fills to $k$ with BM25 over them (coverage 0.89, 20\,ms).
+Finding the same company's statements on an aspect in other years, following a commitment forward and detecting a dropped target are joins, not similarity problems (without a company filter, templated ESG prose retrieves other companies' sentences: Q5 in Table~\ref{tab:five-queries}). Besides the aspects, mentions and promise tables of Figure~\ref{fig:arch}, the graph holds 8,524 \texttt{follows\_up} edges to later statements of the same company and aspect. LLM extraction passed its gate on the gold sentences (partial-match F1 0.649, category accuracy 0.903), but canonicalising the free-text aspects did not (best pairwise precision 0.597 against a gate of 0.80), so cross-year edges rest on morphological normalisation only. The graph arms return page-cited statements: \cond{cross\_year\_graph} joins the item's aspect to the company's other-year statements (coverage 0.40 on dev, 9\,ms), and \cond{cross\_year\_fused} fills to $k$ with BM25 over them (coverage 0.89, 20\,ms).
 
 \paragraph{Agentic retriever.}
 \label{sec:agentic}
-A bounded planner calls the same tools as the baseline (filtered search in the four modes, the statements around a hit, a whole page); code rejects any query outside the company or year window, and the agent never proposes a label or an outcome. For RQ1, a first \emph{gate} call asks whether the sentence has a gap another passage could close (an unresolved reference, an unclear actor); if not, the classifier sees exactly what \cond{sentence\_only} sees, and if so the planner writes the gap as a question with keyword queries and a \emph{verifier} keeps only the passages that answer it. For RQ2 it starts from the trajectory finder's per-year reading budget (Section~\ref{sec:rq2-evidence}; on its own the \emph{fixed-budget} arm), runs one search for a moved or dropped deadline, and takes up to two planner steps for what is still missing. An earlier version that fused the planner's queries cost 3.2$\times$ a plain search and mostly re-found the same statements.
+A bounded planner calls the corpus tools of Figure~\ref{fig:arch} (filtered search, neighbours, page, reports), never the graph; code rejects any query outside the company or year window, and the agent never proposes a label or an outcome. For RQ1, a first \emph{gate} call asks whether the sentence has a gap another passage could close (an unresolved reference, an unclear actor); if not, the classifier sees exactly what \cond{sentence\_only} sees, and if so the planner writes the gap as a question with keyword queries and a \emph{verifier} keeps only the passages that answer it. For RQ2 it starts from the trajectory finder's per-year reading budget (Section~\ref{sec:rq2-evidence}; on its own the \emph{fixed-budget} arm), runs one search for a moved or dropped deadline, and takes up to two planner steps for what is still missing. An earlier version that fused the planner's queries cost 3.2$\times$ a plain search and mostly re-found the same statements.
 
 \subsection{Classifier and promise judge}
 
