@@ -75,6 +75,8 @@ uv run gw-eval --system baseline-rag --split dev --repeats 3 \
 uv run gw-eval --system graph-rag --split dev --repeats 3 \
                --conditions sentence_only,local,cross_year_graph,cross_year_fused
 uv run gw-eval --task rq2 --system baseline-rag --split dev --repeats 3     # RQ2: promise outcomes, shared judge
+uv run gw-eval --task rq2 --rq2-baseline majority --split dev              # RQ2 floors: dev majority class, or `direct`
+                                                                            # (the model shown the commitment alone)
 uv run gw-eval --publish artifacts/runs/<run_id> --name <group>/<what-it-is> --note "one line"
 uv run gw-eval --compare results/baseline/statement-hybrid-cited results/graph/graph-arms-cited
 uv run gw-eval --ragas artifacts/runs/<run_id>                               # RAG metrics, scored afterwards

@@ -1,0 +1,59 @@
+{
+  "run_id": "20261107T084650Z-direct-rq2",
+  "system": "direct",
+  "task": "rq2",
+  "conditions": [
+    "promise_window"
+  ],
+  "dataset_id": "rq2promises",
+  "dataset_hash": "a6f35618dd6e",
+  "label_source": "pair_gold",
+  "n_items": 250,
+  "git_sha": "937c26655c86a1f0421bc183c3eb35896c1ea722",
+  "git_dirty": true,
+  "graph_build_id": null,
+  "llm": {
+    "chat_model": "gpt-5.6-luna",
+    "chat_base_url": "https://api.openai.com/v1",
+    "embed_model": "text-embedding-3-small",
+    "embed_base_url": "https://api.openai.com/v1",
+    "temperature": 0.0,
+    "reasoning_effort": "low",
+    "cache": false,
+    "prices_usd_per_mtok": {
+      "chat_in": 0.2,
+      "chat_out": 1.2,
+      "embed": 0.02
+    }
+  },
+  "repeats": 3,
+  "seed": 20261030,
+  "started_at": "2026-11-07T08:46:50.463512+00:00",
+  "finished_at": "2026-11-07T08:51:41.934145+00:00",
+  "wall_seconds": 291.4698586000013,
+  "config": {
+    "split": "test",
+    "k": 20,
+    "sample": null,
+    "limit": null,
+    "judge": {
+      "judge": "direct",
+      "prompt": "promise_outcome_direct.md",
+      "prompt_sha": "fbf6e2039c56",
+      "rule": "model, no evidence"
+    },
+    "classifier": {
+      "style": "baseline-direct"
+    },
+    "retriever": {
+      "baseline": "direct",
+      "evidence": "none"
+    },
+    "selection": {
+      "label_source": {
+        "human_pair": 115,
+        "model_pair": 135
+      }
+    }
+  }
+}

@@ -42,6 +42,9 @@ def eval_main(argv: list[str] | None = None) -> int:
     ap.add_argument("--baseline", default="sentence_only", help="condition that deltas are measured against")
     ap.add_argument("--k", type=int, help="evidence spans per item (default 3 for rq1, 20 for rq2)")
     ap.add_argument("--judge", default="v2", choices=["v1", "v2", "v3"], help="rq2: the judge's version")
+    ap.add_argument("--rq2-baseline", choices=["majority", "direct"],
+                    help="rq2: run a floor instead of a system: the dev majority class, or the model shown "
+                         "the commitment alone (no retrieval, no judge)")
     ap.add_argument("--evidence", type=Path, help="score evidence produced outside this package")
     ap.add_argument("--predictions", type=Path, help="score labels produced outside this package")
     ap.add_argument("--export-queries", type=Path, metavar="OUT",
@@ -111,14 +114,14 @@ def eval_main(argv: list[str] | None = None) -> int:
 
     if args.task == "retrieval":
         return _retrieval(ap, args)
-    if not args.system:
-        ap.error("--system is required (or use --list / --compare / --export-queries)")
+    if not args.system and not (args.task == "rq2" and args.rq2_baseline):
+        ap.error("--system is required (or use --list / --compare / --export-queries / --rq2-baseline)")
     if args.task == "rq2":
         from gw_common.eval import rq2
 
-        run_dir = rq2.run_rq2(args.system, split=args.split, repeats=args.repeats, k=args.k,
-                              limit=args.limit, sample=args.sample, judge=args.judge,
-                              evidence_file=args.evidence)
+        run_dir = rq2.run_rq2(args.system or args.rq2_baseline, split=args.split, repeats=args.repeats,
+                              k=args.k, limit=args.limit, sample=args.sample, judge=args.judge,
+                              evidence_file=args.evidence, baseline=args.rq2_baseline)
         print((run_dir / "report.md").read_text(encoding="utf-8"))
         print(f"run dir: {run_dir}")
         return 0
