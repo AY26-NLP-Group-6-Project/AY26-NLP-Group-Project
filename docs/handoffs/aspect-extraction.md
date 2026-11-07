@@ -168,7 +168,7 @@ climate split explicitly; run 1 used v1, whose copy stays in the run folder (`pr
 
 ### 8.4 Reproducibility limits that travel with every result built on this run
 
-- Model recorded as the session identity "GPT-6"; no immutable snapshot id was available.
+- No immutable snapshot id was available.
 - Temperature was not controllable and is recorded as `null`, not 0.
 - Gold rows `eval0001`-`eval0003` were visible before calibration; both scores are kept.
 
