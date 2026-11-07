@@ -228,6 +228,13 @@ disappeared 0.67 / 1.00.
 | trajectory finder (graph) | `graph/promise-window-trajectory` | 0.791 ± 0.005 | 0.789 | 0.69 | 0.769 | 5 / 22 | 17 / 101 | 80 / 89 (0.90) | 11.7 | 261 ms |
 | hybrid, top 20 in the window | `baseline/promise-window-hybrid` | 0.783 ± 0.009 | 0.789 | 0.68 | 0.771 | 3 / 22 | 21 / 101 | 78 / 83 (0.94) | 20.0 | 641 ms |
 
+Two floors under every arm (`baseline/rq2-majority-*`, `baseline/rq2-direct-*`, 2026-11-07, final judge for the
+arms): answering the dev majority class (`achieved`) for every promise scores 0.496 on dev and 0.580 on test with a
+verdict on every gold-unclear promise (κ 0); the model shown the commitment alone, no retrieval, three replies
+voted, answers `unclear` on 121 of 123 dev and 241 of 250 test promises (0.195 and 0.284; nine test verdicts, eight
+right; USD 0.90 per 1,000 promises). Paired on test with the second batch: finder over the majority floor +75 / −19,
+over the no-evidence model +147 / −17; hybrid over the majority floor +64 / −22; all p < 0.001.
+
 Paired on the 123 promises (majority votes, McNemar): +4 / −4, p = 1.00; the hybrid arm is unstable
 across repeats on 20 promises, the finder on 10. On RQ2 as on RQ1, the graph line's structured
 retrieval and plain hybrid retrieval are not distinguishable on dev. The finder reads 11.7 statements

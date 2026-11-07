@@ -34,7 +34,7 @@
 \newcommand{\memberF}{Member Six}   \newcommand{\matricF}{G2XXXXXXF} \newcommand{\mailF}{member6@e.ntu.edu.sg}
 \newcommand{\datalink}{\url{https://drive.google.com/file/d/1k0vG2eQaOc13oEJcvT5vQMuVagxhZR1L/view?usp=sharing}}
 \newcommand{\codelink}{\url{https://github.com/AY26-NLP-Group-6-Project/AY26-NLP-Group-Project}}
-\newcommand{\sheetlink}{\url{https://docs.google.com/spreadsheets/d/REPLACE-WITH-ANNOTATION-SHEET-ID}}
+\newcommand{\sheetlink}{\url{https://docs.google.com/spreadsheets/d/176A5URtreDoXT9JHUQ1ykacDJudnrlmvuIhMU-e2_pI/edit?usp=sharing}}
 \newcommand{\chatmodel}{\texttt{gpt-5.6-luna}}
 \newcommand{\embmodel}{\texttt{text-embedding-3-small}}
 \newcommand{\reranker}{\texttt{ms-marco-MiniLM-L-6-v2}}
@@ -72,7 +72,7 @@
 \maketitle
 
 \begin{abstract}
-Analysts reading sustainability reports want to know whether a company's dated commitments were kept, and where the evidence is. We build Greenwash-RAG, a retrieval-augmented system over 240 sustainability reports of 56 SGX-listed issuers (2020--2025, 3.5\,M words, 108,376 statement chunks) that answers with page-cited evidence through a Streamlit interface. A hybrid retriever (BM25 and dense retrieval with reciprocal rank fusion, cross-encoder re-ranking and company/year filters) reaches the best nDCG@10 on pooled, model-graded judgements (0.80 against 0.71 for BM25 alone), and a temporal claim graph returns precise but sparse cross-year evidence at a tenth of its latency. \textbf{RQ1} labels a sentence's sustainability action under the A3CG scheme on 1,000 self-annotated sentences (Fleiss \kappaval{} 0.81): on the 669 test sentences no evidence condition improves macro-F1 beyond run-to-run noise, and showing evidence makes the model worse at rejecting invalid aspect--action pairs. \textbf{RQ2} follows 373 dated commitments through later reports: the graph's trajectory finder reads 40\% fewer statements than hybrid retrieval at no loss of accuracy, 88\% of its verdicts on the test split are correct, and an agentic planner adds cost but no accuracy. About half of the commitments were met, one in eight was missed or re-dated, and a third cannot be settled from the reports.
+Analysts reading sustainability reports want to know whether a company's dated commitments were kept, and where the evidence is. We build Greenwash-RAG, a retrieval-augmented system over 240 sustainability reports of 56 SGX-listed issuers (2020--2025, 3.5\,M words, 108,376 statement chunks) that answers with page-cited evidence through a Streamlit interface. A hybrid retriever (BM25 and dense retrieval with reciprocal rank fusion, cross-encoder re-ranking and company/year filters) reaches the best nDCG@10 on pooled, model-graded judgements (0.80 against 0.71 for BM25 alone), and a temporal claim graph returns precise but sparse cross-year evidence at a tenth of its latency. \textbf{RQ1} labels a sentence's sustainability action under the A3CG scheme on 1,000 self-annotated sentences (Fleiss \kappaval{} 0.81): on the 669 test sentences no evidence condition improves macro-F1 beyond run-to-run noise, and showing evidence makes the model worse at rejecting invalid aspect--action pairs. \textbf{RQ2} follows 373 dated commitments through later reports: the graph's trajectory finder reads 40\% fewer statements than hybrid retrieval at no loss of accuracy, 88\% of its verdicts on the test split are correct, every retrieval arm is far above the majority-class and no-evidence floors (0.58 and 0.28), and an agentic planner adds cost but no accuracy. About half of the commitments were met, one in eight was missed or re-dated, and a third cannot be settled from the reports.
 \end{abstract}
 
 % =============================================================================================
@@ -471,7 +471,7 @@ Two human check sheets, weighted to their pools, score the first system and the 
 \subsection{Retrieval arms against the gold set}
 \label{sec:rq2-gold}
 \label{sec:rq2-test}
-Table~\ref{tab:rq2-summary} compares the four retrievers under the shared judge. On dev the trajectory finder and the agent tie at 0.837, the hybrid top 20 is at 0.813 and the fixed budget at 0.870, all within the noise of a judge settled on this split's errors (eight repeats on the fixed budget's evidence range 0.829--0.870); the finder reads 11.6 statements where the hybrid reads 20, so its judgements are cheaper and steadier. Because the same hybrid configuration scored 0.816 and 0.748 in two test batches on different machines, test arms are compared only within the second batch, where all four ran on one machine. There the finder (0.804) and the agent (0.800) lead the fixed budget (0.768) and the hybrid baseline (0.748): the finder is ahead of the baseline ($+24 / {-10}$, $p = 0.024$, uncorrected, the one retrieval comparison on test below 0.05) and ties the agent ($+14 / {-15}$, $p = 1.00$), which needs a planner and fifty times the retrieval latency; its verdicts are also the most often right (0.88 against 0.83--0.86). \textbf{The graph's ordered, shorter evidence is what the judge rewards}: 20 loosely ranked statements give it more to over-commit on (a verdict on 27 of the 64 gold-unclear promises against 18 for the finder).
+Table~\ref{tab:rq2-summary} compares the four retrievers under the shared judge, above two floors: answering the development split's majority class (\emph{achieved}) for every promise, and the model shown the commitment alone, with no retrieved statement (majority of three replies). The majority floor scores 0.496 on dev and 0.580 on test and gives a verdict on every promise a reader cannot settle; the model without evidence abstains on 97\% of promises (0.195 and 0.284), giving nine verdicts on test, eight of them right. Every retrieval arm is above both on every promise set (the finder against the majority floor on test $+75 / {-19}$, against the model without evidence $+147 / {-17}$, both $p < 0.001$): the question is not answerable from the commitment alone. On dev the trajectory finder and the agent tie at 0.837, the hybrid top 20 is at 0.813 and the fixed budget at 0.870, all within the noise of a judge settled on this split's errors (eight repeats on the fixed budget's evidence range 0.829--0.870); the finder reads 11.6 statements where the hybrid reads 20, so its judgements are cheaper and steadier. Because the same hybrid configuration scored 0.816 and 0.748 in two test batches on different machines, test arms are compared only within the second batch, where all four ran on one machine. There the finder (0.804) and the agent (0.800) lead the fixed budget (0.768) and the hybrid baseline (0.748): the finder is ahead of the baseline ($+24 / {-10}$, $p = 0.024$, uncorrected, the one retrieval comparison on test below 0.05) and ties the agent ($+14 / {-15}$, $p = 1.00$), which needs a planner and fifty times the retrieval latency; its verdicts are also the most often right (0.88 against 0.83--0.86). \textbf{The graph's ordered, shorter evidence is what the judge rewards}: 20 loosely ranked statements give it more to over-commit on (a verdict on 27 of the 64 gold-unclear promises against 18 for the finder).
 
 \textbf{Retrieval is not what limits RQ2}: in 14 of the 17 checkable hybrid errors on dev the deciding phrase was already in the evidence, doubling the evidence to 40 statements lowered accuracy, and the planner's own hops added statements the judge almost never used. The lever is how the judge reads the evidence: its stricter predecessor, which counted only literal restatements of the target as being about it, scores 5 to 17 of 250 test promises lower on every arm ($p = 0.006$ on the finder's evidence, $0.020$ on the agent's; run records), by leaving settled promises unclear. That gain sits mostly on the model-annotated rows (the 115 human-labelled test rows move by at most six, the 135 model-labelled rows by 8 to 14), so part of it may be agreement between the judge's reading and the model annotators' rather than correctness, and dev overstated it (fixed budget 0.870 on dev, 0.768--0.808 on test). The agent-plus-filter pipeline chosen on dev (0.808 in the first batch) ties the fixed budget and trails the plain agent there ($+5 / {-13}$, $p = 0.096$) at twice the judging cost.
 
@@ -484,13 +484,16 @@ Table~\ref{tab:rq2-summary} compares the four retrievers under the shared judge.
 \cmidrule(lr){3-4}\cmidrule(lr){5-7}
 arm & stmts & dev & test & over & under & prec. & USD/1k \\
 \midrule
+majority class (\emph{achieved}) & -- & 0.496 & 0.580 & 64/64 & 0/186 & 0.58 & 0 \\
+model, no evidence & 0 & 0.195 & 0.284 & 1/64 & 178/186 & 0.89 & 0.90 \\
+\midrule
 hybrid top-20 & 20.0 & 0.813 & 0.748 & 27/64 & 33/186 & 0.83 & 5.64 \\
 trajectory finder (graph) & 11.6 & 0.837 & \textbf{0.804} & 18/64 & 27/186 & \textbf{0.88} & 4.56 \\
 fixed budget & 11.5 & \textbf{0.870} & 0.768 & 22/64 & 29/186 & 0.84 & 4.59 \\
 agent, two hops & 16.5 & 0.837 & 0.800 & 21/64 & 24/186 & 0.86 & 6.32 \\
 \bottomrule
 \end{tabular*}
-\caption{RQ2 outcome accuracy (majority of three judge runs) on dev (123 promises) and on the second test batch (250 promises, all four arms on one machine). Over: verdicts given on the 64 gold-unclear test promises; under: the 186 settled test promises left unclear; prec.: share of test verdicts that are right; cost per 1,000 promises on test. The judge was settled on the dev errors, so its dev numbers are optimistic. Full tables: \ref{tab:rq2-main}, \ref{tab:rq2-test} and~\ref{tab:rq2-test-pairs}.}
+\caption{RQ2 outcome accuracy (majority of three judge runs) on dev (123 promises) and on the second test batch (250 promises, all four arms on one machine), above the two floors (runs \run{baseline/rq2-majority-*}, \run{baseline/rq2-direct-*}). Over: verdicts given on the 64 gold-unclear test promises; under: the 186 settled test promises left unclear; prec.: share of test verdicts that are right; cost per 1,000 promises on test. The judge was settled on the dev errors, so its dev numbers are optimistic. Full tables: \ref{tab:rq2-main}, \ref{tab:rq2-test} and~\ref{tab:rq2-test-pairs}.}
 \label{tab:rq2-summary}
 \end{table}
 
@@ -541,7 +544,7 @@ First, on the knowledge base and retrieval side, the course's hybrid design hold
 
 Second, for RQ1, retrieved evidence does not improve A3CG action labelling beyond run-to-run noise on either split, and showing it by default costs \emph{none} detection; evidence should be opt-in for single-sentence classification.
 
-Third, for RQ2, following a dated commitment through later reports is feasible: the trajectory finder reads 40\% fewer statements than hybrid retrieval at no loss of accuracy on dev and ahead of it on test ($p = 0.024$, uncorrected), and 88\% of its test verdicts are right. Neither agentic planning nor more evidence helped; how the judge reads the evidence is the lever.
+Third, for RQ2, following a dated commitment through later reports is feasible: the trajectory finder reads 40\% fewer statements than hybrid retrieval at no loss of accuracy on dev and ahead of it on test ($p = 0.024$, uncorrected), and 88\% of its test verdicts are right; every retrieval arm is far above the majority-class and no-evidence floors (0.58 and 0.28 on test), so the question is answered from the evidence, not from the commitment. Neither agentic planning nor more evidence helped; how the judge reads the evidence is the lever.
 
 Fourth, about half of the dated commitments in these reports were met, one in eight to one in six was missed or re-dated, and a quarter to a third cannot be judged from the text alone.
 
@@ -731,6 +734,9 @@ These tables expand Section~\ref{sec:rq2}: every arm on dev and test (Tables~\re
 \toprule
 arm (run) & vote acc. & \kappaval & macro-F1 & over-commit & under-commit & verdict prec. & stmts & USD / 1k promises \\
 \midrule
+majority class, \emph{achieved} for every promise (M) & 0.496 & 0.00 & 0.166 & 22 / 22 & 0 / 101 & 61 / 123 (0.50) & -- & 0 \\
+model shown the commitment alone (D) & 0.195 & 0.01 & 0.093 & 0 / 22 & 99 / 101 & 2 / 2 (1.00) & 0 & 0.87 \\
+\midrule
 trajectory finder, graph (T) & 0.837 & 0.75 & 0.788 & 5 / 22 & 10 / 101 & 86 / 96 (0.90) & 11.7 & 4.50 \\
 hybrid top-20 in window (H) & 0.813 & 0.71 & 0.770 & 6 / 22 & 12 / 101 & 84 / 95 (0.88) & 20.0 & 5.64 \\
 fixed budget, finder rules without the graph (F) & \textbf{0.870} & 0.80 & 0.826 & 4 / 22 & 8 / 101 & 89 / 97 (0.92) & 11.6 & 4.48 \\
@@ -738,7 +744,7 @@ agent, two hops (A) & 0.837 & 0.75 & 0.773 & 5 / 22 & 11 / 101 & 86 / 95 (0.91) 
 agent + filter, judged twice (A$_f$) & 0.862 & 0.79 & 0.813 & 5 / 22 & 9 / 101 & 89 / 97 (0.92) & 11.7 & 10.15 \\
 \bottomrule
 \end{tabular*}
-\caption{RQ2 on the gold development split (123 promises, three uncached judge repeats, majority vote). Runs: T \run{graph/promise-window-trajectory-v3}, H \run{agentic/rq2-dev-v3-hybrid}, F \run{agentic/rq2-dev-v3-fixed-budget}, A \run{agentic/rq2-dev-v3-agent}, A$_f$ \run{agentic/rq2-dev-v3-agent-verified}. Over-commit: a verdict where the gold is unclear; under-commit: unclear where the gold has a verdict. Cost per 1,000 promises at three judgements each, the planner once. The judge was settled on this split's errors, so its rows are optimistic.}
+\caption{RQ2 on the gold development split (123 promises, three uncached judge repeats, majority vote). Runs: M \run{baseline/rq2-majority-dev}, D \run{baseline/rq2-direct-dev} (three replies, no retrieval), T \run{graph/promise-window-trajectory-v3}, H \run{agentic/rq2-dev-v3-hybrid}, F \run{agentic/rq2-dev-v3-fixed-budget}, A \run{agentic/rq2-dev-v3-agent}, A$_f$ \run{agentic/rq2-dev-v3-agent-verified}. Over-commit: a verdict where the gold is unclear; under-commit: unclear where the gold has a verdict. Cost per 1,000 promises at three judgements each, the planner once. The judge was settled on this split's errors, so its rows are optimistic.}
 \label{tab:rq2-main}
 \end{table}
 
@@ -748,6 +754,10 @@ agent + filter, judged twice (A$_f$) & 0.862 & 0.79 & 0.813 & 5 / 22 & 9 / 101 &
 \begin{tabular*}{\linewidth}{@{}@{\extracolsep{\fill}}lrrrrrrrrr@{}}
 \toprule
 arm (run) & right & vote acc. (95\% CI) & \kappaval & macro-F1 & over-commit & under-commit & verdict prec. & stmts & USD/1k \\
+\midrule
+\multicolumn{10}{@{}l}{\emph{floors (2026-11-07, the batch-2 machine)}} \\
+majority class, \emph{achieved} for every promise (M) & 145 & 0.580 (0.520--0.644) & 0.00 & 0.184 & 64 / 64 & 0 / 186 & 145 / 250 (0.58) & -- & 0 \\
+model shown the commitment alone (D) & 71 & 0.284 (0.232--0.344) & 0.02 & 0.129 & 1 / 64 & 178 / 186 & 8 / 9 (0.89) & 0 & 0.90 \\
 \midrule
 \multicolumn{10}{@{}l}{\emph{batch 2 (2026-11-04/05, one machine)}} \\
 hybrid top-20 (HT$'$) & 187 & 0.748 (0.696--0.800) & 0.58 & 0.610 & 27 / 64 & 33 / 186 & 150 / 180 (0.83) & 20.0 & 5.64 \\
@@ -762,7 +772,7 @@ agent, two hops (AT) & \textbf{210} & \textbf{0.840} (0.792--0.884) & 0.72 & 0.6
 agent + filter (the pipeline chosen on dev) & 202 & 0.808 (0.760--0.852) & 0.67 & 0.691 & 22 / 64 & 23 / 186 & 160 / 185 (0.87) & 11.5 & 10.26 \\
 \bottomrule
 \end{tabular*}
-\caption{RQ2 on the test split (250 promises, read once per arm; three uncached judge repeats, majority vote). Runs: batch 2 HT$'$ \run{baseline/promise-window-hybrid-test-v3}, GT \run{graph/promise-window-trajectory-test-v3}, FT$'$ and AT$'$ \run{agentic/rq2-test-*-v3-b2}; batch 1 \run{agentic/rq2-test-*-v3} and \run{agentic/rq2-test-chosen-pipeline}. The same hybrid configuration scored 0.816 in batch 1 and 0.748 in batch 2, so arms are paired within a batch only. Cost per 1,000 promises at three judgements, the planner once.}
+\caption{RQ2 on the test split (250 promises, read once per arm; three uncached judge repeats, majority vote). Runs: M \run{baseline/rq2-majority-test}, D \run{baseline/rq2-direct-test} (three replies, no retrieval); batch 2 HT$'$ \run{baseline/promise-window-hybrid-test-v3}, GT \run{graph/promise-window-trajectory-test-v3}, FT$'$ and AT$'$ \run{agentic/rq2-test-*-v3-b2}; batch 1 \run{agentic/rq2-test-*-v3} and \run{agentic/rq2-test-chosen-pipeline}. The same hybrid configuration scored 0.816 in batch 1 and 0.748 in batch 2, so arms are paired within a batch only. Cost per 1,000 promises at three judgements, the planner once.}
 \label{tab:rq2-test}
 \end{table}
 
@@ -792,6 +802,12 @@ statements shown per promise & 6 & 11.6 \\
 \toprule
 comparison (test) & right & flips & $p$ \\
 \midrule
+\multicolumn{4}{@{}l}{\emph{floors, test}} \\
+model, no evidence $\to$ majority class & 71 $\to$ 145 & $+137 / {-63}$ & $<0.001$ \\
+majority class $\to$ hybrid & 145 $\to$ 187 & $+64 / {-22}$ & $<0.001$ \\
+majority class $\to$ finder & 145 $\to$ 201 & $+75 / {-19}$ & $<0.001$ \\
+model, no evidence $\to$ finder & 71 $\to$ 201 & $+147 / {-17}$ & $<0.001$ \\
+\midrule
 \multicolumn{4}{@{}l}{\emph{retrieval arms, batch 2}} \\
 hybrid $\to$ finder & 187 $\to$ 201 & $+24 / {-10}$ & 0.024 \\
 hybrid $\to$ fixed budget & 187 $\to$ 192 & $+23 / {-18}$ & 0.53 \\
@@ -805,7 +821,7 @@ fixed budget $\to$ pipeline$^{*}$ & 202 $\to$ 202 & $+5 / {-5}$ & 1.00 \\
 agent $\to$ pipeline$^{*}$ & 210 $\to$ 202 & $+5 / {-13}$ & 0.096 \\
 \bottomrule
 \end{tabular*}
-\caption{Paired comparisons on the test split under the shared judge (majority votes, McNemar, uncorrected); $^{*}$ marks comparisons frozen before test was read. Batch 2 pairs HT$'$, GT, FT$'$ and AT$'$; batch 1 pairs FT, AT and the chosen pipeline (Table~\ref{tab:rq2-test}). Against the judge's stricter predecessor on the same stored evidence, every arm gains 5 to 17 promises (finder $+26 / {-9}$, $p = 0.006$; agent, batch 2, $+23 / {-9}$, $p = 0.020$; hybrid and fixed budget $p \ge 0.065$); those pairs are in the run records.}
+\caption{Paired comparisons on the test split under the shared judge (majority votes, McNemar, uncorrected); $^{*}$ marks comparisons frozen before test was read. The floors ran on the batch-2 machine and pair with its arms; batch 2 pairs HT$'$, GT, FT$'$ and AT$'$; batch 1 pairs FT, AT and the chosen pipeline (Table~\ref{tab:rq2-test}). Against the judge's stricter predecessor on the same stored evidence, every arm gains 5 to 17 promises (finder $+26 / {-9}$, $p = 0.006$; agent, batch 2, $+23 / {-9}$, $p = 0.020$; hybrid and fixed budget $p \ge 0.065$); those pairs are in the run records.}
 \label{tab:rq2-test-pairs}
 \end{table}
 

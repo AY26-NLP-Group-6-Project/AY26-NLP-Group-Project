@@ -226,7 +226,8 @@ class FakeDirectClient(FakeClient):
 
 
 def _preds(run_dir):
-    return [json.loads(line) for line in (run_dir / "predictions.jsonl").read_text(encoding="utf-8").splitlines()]
+    lines = (run_dir / "predictions.jsonl").read_text(encoding="utf-8").splitlines()
+    return [json.loads(line) for line in lines]
 
 
 def test_the_majority_floor_answers_the_dev_majority_without_a_model(gold_dir, tmp_path, monkeypatch):

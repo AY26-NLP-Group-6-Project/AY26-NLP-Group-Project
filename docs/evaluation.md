@@ -183,7 +183,10 @@ votes from `predictions.jsonl`, so give it run directories (`artifacts/runs/<run
 holds summaries only. `--pairs condA:condB,...` adds pairs of conditions, so two arms of one run can be compared.
 
 On RQ2, `--judge v1|v2|v3` picks the judge (default v2; v3 in `agentic.md`), and `--evidence <run>/evidence.jsonl` judges
-an earlier run's statements again with no retrieval, so two judges compare on one evidence.
+an earlier run's statements again with no retrieval, so two judges compare on one evidence. `--rq2-baseline majority|direct`
+runs a floor instead of a system through the same loop, so its votes pair with any arm's: `majority` answers the most
+frequent outcome of the dev split (achieved) for every promise, `direct` shows the model the commitment alone
+(`configs/prompts/promise_outcome_direct.md`, no retrieval, no judge) and takes the majority of three replies.
 
 `GW_RETRIEVAL_WORKERS` (default 1) sets the threads that collect evidence. An agent mostly waits on the network, so
 its runs use 8; a retrieval latency then includes queueing, so latencies compare only between runs at one worker.
