@@ -341,7 +341,7 @@ test promises, the RQ2 F1 columns rest on few items. Reading: in RQ1 evidence ne
 implemented-or-planning direction (0.850–0.874 in every arm, lowest in the three cross-year arms) and
 moves only the two neutral decisions, presence down (the `none` loss) and decidability up by at most
 0.012; in RQ2 the floors fail on decidability (the majority class never abstains, the closed-book model
-always does), the finder and the agent settle 0.819–0.823 of the undropped promises correctly against
+almost always does: nine verdicts on 250), the finder and the agent settle 0.819–0.823 of the undropped promises correctly against
 0.765 for hybrid top-20, and a verdict's direction is right 0.82–0.87 of the time in every arm.
 
 ## 3. What can be claimed
