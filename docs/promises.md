@@ -237,7 +237,8 @@ on trajectory evidence.
 
 A later judge keeps this design and adds labels for a differently worded measure of the same commitment, a stated part
 delivery and a figure compared in code; `--judge v3` selects it, v2 stays the default and every number in this file is
-v2. It has no human check of its own. Results and limits: `agentic.md`.
+v2. The group checked its three added readings against the two filled sheets (section 3) and found it no less
+reliable than v2; the sheet scores in section 6 are v2's. Results and limits: `agentic.md`.
 
 ## 6. Results of the held-out check
 
