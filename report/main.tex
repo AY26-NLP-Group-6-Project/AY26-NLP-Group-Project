@@ -477,14 +477,14 @@ Table~\ref{tab:rq2-summary} compares the four retrievers under the shared judge,
 
 \begin{table}[t]
 \centering\scriptsize
-\setlength{\tabcolsep}{3pt}
+\setlength{\tabcolsep}{2pt}
 \begin{tabular*}{\columnwidth}{@{}l@{\extracolsep{\fill}}rrrrrrr@{}}
 \toprule
  & & \multicolumn{2}{c}{accuracy} & \multicolumn{3}{c}{test} & \\
 \cmidrule(lr){3-4}\cmidrule(lr){5-7}
 arm & stmts & dev & test & over & under & prec. & USD/1k \\
 \midrule
-majority class (\emph{achieved}) & -- & 0.496 & 0.580 & 64/64 & 0/186 & 0.58 & 0 \\
+majority class & -- & 0.496 & 0.580 & 64/64 & 0/186 & 0.58 & 0 \\
 model, no evidence & 0 & 0.195 & 0.284 & 1/64 & 178/186 & 0.89 & 0.90 \\
 \midrule
 hybrid top-20 & 20.0 & 0.813 & 0.748 & 27/64 & 33/186 & 0.83 & 5.64 \\
