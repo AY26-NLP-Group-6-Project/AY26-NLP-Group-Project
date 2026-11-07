@@ -9,6 +9,10 @@ What a system contributes is `retrieve(query, k)` under the `promise_window` con
 harness holds fixed is the judge (`gw_common.judges.promise`, v2 by default), the cap `k`, the gold
 (`data/eval/rq2promises.*.jsonl`) and the split. Labels are the four reported outcomes; a `revised`
 proposal counts as `failed`.
+
+Two floors run through the same loop with `baseline=` (`gw-eval --task rq2 --rq2-baseline ...`): `majority`
+answers the most frequent outcome of the development split for every promise, `direct` shows the model the
+commitment alone and lets it name the outcome. Neither retrieves, so their votes pair with any arm's.
 """
 
 from __future__ import annotations
@@ -106,6 +110,13 @@ def load_gold(split: str | None = None) -> tuple[list[dict], str]:
     return rows, path.name.split(".")[-2]
 
 
+def majority_label(split: str = "dev") -> str:
+    """The most frequent reported outcome of `split`; the constant the majority floor answers."""
+    rows, _ = load_gold(split)
+    counts = Counter(J.reported(r["outcome"]) for r in rows if r["outcome"] in J.REPORTED)
+    return counts.most_common(1)[0][0]
+
+
 # --------------------------------------------------------------------------- metrics on the four outcomes
 def kappa(a: list[str], b: list[str]) -> float | None:
     if not a:
@@ -198,22 +209,33 @@ def run_rq2(
     workers: int = WORKERS,
     client=None,
     evidence_file: Path | None = None,
+    baseline: str | None = None,
 ) -> Path:
     """Retrieve the window evidence of every gold promise of `split` with the system's retriever, judge
     it `repeats` times with the shared judge, score the votes against the gold, write the run dir. With
     `evidence_file` (an earlier run's `evidence.jsonl`) nothing is retrieved, so judges compare on one
-    evidence."""
+    evidence. With `baseline` (`majority` or `direct`) no system is loaded and nothing is retrieved: the
+    floor answers every promise itself and is scored and written exactly like an arm."""
     started = datetime.now(UTC)
     t0 = time.perf_counter()
+    if baseline is not None and baseline not in J.BASELINES:
+        raise ValueError(f"baseline must be one of {J.BASELINES}")
+    if baseline == "majority":
+        repeats = 1  # a constant does not sample
     if repeats > 1 and client is None and os.environ.get("GW_LLM_CACHE", "1") != "0":
         os.environ["GW_LLM_CACHE"] = "0"
         print(f"  repeats={repeats}: response cache bypassed so each repeat samples the model again")
-    system = load_system(system_name)
-    if CONDITION not in system.supported_conditions():
-        raise ValueError(f"{system_name} does not support the {CONDITION.value} condition")
-    retriever = system.retriever() if evidence_file is None else None
-    if retriever is None and evidence_file is None:
-        raise ValueError(f"{system_name} has no retriever")
+    retriever = None
+    if baseline is None:
+        system = load_system(system_name)
+        if CONDITION not in system.supported_conditions():
+            raise ValueError(f"{system_name} does not support the {CONDITION.value} condition")
+        retriever = system.retriever() if evidence_file is None else None
+        if retriever is None and evidence_file is None:
+            raise ValueError(f"{system_name} has no retriever")
+    else:
+        system_name = baseline
+    constant = majority_label("dev") if baseline == "majority" else None
     rows, dataset_hash = load_gold(split)
     rows = [r for r in rows if r["outcome"] in J.REPORTED]
     if sample and sample < len(rows):
@@ -226,12 +248,15 @@ def run_rq2(
 
     run_dir = new_run_dir(out_root or RUNS_DIR, f"{started:%Y%m%dT%H%M%SZ}-{system_name}-rq2")
     run_id = run_dir.name
-    if client is None:
+    if client is None and baseline != "majority":
         from gw_common.llm import LLMClient
 
         client = LLMClient()
     settings = getattr(client, "settings", None)
-    prompt = J.sections(J.PROMPTS[judge])
+    if baseline is None:
+        prompt = J.sections(J.PROMPTS[judge])
+    else:
+        prompt = J.sections(J.DIRECT_PROMPT) if baseline == "direct" else {}
 
     # retrieval, once per promise, timed
     retrieval_ms: dict[str, float] = {}
@@ -240,6 +265,8 @@ def run_rq2(
     supplied = read_evidence(evidence_file) if evidence_file is not None else None
 
     def fetch(r: dict) -> tuple[list[EvidenceSpan], float]:
+        if baseline is not None:
+            return [], 0.0
         if supplied is not None:
             return list(supplied.get(r["promise_id"], []))[:k], 0.0
         t = time.perf_counter()
@@ -264,21 +291,28 @@ def run_rq2(
     retriever_info = retriever.describe() if hasattr(retriever, "describe") else {}
     if evidence_file is not None:
         retriever_info = {"evidence_from": Path(evidence_file).parent.name}
+    if baseline is not None:
+        retriever_info = {"baseline": baseline, "evidence": "none"}
 
     # the judge, `repeats` times over identical evidence
     reps, runs, usage = [], [], []
     with (run_dir / "predictions.jsonl").open("w", encoding="utf-8") as fp:
         for rep in range(repeats):
-            before = dict(getattr(client, "usage", {}))
+            before = dict(getattr(client, "usage", None) or {})
             t_rep = time.perf_counter()
 
             def one(r: dict) -> dict:
+                if baseline == "majority":
+                    return {"outcome": constant, "rationale": "the most frequent outcome on dev",
+                            "evidence_refs": [], "parse_ok": True}
+                if baseline == "direct":
+                    return J.propose_direct(r["promise"], client, prompt)
                 return J.JUDGES[judge](r["promise"], evidence[r["promise_id"]], client, prompt)
 
             with ThreadPoolExecutor(max_workers=workers) as pool:
                 results = list(pool.map(one, rows))
             wall_s = time.perf_counter() - t_rep
-            after = dict(getattr(client, "usage", {}))
+            after = dict(getattr(client, "usage", None) or {})
             labels = [J.reported(res["outcome"]) for res in results]
             for r, res, lab in zip(rows, results, labels, strict=True):
                 fp.write(
@@ -305,6 +339,8 @@ def run_rq2(
                 for key in ("calls", "input_tokens", "output_tokens")
             }
             cost = settings.cost_usd(spent["input_tokens"], spent["output_tokens"]) if settings else None
+            if baseline == "majority":
+                cost = 0.0  # no call is made
             usage.append({**spent, "cost_usd": cost, "wall_s": wall_s})
             reps.append(
                 {
@@ -396,8 +432,8 @@ def run_rq2(
             "k": k,
             "sample": sample,
             "limit": limit,
-            "judge": J.describe(judge),
-            "classifier": {"style": f"judge-{judge}"},
+            "judge": J.describe(judge) if baseline is None else J.describe_baseline(baseline, constant),
+            "classifier": {"style": f"judge-{judge}" if baseline is None else f"baseline-{baseline}"},
             "retriever": retriever_info,
             "selection": {"label_source": dict(Counter(r["label_source"] for r in rows))},
         },

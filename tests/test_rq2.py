@@ -211,3 +211,53 @@ def test_new_run_dir_never_shares_a_directory(tmp_path):
     assert first.name == "20261104T005711Z-graph-rag-rq2"
     assert second.name == "20261104T005711Z-graph-rag-rq2-2"
     assert first.is_dir() and second.is_dir() and first != second
+
+
+class FakeDirectClient(FakeClient):
+    """Names an outcome with no evidence in sight."""
+
+    def chat(self, messages, max_tokens=0, response_format=None):
+        self.usage["calls"] += 1
+        self.usage["input_tokens"] += 50
+        self.usage["output_tokens"] += 10
+        user = messages[1]["content"]
+        assert "[E" not in user and "Deadline year: 2023" in user and "Acme" in user
+        return SimpleNamespace(text=json.dumps({"outcome": "failed", "rationale": "a guess"}))
+
+
+def _preds(run_dir):
+    return [json.loads(line) for line in (run_dir / "predictions.jsonl").read_text(encoding="utf-8").splitlines()]
+
+
+def test_the_majority_floor_answers_the_dev_majority_without_a_model(gold_dir, tmp_path, monkeypatch):
+    monkeypatch.setattr(R, "load_system", lambda name: pytest.fail("no system is loaded for a floor"))
+    run_dir = R.run_rq2("ignored", split="dev", repeats=3, out_root=tmp_path / "runs", baseline="majority")
+    assert run_dir.name.endswith("-majority-rq2")
+    preds = _preds(run_dir)
+    assert {p["rep"] for p in preds} == {0} and {p["label"] for p in preds} == {"achieved"}
+    block = json.loads((run_dir / "metrics.json").read_text(encoding="utf-8"))["conditions"]["promise_window"]
+    assert block["majority"]["action"]["accuracy"] == pytest.approx(2 / 5)
+    assert block["evidence"]["coverage"] == 0 and block["speed_cost"]["cost_usd_total"] == 0.0
+    manifest = json.loads((run_dir / "manifest.json").read_text(encoding="utf-8"))
+    assert manifest["system"] == "majority" and manifest["config"]["judge"]["label"] == "achieved"
+    assert manifest["config"]["judge"]["rule"] == "constant"
+    assert manifest["config"]["classifier"] == {"style": "baseline-majority"}
+    assert manifest["config"]["retriever"] == {"baseline": "majority", "evidence": "none"}
+
+
+def test_the_direct_floor_shows_no_evidence_and_pairs_like_an_arm(gold_dir, tmp_path, monkeypatch):
+    monkeypatch.setattr(R, "load_system", lambda name: pytest.fail("no system is loaded for a floor"))
+    client = FakeDirectClient()
+    run_dir = R.run_rq2("ignored", split="dev", repeats=2, out_root=tmp_path / "runs", client=client,
+                        baseline="direct")
+    assert client.usage["calls"] == 10 and run_dir.name.endswith("-direct-rq2")
+    preds = _preds(run_dir)
+    assert {p["label"] for p in preds} == {"failed"} and all(p["parse_ok"] for p in preds)
+    block = json.loads((run_dir / "metrics.json").read_text(encoding="utf-8"))["conditions"]["promise_window"]
+    assert block["majority"]["action"]["accuracy"] == pytest.approx(1 / 5)
+    assert block["speed_cost"]["judge_calls_per_item"] == 1.0 and block["evidence"]["mean_spans"] == 0
+    manifest = json.loads((run_dir / "manifest.json").read_text(encoding="utf-8"))
+    assert manifest["config"]["judge"]["judge"] == "direct"
+    assert manifest["config"]["judge"]["prompt"] == "promise_outcome_direct.md"
+    assert manifest["config"]["classifier"] == {"style": "baseline-direct"}
+    assert "| promise_window | promise_window | 5 |" in C.compare(run_dir, run_dir)

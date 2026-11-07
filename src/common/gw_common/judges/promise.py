@@ -38,6 +38,9 @@ PROMPTS = {
     "v3": REPO_ROOT / "configs" / "prompts" / "promise_outcome_v3.md",
 }
 DEFAULT_JUDGE = "v2"
+# The two RQ2 floors: the model with the commitment alone (no evidence), and the dev majority class.
+DIRECT_PROMPT = REPO_ROOT / "configs" / "prompts" / "promise_outcome_direct.md"
+BASELINES = ("direct", "majority")
 OUTCOMES = ("achieved", "failed", "revised", "unclear", "disappeared")
 REPORTED = ("achieved", "failed", "unclear", "disappeared")
 RELATIONS = ("this_target", "same_metric", "other")
@@ -98,6 +101,16 @@ def describe(judge: str = DEFAULT_JUDGE) -> dict:
     if judge == "v3":
         info.update(features=sorted(v3_features()), evidence_chars=v3_chars())
     return info
+
+
+def describe_baseline(name: str, label: str | None = None) -> dict:
+    """What the run manifest records about an RQ2 floor: the closed-book model or the dev majority class."""
+    if name == "direct":
+        return {"judge": "direct", "prompt": DIRECT_PROMPT.name,
+                "prompt_sha": hashlib.sha256(DIRECT_PROMPT.read_bytes()).hexdigest()[:12],
+                "rule": "model, no evidence"}
+    return {"judge": "majority", "prompt": None, "prompt_sha": None, "rule": "constant", "label": label,
+            "chosen_on": "dev"}
 
 
 def _target_phrase(p: dict) -> tuple[str, str]:
@@ -165,6 +178,44 @@ def propose(promise: dict, evidence: list[dict], client: LLMClient, prompt: dict
         "outcome": outcome if outcome in OUTCOMES else "unclear",
         "rationale": str(obj.get("rationale") or "").strip(),
         "evidence_refs": [r for r in refs if r in valid],
+        "parse_ok": outcome in OUTCOMES,
+    }
+
+
+def propose_direct(promise: dict, client: LLMClient, prompt: dict[str, str]) -> dict:
+    """The closed-book baseline: the model names the outcome from the commitment alone, no evidence shown.
+
+    Same label set and the same reporting rule as the judge (a `revised` reply counts as `failed`), so
+    its votes pair with any retrieval arm's on the same promises."""
+    quantity, baseline = _target_phrase(promise)
+    origin = promise["origin"]
+    user = prompt["user"].format(
+        company=promise["company"],
+        origin_year=origin["year"],
+        origin_page=origin.get("page"),
+        origin_text=(origin.get("text") or origin.get("target_text") or "")[:700],
+        metric=promise["metric"],
+        quantity=quantity,
+        baseline=baseline,
+        target_year=promise["target_year"],
+        recurring=" (RECURRING annual target)" if promise.get("recurring") else "",
+    )
+    reply = client.chat(
+        [{"role": "system", "content": prompt["system"]}, {"role": "user", "content": user}],
+        max_tokens=300,
+        response_format={"type": "json_object"},
+    )
+    match = _JSON.search(reply.text or "")
+    try:
+        obj = json.loads(match.group(0)) if match else {}
+    except ValueError:
+        obj = {}
+    obj = obj if isinstance(obj, dict) else {}
+    outcome = str(obj.get("outcome", "")).strip().lower()
+    return {
+        "outcome": outcome if outcome in OUTCOMES else "unclear",
+        "rationale": str(obj.get("rationale") or "").strip(),
+        "evidence_refs": [],
         "parse_ok": outcome in OUTCOMES,
     }
 
